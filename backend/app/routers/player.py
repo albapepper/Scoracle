@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from typing import Optional, Dict, Any, List
 from app.services.balldontlie_api import get_player_info, get_player_stats
 from app.services.sports_context import get_sports_context
+from app.services.stats_percentile import stats_percentile_service
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -150,6 +151,38 @@ async def get_nba_shooting_stats(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching NBA shooting stats: {str(e)}")
+
+
+@router.get("/{player_id}/percentiles")
+async def get_player_stats_percentiles(
+    player_id: str = Path(..., description="ID of the player to fetch stats for"),
+    season: Optional[str] = Query(None, description="Season to fetch stats for"),
+    sports_context = Depends(get_sports_context)
+):
+    """
+    Get player statistics with percentile rankings compared to other players.
+    """
+    # Get active sport from context
+    sport = sports_context.get_active_sport()
+    
+    try:
+        # First get the player's stats
+        stats = await get_player_stats(player_id, sport, season=season)
+        
+        # Then calculate percentiles based on all players in that season
+        percentiles = await stats_percentile_service.calculate_percentiles(stats, sport, season)
+        
+        return {
+            "player_id": player_id,
+            "sport": sport,
+            "season": season or "current",
+            "statistics": stats,
+            "percentiles": percentiles
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error calculating player percentiles: {str(e)}")
 
 @router.get("/nfl/stats/season")
 async def get_nfl_season_stats(

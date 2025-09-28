@@ -1,8 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Container, Title, Text, Card, Badge, Group, Button, Loader, Stack, Grid, Paper, Anchor } from '@mantine/core';
+import { 
+  Container, 
+  Title, 
+  Text, 
+  Card, 
+  Badge, 
+  Group, 
+  Button, 
+  Loader, 
+  Stack, 
+  Grid, 
+  Paper, 
+  Anchor,
+  Divider,
+  Box,
+  List
+} from '@mantine/core';
 import { useSportContext } from '../context/SportContext';
 import { getEntityMentions } from '../services/api';
+import theme from '../theme';
 
 function MentionsPage() {
   const { entityType, entityId } = useParams();
@@ -19,7 +36,13 @@ function MentionsPage() {
       
       try {
         const data = await getEntityMentions(entityType, entityId, activeSport);
-        setMentions(data.mentions || []);
+        
+        // Sort mentions by recency (newest first)
+        const sortedMentions = (data.mentions || []).sort((a, b) => {
+          return new Date(b.pub_date) - new Date(a.pub_date);
+        });
+        
+        setMentions(sortedMentions);
         setEntityInfo(data.entity_info || null);
       } catch (err) {
         setError('Failed to load mentions. Please try again later.');
@@ -46,7 +69,7 @@ function MentionsPage() {
   if (isLoading) {
     return (
       <Container size="md" py="xl" ta="center">
-        <Loader size="xl" />
+        <Loader size="xl" color={theme.colors.ui.primary} />
         <Text mt="md">Loading mentions...</Text>
       </Container>
     );
@@ -55,8 +78,13 @@ function MentionsPage() {
   if (error) {
     return (
       <Container size="md" py="xl" ta="center">
-        <Title order={3} c="red">{error}</Title>
-        <Button component={Link} to="/" mt="md">
+        <Title order={3} c={theme.colors.status.error}>{error}</Title>
+        <Button 
+          component={Link} 
+          to="/" 
+          mt="md"
+          style={{ backgroundColor: theme.colors.ui.primary }}
+        >
           Return to Home
         </Button>
       </Container>
@@ -66,83 +94,111 @@ function MentionsPage() {
   return (
     <Container size="md" py="xl">
       <Stack spacing="xl">
-        {/* Entity Information */}
-        <Paper p="md" withBorder>
-          <Title order={2} mb="md">{getEntityName()}</Title>
-          
-          {entityInfo && (
-            <Grid>
-              {entityType === 'player' && (
-                <>
-                  <Grid.Col span={{ base: 12, md: 6 }}>
-                    <Text><strong>Position:</strong> {entityInfo.position || 'N/A'}</Text>
-                  </Grid.Col>
-                  <Grid.Col span={{ base: 12, md: 6 }}>
-                    <Text><strong>Team:</strong> {entityInfo.team?.name || 'N/A'}</Text>
-                  </Grid.Col>
-                </>
-              )}
-              
-              {entityType === 'team' && (
-                <>
-                  <Grid.Col span={{ base: 12, md: 6 }}>
-                    <Text><strong>City:</strong> {entityInfo.city || 'N/A'}</Text>
-                  </Grid.Col>
-                  <Grid.Col span={{ base: 12, md: 6 }}>
-                    <Text><strong>Conference:</strong> {entityInfo.conference || 'N/A'}</Text>
-                  </Grid.Col>
-                </>
-              )}
-            </Grid>
-          )}
-          
-          <Group mt="lg">
-            <Button
-              component={Link}
-              to={`/${entityType}/${entityId}`}
-              variant="filled"
-            >
-              View Stats
-            </Button>
-            <Button
-              component={Link}
-              to="/"
-              variant="outline"
-            >
-              Back to Home
-            </Button>
-          </Group>
-        </Paper>
+        {/* Entity Information Box */}
+        <Card 
+          shadow="sm" 
+          p="lg" 
+          radius="md" 
+          withBorder
+          style={{ 
+            backgroundColor: theme.colors.background.secondary,
+            borderColor: theme.colors.ui.border
+          }}
+        >
+          <Stack spacing="md">
+            <Title order={2} style={{ color: theme.colors.text.accent }}>
+              {getEntityName()}
+            </Title>
+            
+            {entityInfo && (
+              <Grid>
+                {entityType === 'player' && (
+                  <>
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Text><strong>Position:</strong> {entityInfo.position || 'N/A'}</Text>
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Text><strong>Team:</strong> {entityInfo.team?.name || 'N/A'}</Text>
+                    </Grid.Col>
+                  </>
+                )}
+                
+                {entityType === 'team' && (
+                  <>
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Text><strong>City:</strong> {entityInfo.city || 'N/A'}</Text>
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Text><strong>Conference:</strong> {entityInfo.conference || 'N/A'}</Text>
+                    </Grid.Col>
+                  </>
+                )}
+              </Grid>
+            )}
+            
+            <Box mt="md">
+              <Button
+                component={Link}
+                to={`/${entityType}/${entityId}`}
+                style={{ 
+                  backgroundColor: theme.colors.ui.primary,
+                  color: 'white'
+                }}
+                size="md"
+                fullWidth
+              >
+                View Stats
+              </Button>
+            </Box>
+          </Stack>
+        </Card>
         
         {/* Recent Mentions */}
         <div>
-          <Title order={3} mb="md">Recent Mentions</Title>
-          <Text c="dimmed" mb="md">News from the last 36 hours</Text>
+          <Title order={3} mb="sm" style={{ color: theme.colors.text.accent }}>
+            Recent Mentions
+          </Title>
+          <Text c="dimmed" mb="lg">News articles mentioning {getEntityName()}</Text>
+          
+          <Divider mb="lg" />
           
           {mentions.length === 0 ? (
             <Text>No recent mentions found.</Text>
           ) : (
-            <Stack spacing="md">
+            <List spacing="md" listStyleType="none" center>
               {mentions.map((mention, index) => (
-                <Card key={index} withBorder shadow="sm">
-                  <Group position="apart" mb="xs">
-                    <Title order={4}>{mention.title}</Title>
-                    <Badge>{mention.source}</Badge>
+                <List.Item key={index}>
+                  <Group position="apart" noWrap align="flex-start">
+                    <Box style={{ flex: 1 }}>
+                      <Text weight={600} size="lg" lineClamp={2}>
+                        {mention.title}
+                      </Text>
+                      <Group spacing="xs" mt={5}>
+                        <Text size="sm" c="dimmed">
+                          {mention.source} • {new Date(mention.pub_date).toLocaleDateString()}
+                        </Text>
+                      </Group>
+                    </Box>
+                    
+                    <Button 
+                      component="a"
+                      href={mention.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="outline"
+                      compact
+                      style={{ 
+                        borderColor: theme.colors.ui.primary,
+                        color: theme.colors.ui.primary
+                      }}
+                    >
+                      Link
+                    </Button>
                   </Group>
-                  <Text lineClamp={3} mb="md">
-                    {mention.description}
-                  </Text>
-                  <Group position="apart">
-                    <Text size="sm" c="dimmed">
-                      {new Date(mention.pub_date).toLocaleDateString()}
-                    </Text>
-                    <Anchor href={mention.link} target="_blank">
-                      Read More
-                    </Anchor>
-                  </Group>
-                </Card>
+                  <Divider mt="md" mb="md" />
+                </List.Item>
               ))}
-            </Stack>
+            </List>
           )}
         </div>
       </Stack>

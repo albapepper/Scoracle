@@ -44,6 +44,16 @@ export const getPlayerDetails = async (playerId, season, sport) => {
   return response.data;
 };
 
+export const getPlayerPercentiles = async (playerId, season, sport) => {
+  const params = {
+    ...(season && { season }),
+    ...(sport && { sport }),
+  };
+  
+  const response = await apiClient.get(`/player/${playerId}/percentiles`, { params });
+  return response.data;
+};
+
 export const getPlayerSeasons = async (playerId, sport) => {
   const params = sport ? { sport } : {};
   const response = await apiClient.get(`/player/${playerId}/seasons`, { params });
@@ -58,6 +68,16 @@ export const getTeamDetails = async (teamId, season, sport) => {
   };
   
   const response = await apiClient.get(`/team/${teamId}`, { params });
+  return response.data;
+};
+
+export const getTeamPercentiles = async (teamId, season, sport) => {
+  const params = {
+    ...(season && { season }),
+    ...(sport && { sport }),
+  };
+  
+  const response = await apiClient.get(`/team/${teamId}/percentiles`, { params });
   return response.data;
 };
 

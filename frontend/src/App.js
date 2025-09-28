@@ -2,6 +2,9 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppShell } from '@mantine/core';
 
+// Theme provider
+import { ThemeProvider } from './ThemeProvider';
+
 // Context provider
 import { SportContextProvider } from './context/SportContext';
 
@@ -18,12 +21,13 @@ import Footer from './components/Footer';
 
 function App() {
   return (
-    <SportContextProvider>
-      <AppShell
-        header={{ height: 60 }}
-        footer={{ height: 60 }}
-        padding="md"
-      >
+    <ThemeProvider>
+      <SportContextProvider>
+        <AppShell
+          header={{ height: 60 }}
+          footer={{ height: 60 }}
+          padding="md"
+        >
         <AppShell.Header>
           <Header />
         </AppShell.Header>
@@ -45,6 +49,7 @@ function App() {
         </AppShell.Footer>
       </AppShell>
     </SportContextProvider>
+  </ThemeProvider>
   );
 }
 

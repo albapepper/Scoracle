@@ -7,13 +7,13 @@ import {
   Card, 
   Title, 
   Text, 
-  Container, 
   SegmentedControl,
   Stack,
-  Center,
 } from '@mantine/core';
 import { useSportContext } from '../context/SportContext';
 import { searchEntities } from '../services/api';
+import theme from '../theme';
+import { IconSearch } from '@tabler/icons-react';
 
 function SearchForm() {
   const navigate = useNavigate();
@@ -50,10 +50,15 @@ function SearchForm() {
   };
   
   return (
-    <Card shadow="sm" p="lg" radius="md" withBorder>
+    <Card shadow="sm" p="lg" radius="md" withBorder style={{ 
+      backgroundColor: theme.colors.background.primary,
+      borderColor: theme.colors.ui.border
+    }}>
       <form onSubmit={handleSubmit}>
         <Stack>
-          <Title order={3} ta="center">Find a Player or Team</Title>
+          <Title order={3} ta="center" style={{ color: theme.colors.text.accent }}>
+            Find a {activeSport} {entityType}
+          </Title>
           
           <SegmentedControl
             value={entityType}
@@ -62,22 +67,44 @@ function SearchForm() {
               { label: 'Player', value: 'player' },
               { label: 'Team', value: 'team' },
             ]}
+            styles={{
+              root: {
+                backgroundColor: theme.colors.background.tertiary,
+                borderColor: theme.colors.ui.border
+              }
+            }}
+            color={theme.colors.ui.primary}
             fullWidth
           />
           
           <TextInput
             required
-            placeholder={`Enter ${entityType} name`}
+            placeholder={`Search for a ${entityType} by name...`}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            size="lg"
+            icon={<IconSearch size="1.2rem" />}
+            styles={{
+              input: {
+                backgroundColor: theme.colors.background.secondary,
+                '&:focus': {
+                  borderColor: theme.colors.ui.primary
+                }
+              }
+            }}
           />
           
-          {error && <Text c="red">{error}</Text>}
+          {error && <Text c="red" ta="center">{error}</Text>}
           
           <Button 
             type="submit" 
             loading={isLoading}
             fullWidth
+            size="md"
+            style={{ 
+              backgroundColor: theme.colors.ui.primary,
+              color: 'white'
+            }}
           >
             Search
           </Button>

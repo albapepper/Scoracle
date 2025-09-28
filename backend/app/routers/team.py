@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from typing import Optional, Dict, Any, List
 from app.services.balldontlie_api import get_team_info, get_team_stats, get_standings
 from app.services.sports_context import get_sports_context
+from app.services.stats_percentile import stats_percentile_service
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -183,3 +184,35 @@ async def get_epl_standings(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching EPL standings: {str(e)}")
+
+
+@router.get("/{team_id}/percentiles")
+async def get_team_stats_percentiles(
+    team_id: str = Path(..., description="ID of the team to fetch stats for"),
+    season: Optional[str] = Query(None, description="Season to fetch stats for"),
+    sports_context = Depends(get_sports_context)
+):
+    """
+    Get team statistics with percentile rankings compared to other teams.
+    """
+    # Get active sport from context
+    sport = sports_context.get_active_sport()
+    
+    try:
+        # First get the team's stats
+        stats = await get_team_stats(team_id, sport, season=season)
+        
+        # Then calculate percentiles based on all teams in that season
+        percentiles = await stats_percentile_service.calculate_percentiles(stats, sport, season)
+        
+        return {
+            "team_id": team_id,
+            "sport": sport,
+            "season": season or "current",
+            "statistics": stats,
+            "percentiles": percentiles
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error calculating team percentiles: {str(e)}")
