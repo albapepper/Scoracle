@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import theme from '../theme';
 
@@ -11,26 +11,11 @@ const PlayerStatsRadarChart = ({ stats, percentiles, showPercentiles = false }) 
   const [chartMode, setChartMode] = useState(showPercentiles ? 'percentiles' : 'raw');
   
   // Toggle between raw stats and percentiles
-  const toggleChartMode = () => {
-    setChartMode(prev => prev === 'raw' ? 'percentiles' : 'raw');
-  };
+  const toggleChartMode = useCallback(() => {
+    setChartMode((prev) => (prev === 'raw' ? 'percentiles' : 'raw'));
+  }, []);
   
-  useEffect(() => {
-    if (!stats || !chartRef.current) return;
-    
-    // Clear previous chart
-    d3.select(chartRef.current).selectAll("*").remove();
-    
-    // Create the radar chart
-    createRadarChart();
-    
-    // Add toggle button if percentiles are available
-    if (percentiles && Object.keys(percentiles).length > 0) {
-      addToggleButton();
-    }
-  }, [stats, percentiles, chartMode]);
-  
-  const getPercentileColor = (percentile) => {
+  const getPercentileColor = useCallback((percentile) => {
     // Use the theme's percentile color scale
     const percentileColors = theme.colors.visualization.percentiles;
     
@@ -39,9 +24,9 @@ const PlayerStatsRadarChart = ({ stats, percentiles, showPercentiles = false }) 
     if (percentile >= 40) return percentileColors[2]; // Average (40-60%)
     if (percentile >= 20) return percentileColors[1]; // Below average (20-40%)
     return percentileColors[0]; // Very low (0-20%)
-  };
-  
-  const addToggleButton = () => {
+  }, []);
+
+  const addToggleButton = useCallback(() => {
     const container = d3.select(chartRef.current);
     
     // Remove existing button if any
@@ -61,9 +46,9 @@ const PlayerStatsRadarChart = ({ stats, percentiles, showPercentiles = false }) 
       .style('cursor', 'pointer')
       .text(chartMode === 'raw' ? 'Show Percentiles' : 'Show Raw Stats')
       .on('click', toggleChartMode);
-  };
-  
-  const createRadarChart = () => {
+  }, [chartMode, toggleChartMode]);
+
+  const createRadarChart = useCallback(() => {
     // Define key stats to visualize with their display names
     const statDefinitions = [
       { key: 'points_per_game', name: 'Points', max: 30 },
@@ -307,7 +292,22 @@ const PlayerStatsRadarChart = ({ stats, percentiles, showPercentiles = false }) 
           .text(item.label);
       });
     }
-  };
+  }, [chartMode, percentiles, stats, getPercentileColor]);
+
+  useEffect(() => {
+    if (!stats || !chartRef.current) return;
+
+    // Clear previous chart
+    d3.select(chartRef.current).selectAll("*").remove();
+
+    // Create the radar chart
+    createRadarChart();
+
+    // Add toggle button if percentiles are available
+    if (percentiles && Object.keys(percentiles).length > 0) {
+      addToggleButton();
+    }
+  }, [stats, percentiles, createRadarChart, addToggleButton]);
   
   return (
     <div ref={chartRef} style={{ width: '100%', height: '400px', position: 'relative' }}>

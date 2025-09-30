@@ -2,23 +2,23 @@ FROM node:16-alpine as build
 
 WORKDIR /app
 
-# Copy package.json and install dependencies
-COPY package.json package-lock.json* ./
-RUN npm ci
+# Install dependencies
+COPY package.json ./
+RUN npm install
 
-# Copy application code
+# Copy application source
 COPY . .
 
-# Build the React app
+# Build the production bundle
 RUN npm run build
 
-# Production stage
+# Production image
 FROM nginx:stable-alpine
 
-# Copy built files from build stage
+# Copy build artifacts into nginx html directory
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Copy custom nginx config to handle React Router
+# Provide custom nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80

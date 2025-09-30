@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import theme from '../theme';
 
@@ -11,26 +11,11 @@ const TeamStatsBarChart = ({ stats, percentiles, showPercentiles = false }) => {
   const [chartMode, setChartMode] = useState(showPercentiles ? 'percentiles' : 'raw');
   
   // Toggle between raw stats and percentiles
-  const toggleChartMode = () => {
-    setChartMode(prev => prev === 'raw' ? 'percentiles' : 'raw');
-  };
-  
-  useEffect(() => {
-    if (!stats || !chartRef.current) return;
-    
-    // Clear previous chart
-    d3.select(chartRef.current).selectAll("*").remove();
-    
-    // Create the bar chart
-    createBarChart();
-    
-    // Add toggle button if percentiles are available
-    if (percentiles && Object.keys(percentiles).length > 0) {
-      addToggleButton();
-    }
-  }, [stats, percentiles, chartMode]);
-  
-  const getPercentileColor = (percentile) => {
+  const toggleChartMode = useCallback(() => {
+    setChartMode((prev) => (prev === 'raw' ? 'percentiles' : 'raw'));
+  }, []);
+
+  const getPercentileColor = useCallback((percentile) => {
     // Use the theme's percentile color scale
     const percentileColors = theme.colors.visualization.percentiles;
     
@@ -39,9 +24,9 @@ const TeamStatsBarChart = ({ stats, percentiles, showPercentiles = false }) => {
     if (percentile >= 40) return percentileColors[2]; // Average (40-60%)
     if (percentile >= 20) return percentileColors[1]; // Below average (20-40%)
     return percentileColors[0]; // Very low (0-20%)
-  };
-  
-  const addToggleButton = () => {
+  }, []);
+
+  const addToggleButton = useCallback(() => {
     const container = d3.select(chartRef.current);
     
     // Remove existing button if any
@@ -61,9 +46,9 @@ const TeamStatsBarChart = ({ stats, percentiles, showPercentiles = false }) => {
       .style('cursor', 'pointer')
       .text(chartMode === 'raw' ? 'Show Percentiles' : 'Show Raw Stats')
       .on('click', toggleChartMode);
-  };
-  
-  const createBarChart = () => {
+  }, [chartMode, toggleChartMode]);
+
+  const createBarChart = useCallback(() => {
     // Define key stats to visualize with their display names and keys
     const statDefinitions = [
       { key: 'points_per_game', label: 'Points' },
@@ -260,7 +245,22 @@ const TeamStatsBarChart = ({ stats, percentiles, showPercentiles = false }) => {
           .text(item.label);
       });
     }
-  };
+  }, [chartMode, percentiles, stats, getPercentileColor]);
+
+  useEffect(() => {
+    if (!stats || !chartRef.current) return;
+
+    // Clear previous chart
+    d3.select(chartRef.current).selectAll("*").remove();
+
+    // Create the bar chart
+    createBarChart();
+
+    // Add toggle button if percentiles are available
+    if (percentiles && Object.keys(percentiles).length > 0) {
+      addToggleButton();
+    }
+  }, [stats, percentiles, createBarChart, addToggleButton]);
   
   return (
     <div ref={chartRef} style={{ width: '100%', height: '300px', position: 'relative' }}>

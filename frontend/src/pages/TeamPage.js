@@ -13,7 +13,7 @@ function TeamPage() {
   const [teamInfo, setTeamInfo] = useState(null);
   const [teamStats, setTeamStats] = useState(null);
   const [teamRoster, setTeamRoster] = useState([]);
-  const [availableSeasons, setAvailableSeasons] = useState(['2023-2024', '2022-2023', '2021-2022']); // Placeholder
+  const availableSeasons = ['2023-2024', '2022-2023', '2021-2022'];
   const [selectedSeason, setSelectedSeason] = useState('2023-2024'); // Default to current season
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
