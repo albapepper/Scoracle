@@ -177,6 +177,10 @@ The application uses the following API keys:
 - Add comparison features for players and teams
 - Implement real-time score updates
 
+## Deployment
+
+- [Google Cloud Run guide](docs/deployment/cloud-run.md) — step-by-step instructions for publishing the frontend and backend using Artifact Registry and Cloud Run.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
