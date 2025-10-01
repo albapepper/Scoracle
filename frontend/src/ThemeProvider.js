@@ -41,6 +41,20 @@ const mantineTheme = createTheme({
         color: 'primary',
       },
     },
+    Card: {
+      styles: {
+        root: {
+          backgroundColor: theme.colors.background.secondary,
+        },
+      },
+    },
+    Paper: {
+      styles: {
+        root: {
+          backgroundColor: theme.colors.background.secondary,
+        },
+      },
+    },
   },
   
   // Set color scheme
@@ -56,10 +70,10 @@ const mantineTheme = createTheme({
   },
   
   // Custom global styles
-  globalStyles: (theme) => ({
+  globalStyles: (mantineTheme) => ({
     body: {
-      backgroundColor: '#f8f8f5', // Eggshell background
-      color: '#333333', // Dark text
+      backgroundColor: theme.colors.background.primary, // Eggshell background from our tokens
+      color: theme.colors.text.primary, // Dark text from tokens
       fontFamily: "'Source Sans Pro', 'Segoe UI', sans-serif",
     },
     a: {

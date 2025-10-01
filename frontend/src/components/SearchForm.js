@@ -50,7 +50,7 @@ function SearchForm() {
   
   return (
     <Card shadow="sm" p="lg" radius="md" withBorder style={{ 
-      backgroundColor: theme.colors.background.primary,
+      backgroundColor: theme.colors.background.secondary,
       borderColor: theme.colors.ui.border
     }}>
       <form onSubmit={handleSubmit}>

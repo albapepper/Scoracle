@@ -8,8 +8,8 @@ const theme = {
   colors: {
     // Background colors
     background: {
-      primary: '#f8f8f5', // Eggshell white for main background
-      secondary: '#f2f2ee', // Slightly darker eggshell for cards/sections
+      primary: '#f8f8f5', // Eggshell white for main page background
+      secondary: '#f3efe6', // Bone tone for cards/sections (softer than eggshell)
       tertiary: '#e8e8e2', // For highlights and accents
     },
     
@@ -101,6 +101,22 @@ const theme = {
     md: '0 2px 4px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.07)',
     lg: '0 4px 6px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06)',
     xl: '0 10px 15px rgba(0, 0, 0, 0.03), 0 4px 6px rgba(0, 0, 0, 0.05)',
+  }
+};
+
+// Header-specific tokens for consistent styling
+theme.header = {
+  // Deeper, sophisticated blue gradient
+  gradientStart: '#2b6fb4',
+  gradientEnd: '#1e5aa0',
+  // Title styles
+  title: {
+    color: '#ffffff',
+    // Slightly stronger stroke for better pop
+    strokeWidth: '1.25px',
+    strokeColor: 'rgba(0,0,0,0.9)',
+    // fallback text-shadow for non-webkit browsers
+    textShadow: '0 0 1px rgba(0,0,0,0.6), 0 1px 0 rgba(0,0,0,0.6)'
   }
 };
 

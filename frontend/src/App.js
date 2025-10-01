@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppShell } from '@mantine/core';
+import theme from './theme';
 
 // Theme provider
 import { ThemeProvider } from './ThemeProvider';
@@ -27,6 +28,7 @@ function App() {
           header={{ height: 60 }}
           footer={{ height: 60 }}
           padding="md"
+          styles={{ main: { backgroundColor: theme.colors.background.primary } }}
         >
         <AppShell.Header>
           <Header />
