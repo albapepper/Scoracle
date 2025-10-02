@@ -1,23 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  TextInput, 
-  Button, 
-  Card, 
-  Title, 
-  Text, 
-  SegmentedControl,
-  Stack,
-} from '@mantine/core';
+import { Button, Card, Title, Text, SegmentedControl, Stack } from '@mantine/core';
 import { useSportContext } from '../context/SportContext';
-import { searchEntities } from '../services/api';
+import { searchEntities } from '../services/api'; // fallback search
+import EntityAutocomplete from './EntityAutocomplete';
 import theme from '../theme';
-import { IconSearch } from '@tabler/icons-react';
 
 function SearchForm() {
   const navigate = useNavigate();
   const { activeSport } = useSportContext();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(''); // still track for fallback submit
+  const [selected, setSelected] = useState(null);
   const [entityType, setEntityType] = useState('player');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -31,13 +24,19 @@ function SearchForm() {
       if (!query.trim()) {
         throw new Error('Please enter a search term');
       }
-      
+      // If user selected from autocomplete, trust that ID
+      if (selected) {
+        navigate(`/mentions/${entityType}/${selected.id}?sport=${activeSport}`);
+        return;
+      }
+      // Fallback: perform legacy search
       const results = await searchEntities(query, entityType, activeSport);
-      
-      if (results.results && results.results.length > 0) {
-        // Navigate to the first result's mentions page
+      if (results.results && results.results.length === 1) {
+        const only = results.results[0];
+        navigate(`/mentions/${entityType}/${only.id}?sport=${activeSport}`);
+      } else if (results.results && results.results.length > 1) {
         const firstResult = results.results[0];
-        navigate(`/mentions/${entityType}/${firstResult.id}`);
+        navigate(`/mentions/${entityType}/${firstResult.id}?sport=${activeSport}`);
       } else {
         setError(`No ${entityType}s found matching "${query}"`);
       }
@@ -76,21 +75,10 @@ function SearchForm() {
             fullWidth
           />
           
-          <TextInput
-            required
-            placeholder={`Search for a ${entityType} by name...`}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            size="lg"
-            icon={<IconSearch size="1.2rem" />}
-            styles={{
-              input: {
-                backgroundColor: theme.colors.background.secondary,
-                '&:focus': {
-                  borderColor: theme.colors.ui.primary
-                }
-              }
-            }}
+          <EntityAutocomplete
+            entityType={entityType}
+            placeholder={`Start typing a ${entityType} name...`}
+            onSelect={(item) => { setSelected(item); setQuery(item.label); }}
           />
           
           {error && <Text c="red" ta="center">{error}</Text>}
@@ -105,7 +93,7 @@ function SearchForm() {
               color: 'white'
             }}
           >
-            Search
+            {selected ? 'Go' : 'Search'}
           </Button>
         </Stack>
       </form>

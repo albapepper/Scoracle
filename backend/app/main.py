@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.routers import home, mentions, links, player, team
+from app.routers import home, mentions, links, player, team, autocomplete
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -27,6 +27,7 @@ app.include_router(mentions.router, prefix="/api/v1", tags=["mentions"])
 app.include_router(links.router, prefix="/api/v1", tags=["links"])
 app.include_router(player.router, prefix="/api/v1", tags=["player"])
 app.include_router(team.router, prefix="/api/v1", tags=["team"])
+app.include_router(autocomplete.router, prefix="/api/v1", tags=["autocomplete"])
 
 @app.get("/api/health")
 def health_check():

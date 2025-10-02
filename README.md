@@ -110,6 +110,64 @@ uvicorn app.main:app --reload
 
 5. Access the API documentation at http://localhost:8000/api/docs
 
+### Local Development Quick Start (Copy/Paste)
+
+These snippets let you spin up just what you need without Docker while iterating.
+
+#### Backend (FastAPI) – Windows PowerShell
+
+```powershell
+cd backend
+python -m venv venv
+./venv/Scripts/Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+#### Backend (macOS / Linux bash)
+
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+API docs: http://localhost:8000/api/docs
+
+#### Frontend (React) – Windows PowerShell / macOS / Linux
+
+```powershell
+cd frontend
+npm install
+npm start
+```
+
+The React dev server proxies API calls to http://localhost:8000 via the `proxy` field in `frontend/package.json`.
+
+#### One-Liner (already installed deps & venv exists)
+
+PowerShell:
+```powershell
+cd backend; ./venv/Scripts/Activate.ps1; uvicorn app.main:app --reload --port 8000
+```
+
+macOS/Linux:
+```bash
+cd backend && source venv/bin/activate && uvicorn app.main:app --reload --port 8000
+```
+
+#### Stopping Services
+- Backend (Ctrl+C in the uvicorn terminal)
+- Frontend (Ctrl+C in the React dev server terminal)
+- Docker stack (if running): `docker-compose down`
+
+#### Troubleshooting Quick Notes
+- If imports fail after refactor, ensure the virtualenv is activated.
+- Port already in use? Change with `--port 8001` (update frontend `proxy` if needed).
+- If API key changes, expose it via an `.env` and load in `settings` (future enhancement).
+
 #### Frontend (React)
 
 1. Navigate to the frontend directory
@@ -180,10 +238,6 @@ The application uses the following API keys:
 ## Deployment
 
 - [Google Cloud Run guide](docs/deployment/cloud-run.md) — step-by-step instructions for publishing the frontend and backend using Artifact Registry and Cloud Run.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
