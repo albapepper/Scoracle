@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 from typing import List, Optional
 from app.services.balldontlie_api import balldontlie_service
@@ -22,14 +22,21 @@ class AutocompleteResponse(BaseModel):
 
 @router.get("/autocomplete/{entity_type}", response_model=AutocompleteResponse)
 async def autocomplete(
+    request: Request,
     entity_type: str,
     q: str = Query(..., min_length=1, description="Partial name to search"),
     sport: str = Query("NBA", description="Sport (currently NBA supported)"),
     limit: int = Query(8, ge=1, le=15)
 ):
-    entity_type = entity_type.lower()
+    raw_entity_type = entity_type
+    entity_type = (entity_type or "").strip().lower()
     if entity_type not in {"player", "team"}:
-        raise HTTPException(status_code=400, detail="entity_type must be 'player' or 'team'")
+        # Log a hint for debugging mismatches
+        request.app.logger.warning(
+            "Autocomplete invalid entity_type received",
+            extra={"raw": raw_entity_type, "normalized": entity_type, "path": str(request.url)}
+        )
+        raise HTTPException(status_code=400, detail="Entity type must be 'player' or 'team'")
 
     # Minimum 2 chars before hitting upstream to reduce noise
     if len(q.strip()) < 2:
@@ -72,5 +79,9 @@ async def autocomplete(
             sport=sport,
             results=suggestions[:limit]
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Autocomplete error: {str(e)}")
+        # Include limited context for diagnostics
+        request.app.logger.error("Autocomplete internal error", extra={"error": str(e), "q": q, "entity_type": entity_type})
+        raise HTTPException(status_code=500, detail="Autocomplete internal error")
