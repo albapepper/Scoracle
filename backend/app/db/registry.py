@@ -3,6 +3,8 @@ import asyncio
 import logging
 from typing import List, Optional, Dict, Any
 from app.services.balldontlie_api import balldontlie_service
+from app.core.config import settings
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +27,11 @@ CREATE INDEX IF NOT EXISTS idx_entities_search ON entities (sport, entity_type, 
 """
 
 class EntityRegistry:
-    def __init__(self, db_path: str = "./registry.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: str | None = None):
+        resolved = db_path or settings.REGISTRY_DB_PATH
+        # Ensure parent directory exists
+        os.makedirs(os.path.dirname(resolved), exist_ok=True)
+        self.db_path = resolved
         self._conn: Optional[aiosqlite.Connection] = None
         # Ingestion state
         self.ingesting: bool = False

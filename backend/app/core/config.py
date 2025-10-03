@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     
     # API Keys
     BALLDONTLIE_API_KEY: str = os.getenv("BALLDONTLIE_API_KEY", "fd8788ca-65fe-4ea6-896f-a2c9776977d1")
+    REGISTRY_DB_PATH: str = os.getenv("REGISTRY_DB_PATH", "instance/registry.db")
     
     class Config:
         case_sensitive = True
