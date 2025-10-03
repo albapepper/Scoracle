@@ -5,6 +5,7 @@ from typing import List, Optional, Dict, Any
 from app.services.balldontlie_api import balldontlie_service
 from app.core.config import settings
 import os
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +29,15 @@ CREATE INDEX IF NOT EXISTS idx_entities_search ON entities (sport, entity_type, 
 
 class EntityRegistry:
     def __init__(self, db_path: str | None = None):
-        resolved = db_path or settings.REGISTRY_DB_PATH
-        # Ensure parent directory exists
-        os.makedirs(os.path.dirname(resolved), exist_ok=True)
-        self.db_path = resolved
+        if db_path:
+            resolved = Path(db_path)
+        else:
+            # Always anchor at project root (two levels up from this file: backend/app/db -> project root) then instance/registry.db
+            project_root = Path(__file__).resolve().parents[3]
+            resolved = project_root / settings.REGISTRY_DB_PATH
+        resolved.parent.mkdir(parents=True, exist_ok=True)
+        self.db_path = str(resolved)
+        logger.info("Entity registry path set to %s", self.db_path)
         self._conn: Optional[aiosqlite.Connection] = None
         # Ingestion state
         self.ingesting: bool = False

@@ -83,11 +83,13 @@ app.include_router(maintenance_router)
 
 @app.get("/api/health")
 def health_check():
+    logger.info("Health endpoint hit")
     return {"status": "healthy"}
 
 @app.get("/")
 async def root():
     """Simple root route so hitting / doesn't 404 and confuse the reloader/browser."""
+    logger.info("Root endpoint hit")
     return {
         "message": "Scoracle API",
         "docs": "/api/docs",
