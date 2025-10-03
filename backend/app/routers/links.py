@@ -4,7 +4,7 @@ from app.services.google_rss import get_related_links
 
 router = APIRouter()
 
-@router.get("/{entity_type}/{entity_id}")
+@router.get("/links/{entity_type}/{entity_id}")
 async def get_entity_links(
     entity_type: str = Path(..., description="Type of entity: player or team"),
     entity_id: str = Path(..., description="ID of the entity to fetch links for"),

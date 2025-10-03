@@ -76,3 +76,17 @@ class SearchResult(BaseModel):
     name: str
     sport: str
     additional_info: Dict[str, Any] = {}
+
+class SearchResponse(BaseModel):
+    query: str
+    entity_type: str
+    sport: str
+    results: List[SearchResult]
+
+class MentionsResponse(BaseModel):
+    entity_type: str
+    entity_id: str
+    sport: str
+    entity_info: Optional[Dict[str, Any]] = None
+    mentions: List[NewsItem]
+    missing_entity: bool = False

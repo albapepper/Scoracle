@@ -38,6 +38,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# When run via `python -m app.main` provide a helpful hint (Uvicorn should be used instead)
+if __name__ == "__main__":
+    import uvicorn, os
+    port = int(os.environ.get("PORT", "8000"))
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=False)
+
 # Configure CORS
 origins = ["*"]
 app.add_middleware(

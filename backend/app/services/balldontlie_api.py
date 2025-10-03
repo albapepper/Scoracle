@@ -1,6 +1,9 @@
 from typing import Dict, Optional
 from app.core.config import settings
 import httpx
+from fastapi import HTTPException
+import logging
+logger = logging.getLogger(__name__)
 """Service layer for interacting with the balldontlie API.
 
 Refactor notes (2025-10-01):
@@ -40,22 +43,61 @@ class BallDontLieService:
     async def get_player_by_id(self, player_id: str, basic_only: bool = False):
         """Get NBA player information by ID"""
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(f"{self.get_base_url('NBA')}/players/{player_id}", headers=headers)
-            response.raise_for_status()
-            data = response.json()
-        
+        # Prefer shared client if available on app state (set by lifespan)
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as fallback_client:
+                client = fallback_client
+                response = await client.get(f"{self.get_base_url('NBA')}/players/{player_id}", headers=headers)
+                response.raise_for_status()
+                data = response.json()
+        except httpx.HTTPStatusError as e:
+            logger.warning("Upstream player fetch failed", extra={"player_id": player_id, "status": e.response.status_code})
+            raise HTTPException(status_code=502, detail=f"Upstream player service error ({e.response.status_code})")
+        except httpx.HTTPError as e:
+            logger.error("Upstream player fetch network error", extra={"player_id": player_id, "error": str(e)})
+            raise HTTPException(status_code=502, detail="Upstream player service unreachable")
+        # Some upstream anomalies (rate-limit or temporary wrappers) may wrap the object
+        # in a root key like {"data": {...}} or return a list. Normalize here.
+        if isinstance(data, dict) and "data" in data and not isinstance(data.get("data"), list):
+            # Single object nested under data
+            data = data["data"]
+        elif isinstance(data, dict) and "data" in data and isinstance(data.get("data"), list):
+            # If a list was returned unexpectedly, attempt to locate by id
+            for item in data["data"]:
+                if item.get("id") == int(player_id):
+                    data = item
+                    break
+        # Defensive: if still not an object with id, propagate structured error
+        # Defensive validation – upstream occasionally can return a rate‑limit or error payload
+        # that passes raise_for_status() (e.g. 200 with an alternate schema). Guard against
+        # KeyErrors propagating into generic logs in the mentions route.
         if basic_only:
-            # Return only basic information
+            if data.get("id") is None:
+                logger.error(
+                    "Malformed upstream player payload: missing id", 
+                    extra={"player_id": player_id, "keys": list(data.keys())[:15]}
+                )
+                # Surface a structured upstream error so caller can mark missing_entity
+                raise HTTPException(status_code=502, detail="Malformed upstream player payload (missing id)")
+            team_obj = data.get("team", {}) or {}
             return {
-                "id": data["id"],
-                "first_name": data["first_name"],
-                "last_name": data["last_name"],
-                "position": data["position"],
+                "id": data.get("id"),
+                "first_name": data.get("first_name"),
+                "last_name": data.get("last_name"),
+                "position": data.get("position"),
+                # Additional fields exposed for player card
+                "height": data.get("height"),
+                "weight": data.get("weight"),
+                "jersey_number": data.get("jersey_number"),
+                "college": data.get("college"),
+                "country": data.get("country"),
+                "draft_year": data.get("draft_year"),
+                "draft_round": data.get("draft_round"),
+                "draft_number": data.get("draft_number"),
                 "team": {
-                    "id": data["team"]["id"],
-                    "name": data["team"]["full_name"],
-                    "abbreviation": data["team"]["abbreviation"],
+                    "id": team_obj.get("id"),
+                    "name": team_obj.get("full_name") or team_obj.get("name"),
+                    "abbreviation": team_obj.get("abbreviation"),
                 }
             }
         
@@ -377,7 +419,37 @@ async def get_player_info(player_id: str, sport: str, basic_only: bool = False):
     """Get player information, respecting the sport context"""
     sport_upper = sport.upper()
     if sport_upper == "NBA":
-        return await balldontlie_service.get_player_by_id(player_id, basic_only=basic_only)
+        try:
+            return await balldontlie_service.get_player_by_id(player_id, basic_only=basic_only)
+        except HTTPException as e:
+            # Attempt registry fallback only for basic_only (mentions view); if fallback succeeds, mark source
+            if basic_only:
+                try:
+                    from app.db.registry import entity_registry  # local import to avoid circular
+                    # Ensure connection (best-effort)
+                    try:
+                        await entity_registry.connect()
+                    except Exception:
+                        pass
+                    row = await entity_registry.get_basic('NBA', 'player', int(player_id))
+                    if row:
+                        logger.info("Using registry fallback for player %s", player_id)
+                        return {
+                            "id": row.get("id"),
+                            "first_name": row.get("first_name"),
+                            "last_name": row.get("last_name"),
+                            "position": row.get("position"),
+                            "team": {
+                                "id": row.get("team_id"),
+                                "name": row.get("team_abbr"),
+                                "abbreviation": row.get("team_abbr"),
+                            },
+                            "fallback_source": "registry"
+                        }
+                except Exception as reg_ex:
+                    logger.warning("Registry fallback failed for player %s: %s", player_id, reg_ex)
+            # Re-raise original if no fallback
+            raise e
     elif sport_upper == "NFL":
         return await balldontlie_service.get_nfl_player_by_id(player_id, basic_only=basic_only)
     elif sport_upper == "EPL":

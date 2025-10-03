@@ -29,6 +29,7 @@ export const searchEntities = async (query, entityType, sport) => {
 // Mentions services
 export const getEntityMentions = async (entityType, entityId, sport) => {
   const params = sport ? { sport } : {};
+  // Backend route now namespaced under /mentions
   const response = await apiClient.get(`/mentions/${entityType}/${entityId}`, { params });
   return response.data;
 };

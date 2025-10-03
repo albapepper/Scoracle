@@ -117,6 +117,24 @@ function MentionsPage() {
                     <Grid.Col span={{ base: 12, md: 6 }}>
                       <Text><strong>Team:</strong> {entityInfo.team?.name || 'N/A'}</Text>
                     </Grid.Col>
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Text><strong>Height:</strong> {entityInfo.height || 'N/A'}</Text>
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Text><strong>Weight:</strong> {entityInfo.weight || 'N/A'}</Text>
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <Text><strong>Jersey #:</strong> {entityInfo.jersey_number || 'N/A'}</Text>
+                    </Grid.Col>
+                    { (entityInfo.college || entityInfo.draft_year) && (
+                      <Grid.Col span={12}>
+                        <Text>
+                          <strong>Background:</strong> {entityInfo.college ? `${entityInfo.college}` : ''}
+                          {entityInfo.college && entityInfo.draft_year ? ' • ' : ''}
+                          {entityInfo.draft_year ? `Draft ${entityInfo.draft_year}${entityInfo.draft_round ? ` R${entityInfo.draft_round}` : ''}${entityInfo.draft_number ? ` P${entityInfo.draft_number}` : ''}` : ''}
+                        </Text>
+                      </Grid.Col>
+                    ) }
                   </>
                 )}
                 

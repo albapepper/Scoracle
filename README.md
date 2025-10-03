@@ -196,22 +196,27 @@ npm start
 - `GET /api/v1/search` - Search for players or teams
 
 #### Mentions Router
-- `GET /api/v1/mentions/{entity_type}/{entity_id}` - Get mentions and basic information for a player or team
+
+- `GET /api/v1/mentions/{entity_type}/{entity_id}` - Get mentions and basic information for a player or team (namespaced to avoid route conflicts)
 
 #### Links Router
-- `GET /api/v1/links/{entity_type}/{entity_id}` - Get related links for a player or team
+
+- `GET /api/v1/links/{entity_type}/{entity_id}` - Get related links for a player or team (namespaced to avoid route conflicts)
 
 #### Player Router
+
 - `GET /api/v1/player/{player_id}` - Get detailed player information and statistics
 - `GET /api/v1/player/{player_id}/seasons` - Get list of seasons for which a player has statistics
 
 #### Team Router
+
 - `GET /api/v1/team/{team_id}` - Get detailed team information and statistics
 - `GET /api/v1/team/{team_id}/roster` - Get roster of players for a team
 
 ### API Keys
 
 The application uses the following API keys:
+
 - **balldontlie.io API**: `fd8788ca-65fe-4ea6-896f-a2c9776977d1`
 
 ## Data Flow

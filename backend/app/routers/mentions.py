@@ -3,7 +3,7 @@ from typing import Dict, Optional, List, Any
 from pydantic import BaseModel, Field
 from app.services.google_rss import get_entity_mentions
 from app.services.balldontlie_api import get_player_info, get_team_info, get_players, get_teams
-from app.models.schemas import PlayerBase, TeamBase
+from app.models.schemas import PlayerBase, TeamBase, MentionsResponse
 
 router = APIRouter()
 
@@ -43,7 +43,7 @@ async def get_sport_teams(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching teams: {str(e)}")
 
-@router.get("/{entity_type}/{entity_id}")
+@router.get("/mentions/{entity_type}/{entity_id}", response_model=MentionsResponse)
 async def get_mentions(
     entity_type: str = Path(..., description="Type of entity: player or team"),
     entity_id: str = Path(..., description="ID of the entity to fetch mentions for"),
@@ -56,24 +56,30 @@ async def get_mentions(
     if entity_type not in ["player", "team"]:
         raise HTTPException(status_code=400, detail="Entity type must be 'player' or 'team'")
     
-    # Get mentions from RSS service
-    mentions = await get_entity_mentions(entity_type, entity_id, sport)
-    
-    # Get basic entity info from the appropriate API
+    # Get mentions from RSS service (empty list acceptable)
+    sport = sport or "NBA"
+    mentions = await get_entity_mentions(entity_type, entity_id, sport) or []
+
+    entity_info = None
+    missing_entity = False
     try:
         if entity_type == "player":
             entity_info = await get_player_info(entity_id, sport, basic_only=True)
         else:
             entity_info = await get_team_info(entity_id, sport, basic_only=True)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except ValueError:
+        # Unsupported sport requested; mark missing but preserve mentions
+        missing_entity = True
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching entity info: {str(e)}")
-    
-    return {
-        "entity_type": entity_type,
-        "entity_id": entity_id,
-        "sport": sport,
-        "entity_info": entity_info,
-        "mentions": mentions
-    }
+        # For now, log silently via print (later replace with structured logging)
+        print(f"entity_info fetch failed: {e}")
+        missing_entity = True
+
+    return MentionsResponse(
+        entity_type=entity_type,
+        entity_id=entity_id,
+        sport=sport,
+        entity_info=entity_info,
+        mentions=mentions,
+        missing_entity=missing_entity
+    )
