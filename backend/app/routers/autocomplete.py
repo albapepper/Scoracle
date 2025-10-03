@@ -4,7 +4,7 @@ from pydantic import BaseModel
 import time
 import logging
 
-from app.services.sports_context import get_sport_service
+from app.services.balldontlie_api import balldontlie_service
 from app.db.registry import entity_registry
 
 router = APIRouter()
@@ -110,10 +110,12 @@ async def autocomplete(
         except Exception as e:
             logger.warning("Registry search failed, falling back to upstream: %s", e)
 
-        # Fallback to upstream service
-        service = get_sport_service(sport)
-        if not service:
-            raise HTTPException(status_code=400, detail=f"Unsupported sport: {sport}")
+        # Fallback to upstream service (currently only NBA implemented)
+        service = None
+        if sport.upper() == 'NBA':
+            service = balldontlie_service
+        if service is None:
+            raise HTTPException(status_code=400, detail=f"Unsupported sport for upstream fallback: {sport}")
 
         try:
             if entity_type == 'player':
