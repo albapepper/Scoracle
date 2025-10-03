@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 from contextlib import asynccontextmanager
 import httpx
+import asyncio
 
 from app.routers import home, autocomplete, mentions, links, player, team
 from app.core.config import settings
@@ -15,15 +16,10 @@ async def lifespan(app: FastAPI):
     # Startup
     app.state.http_client = httpx.AsyncClient(timeout=15.0)
     await entity_registry.connect()
-    try:
-        # Optionally trigger initial ingestion if empty
-        players_count = await entity_registry.count("NBA", "player")
-        teams_count = await entity_registry.count("NBA", "team")
-        if players_count == 0 or teams_count == 0:
-            logger.info("Registry empty; starting initial NBA ingestion")
-            await entity_registry.ingest_sport("NBA")
-    except Exception as e:
-        logger.error("Error during initial registry ingestion: %s", e)
+    # Kick off non-blocking background ingestion if needed
+    async def _bg_ingest():
+        await entity_registry.ensure_ingested_if_empty("NBA")
+    asyncio.create_task(_bg_ingest())
     yield
     # Shutdown
     await app.state.http_client.aclose()
@@ -77,6 +73,7 @@ async def registry_counts():
             "players": await entity_registry.count(sport, "player"),
             "teams": await entity_registry.count(sport, "team"),
         }
+    counts["status"] = entity_registry.status()
     return counts
 
 app.include_router(maintenance_router)
