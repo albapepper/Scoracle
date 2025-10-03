@@ -18,7 +18,10 @@ async def lifespan(app: FastAPI):
     await entity_registry.connect()
     # Kick off non-blocking background ingestion if needed
     async def _bg_ingest():
-        await entity_registry.ensure_ingested_if_empty("NBA")
+        try:
+            await entity_registry.ensure_ingested_if_empty("NBA")
+        except Exception:
+            logger.exception("Background ingestion crashed")
     asyncio.create_task(_bg_ingest())
     yield
     # Shutdown
@@ -81,3 +84,13 @@ app.include_router(maintenance_router)
 @app.get("/api/health")
 def health_check():
     return {"status": "healthy"}
+
+@app.get("/")
+async def root():
+    """Simple root route so hitting / doesn't 404 and confuse the reloader/browser."""
+    return {
+        "message": "Scoracle API",
+        "docs": "/api/docs",
+        "openapi": "/api/openapi.json",
+        "health": "/api/health"
+    }
