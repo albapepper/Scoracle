@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from typing import Optional, Dict, Any, List
+import logging
 from app.services.balldontlie_api import get_player_info, get_player_stats
 from app.services.sports_context import get_sports_context
 from app.services.stats_percentile import stats_percentile_service
@@ -7,10 +8,12 @@ from app.services.google_rss import get_entity_mentions
 from app.services.cache import basic_cache, stats_cache, percentile_cache
 from pydantic import BaseModel
 from app.models.schemas import PlayerFullResponse
+from pydantic import ValidationError
 
 from app.core.config import settings
 import httpx
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 @router.get("/{player_id}")
 async def get_player_details(
@@ -52,73 +55,130 @@ async def get_player_details(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching player details: {str(e)}")
 
+def _normalize_season_for_upstream(sport: str, season: Optional[str]) -> Optional[str]:
+    """Normalize season formats coming from the UI.
+
+    Accepted inputs examples:
+    - "2022" (already fine)
+    - "2022-2023" (take the first year for upstream NBA season_averages)
+    - "current" or None -> None (let upstream treat as current season when supported)
+    """
+    if not season or season.lower() == "current":
+        return None
+    # Only implement normalization for NBA for now; other sports keep raw (they may expect single year anyway)
+    if sport.upper() == "NBA" and "-" in season:
+        first = season.split("-")[0]
+        if first.isdigit():
+            return first
+    return season
+
 @router.get("/{player_id}/full", response_model=PlayerFullResponse)
 async def get_player_full(
     player_id: str = Path(..., description="ID of the player"),
-    season: Optional[str] = Query(None, description="Season to fetch stats for"),
+    season: Optional[str] = Query(None, description="Season to fetch stats for (can be 'YYYY' or 'YYYY-YYYY')"),
     include_mentions: bool = Query(True, description="Include recent mentions"),
     sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, EPL)"),
     sports_context = Depends(get_sports_context)
 ):
-    """Aggregate endpoint returning summary + stats + percentiles (+ mentions)."""
+    """Aggregate endpoint returning summary + stats + percentiles (+ mentions).
+
+    Adds defensive logging + season normalization to diagnose 500 errors when clients
+    pass range seasons like 2022-2023.
+    """
     resolved_sport = (sport or sports_context.get_active_sport() or "NBA").upper()
     season_key = season or "current"
+    normalized_season = _normalize_season_for_upstream(resolved_sport, season)
+
     cache_key_summary = f"player:summary:{resolved_sport}:{player_id}"
     cache_key_stats = f"player:stats:{resolved_sport}:{player_id}:{season_key}"
     cache_key_pct = f"player:percentiles:{resolved_sport}:{player_id}:{season_key}"
 
-    # Summary (basic info)
-    summary = basic_cache.get(cache_key_summary)
-    if summary is None:
-        info = await get_player_info(player_id, resolved_sport, basic_only=True)
-        summary = {
-            "id": str(info.get("id")),
+    try:
+        # Summary (basic info)
+        summary = basic_cache.get(cache_key_summary)
+        if summary is None:
+            info = await get_player_info(player_id, resolved_sport, basic_only=True)
+            team_obj = (info.get("team") or {})
+            team_raw_id = team_obj.get("id")
+            summary = {
+                "id": str(info.get("id")),
+                "sport": resolved_sport,
+                "first_name": info.get("first_name"),
+                "last_name": info.get("last_name"),
+                "full_name": f"{info.get('first_name','')} {info.get('last_name','')}".strip(),
+                "position": info.get("position"),
+                # Force team_id to string if present
+                "team_id": str(team_raw_id) if team_raw_id is not None else None,
+                "team_name": team_obj.get("name"),
+                "team_abbreviation": team_obj.get("abbreviation"),
+            }
+            basic_cache.set(cache_key_summary, summary, ttl=180)
+        else:
+            # Sanitize cached summary if earlier version stored int team_id
+            if isinstance(summary, dict) and summary.get("team_id") is not None and not isinstance(summary.get("team_id"), str):
+                summary["team_id"] = str(summary.get("team_id"))
+                basic_cache.set(cache_key_summary, summary, ttl=180)
+
+        # Stats
+        stats = stats_cache.get(cache_key_stats)
+        if stats is None:
+            try:
+                raw_stats = await get_player_stats(player_id, resolved_sport, season=normalized_season)
+                stats = (raw_stats[0] if isinstance(raw_stats, list) and raw_stats else raw_stats) or None
+            except Exception as e:
+                logger.warning("Failed fetching stats", extra={"player_id": player_id, "sport": resolved_sport, "season": season, "normalized": normalized_season, "error": str(e)})
+                stats = None
+            stats_cache.set(cache_key_stats, stats, ttl=300)
+
+        # Percentiles (requires stats)
+        percentiles = percentile_cache.get(cache_key_pct)
+        if percentiles is None and stats:
+            try:
+                percentiles = await stats_percentile_service.calculate_percentiles(stats, resolved_sport, normalized_season)
+            except Exception as e:
+                logger.warning("Percentile calculation failed", extra={"player_id": player_id, "sport": resolved_sport, "season": season, "normalized": normalized_season, "error": str(e)})
+                percentiles = None
+            percentile_cache.set(cache_key_pct, percentiles, ttl=1800)
+
+        # Mentions (optional, no caching for now—RSS ttl would be separate if added)
+        mentions = None
+        if include_mentions:
+            try:
+                rss = await get_entity_mentions("player", player_id, resolved_sport)
+                mentions = rss or []
+            except Exception as e:
+                logger.warning("Mentions fetch failed", extra={"player_id": player_id, "sport": resolved_sport, "error": str(e)})
+                mentions = []
+
+        try:
+            model_obj = PlayerFullResponse(
+                summary=summary,  # Pydantic will coerce dict -> PlayerSummary
+                season=season_key,
+                stats=stats,
+                percentiles=percentiles,
+                mentions=mentions
+            )
+        except ValidationError as ve:
+            logger.error("PlayerFullResponse validation failed", extra={
+                "player_id": player_id,
+                "errors": ve.errors(),
+                "summary_keys": list(summary.keys()) if isinstance(summary, dict) else type(summary).__name__,
+                "stats_type": type(stats).__name__,
+                "percentiles_type": type(percentiles).__name__ if percentiles is not None else None
+            })
+            raise HTTPException(status_code=422, detail={"message": "PlayerFullResponse validation failed", "errors": ve.errors()})
+        return model_obj
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Log unexpected exception with contextual data, then raise 500
+        logger.exception("Unhandled error building player full response", extra={
+            "player_id": player_id,
             "sport": resolved_sport,
-            "first_name": info.get("first_name"),
-            "last_name": info.get("last_name"),
-            "full_name": f"{info.get('first_name','')} {info.get('last_name','')}".strip(),
-            "position": info.get("position"),
-            "team_id": (info.get("team") or {}).get("id"),
-            "team_name": (info.get("team") or {}).get("name"),
-            "team_abbreviation": (info.get("team") or {}).get("abbreviation"),
-        }
-        basic_cache.set(cache_key_summary, summary, ttl=180)
-
-    # Stats
-    stats = stats_cache.get(cache_key_stats)
-    if stats is None:
-        try:
-            raw_stats = await get_player_stats(player_id, resolved_sport, season=season)
-            stats = (raw_stats[0] if isinstance(raw_stats, list) and raw_stats else raw_stats) or None
-        except Exception:
-            stats = None
-        stats_cache.set(cache_key_stats, stats, ttl=300)
-
-    # Percentiles (requires stats)
-    percentiles = percentile_cache.get(cache_key_pct)
-    if percentiles is None and stats:
-        try:
-            percentiles = await stats_percentile_service.calculate_percentiles(stats, resolved_sport, season)
-        except Exception:
-            percentiles = None
-        percentile_cache.set(cache_key_pct, percentiles, ttl=1800)
-
-    # Mentions (optional, no caching for now—RSS ttl would be separate if added)
-    mentions = None
-    if include_mentions:
-        try:
-            rss = await get_entity_mentions("player", player_id, resolved_sport)
-            mentions = rss or []
-        except Exception:
-            mentions = []
-
-    return {
-        "summary": summary,
-        "season": season_key,
-        "stats": stats,
-        "percentiles": percentiles,
-        "mentions": mentions
-    }
+            "season": season,
+            "normalized_season": normalized_season
+        })
+        raise HTTPException(status_code=500, detail="Failed to build full player response")
 
 @router.get("/raw/{player_id}")
 async def get_player_raw(

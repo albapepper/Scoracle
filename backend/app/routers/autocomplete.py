@@ -115,7 +115,11 @@ async def autocomplete(
         if sport.upper() == 'NBA':
             service = balldontlie_service
         if service is None:
-            raise HTTPException(status_code=400, detail=f"Unsupported sport for upstream fallback: {sport}")
+            # Gracefully return empty result set for unsupported sports (future sports may be registry-only)
+            response.headers["X-Autocomplete-Supported"] = "false"
+            empty = AutocompleteResponse(query=q, entity_type=entity_type, sport=sport, results=[])
+            _cache_set(cache_key, [])
+            return empty
 
         try:
             if entity_type == 'player':

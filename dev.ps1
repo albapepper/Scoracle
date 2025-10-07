@@ -21,9 +21,12 @@ function Start-Backend {
   Ensure-Venv
   & backend/venv/Scripts/Activate.ps1
   pip install -q -r backend/requirements.txt
-  $env:PYTHONPATH = 'backend/app'
+  Push-Location backend
+  # Ensure current working dir is backend so 'app' is a top-level package
+  $env:PYTHONPATH = '.'
   Write-Host 'Starting FastAPI (uvicorn)...' -ForegroundColor Green
   uvicorn app.main:app --reload --port 8000
+  Pop-Location
 }
 
 function Start-Frontend {
@@ -46,7 +49,7 @@ switch ($Command) {
   'frontend' { Start-Frontend }
   'types' { Generate-Types }
   'up' {
-    $backend = Start-Job { & powershell -NoLogo -NoProfile -Command "Import-Module '$PSScriptRoot/dev.ps1'; Start-Backend" }
+    $backend = Start-Job { & powershell -NoLogo -NoProfile -Command "& '$using:PSScriptRoot/dev.ps1' backend" }
     Start-Sleep -Seconds 3
     Start-Frontend
     Receive-Job $backend -Keep

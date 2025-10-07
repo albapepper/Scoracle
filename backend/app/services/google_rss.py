@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 import urllib.parse
 from app.repositories.registry import entity_registry
-from app.adapters.balldontlie_api import get_player_info, get_team_info
+from app.services.balldontlie_api import get_player_info, get_team_info
 
 async def _resolve_entity_name(entity_type: str, entity_id: str, sport: Optional[str]) -> str:
     """Resolve a human-friendly entity name for RSS queries.
