@@ -1,120 +1,72 @@
-# Scoracle - Sports News & Statistics Platform
+git clone https://github.com/albapepper/scoracle.git
+docker-compose up
+# Scoracle – Sports News & Advanced Statistics Platform
 
-Scoracle is a modern web application that serves as a one-stop shop for sports enthusiasts to get the latest news and statistical information about their favorite players and teams across multiple leagues including NBA, NFL, and EPL.
+Scoracle is a modern web application that aggregates near‑real‑time sports news (Google News RSS) and statistics (balldontlie and future data providers) across multiple leagues. It delivers unified, cached API responses and rich interactive visualizations via a React frontend.
 
-## Features
+## ✨ Key Features
 
-- **Multi-sport Support**: Seamlessly switch between different sports (NBA, NFL, EPL) with a consistent UI
-- **Entity Search**: Search for players and teams across all supported sports
-- **News Aggregation**: View the latest news mentions from the past 36 hours via Google RSS integration
-- **Detailed Statistics**: Access comprehensive player and team statistics via sports APIs
-- **Interactive Visualizations**: Explore sports data through interactive D3.js visualizations
-- **Responsive Design**: Enjoy a smooth experience across desktop and mobile devices
+| Area | Highlights |
+|------|-----------|
+| Multi‑Sport | Pluggable sport context (currently NBA focus; NFL/EPL scaffolding) |
+| Unified Aggregation | Single `/full` endpoints combine summary + stats + percentiles + mentions |
+| Smart Caching | Tiered in‑memory TTL caches for summaries, stats, percentiles (invalidate naturally via TTL) |
+| Mentions & Links | Google RSS query refinement w/ entity name resolution |
+| React Query | Automatic request dedupe + caching on frontend |
+| Entity Preload Cache | Client context seeds detail pages to eliminate blank loading states |
+| Error Envelope | Consistent JSON error contract for all unhandled exceptions |
+| Sport‑First Paths | Optional `/api/v1/{sport}/...` variants for future multi‑sport expansion |
+| Architecture Migration | Transitional layering toward `api/`, `domain/`, `adapters/`, `repositories/` |
 
-## Tech Stack
+## 🧱 Evolving Backend Architecture (Phase 1 ➜ Phase 2)
 
-### Backend
-- **FastAPI**: Modern, high-performance Python web framework
-- **httpx**: Asynchronous HTTP client for API integration
-- **balldontlie.io API**: Primary data source for NBA statistics
-- **Google RSS**: News aggregation source
+Current state uses legacy `routers/` & `services/` plus new facade modules under `app/api/` & `app/adapters/` for a non‑breaking migration. Next phase: move logic into `domain/` (pure business rules), `adapters/` (upstream I/O), and `repositories/` (persistence), trimming old folders when parity is reached.
 
-### Frontend
-- **React**: Component-based UI library
-- **React Router**: For application routing
-- **Mantine UI**: Component library for consistent styling
-- **D3.js**: Data visualization library
-- **Axios**: HTTP client for API requests
-- **Context API**: For managing application state
-
-## Project Structure
-
+## 🗂 Project Structure (Transitional)
 ```
 scoracle/
-├── backend/                # FastAPI backend
+├── backend/
 │   ├── app/
-│   │   ├── core/           # Core configuration
-│   │   ├── models/         # Data models and schemas
-│   │   ├── routers/        # API routes
-│   │   │   ├── home.py     # Home and search endpoints
-│   │   │   ├── mentions.py # News mentions endpoints
-│   │   │   ├── links.py    # Related links endpoints
-│   │   │   ├── player.py   # Player statistics endpoints
-│   │   │   └── team.py     # Team statistics endpoints
-│   │   └── services/       # External API integrations
-│   │       ├── balldontlie_api.py  # Sports data API service
-│   │       ├── google_rss.py       # News RSS service
-│   │       └── sports_context.py   # Sport selection service
-│   ├── Dockerfile          # Backend container configuration
-│   └── requirements.txt    # Python dependencies
-├── frontend/               # React frontend
-│   ├── public/             # Static files
+│   │   ├── main.py                # FastAPI app factory & router mounting
+│   │   ├── core/                  # Settings, config
+│   │   ├── models/                # Pydantic schemas (PlayerFullResponse, ErrorEnvelope, etc.)
+│   │   ├── routers/               # (Legacy) routed endpoints (player, team, mentions, links, autocomplete, home)
+│   │   ├── api/                   # (New) sport-first + re-export bridging layer
+│   │   ├── adapters/              # (New) Re-export wrappers for external services (RSS, balldontlie)
+│   │   ├── services/              # (Legacy) External integration logic (to be relocated)
+│   │   ├── repositories/          # Entity registry abstraction (SQLite)
+│   │   └── domain/                # (Future) Core domain logic (stats transforms, percentile calc wrappers)
+│   ├── requirements.txt
+│   └── Dockerfile
+├── frontend/
 │   ├── src/
-│   │   ├── components/     # Reusable UI components
-│   │   ├── context/        # React context providers
-│   │   ├── pages/          # Page components
-│   │   ├── services/       # API client services
-│   │   └── visualizations/ # D3.js visualization components
-│   ├── Dockerfile          # Frontend container configuration
-│   └── package.json        # JavaScript dependencies
-├── docker-compose.yml      # Multi-container Docker configuration
-└── README.md               # Project documentation
+│   │   ├── pages/                 # PlayerPage, TeamPage consume `/full` endpoints
+│   │   ├── context/               # SportContext, EntityCacheContext
+│   │   ├── services/              # `api.js` (axios + typed helper methods)
+│   │   └── visualizations/        # D3 components (radar, bar charts)
+├── docker-compose.yml
+└── README.md
 ```
 
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
-- Docker and Docker Compose (recommended)
-- Node.js 16+ (for local frontend development)
-- Python 3.8+ (for local backend development)
+* Python 3.11+ (tested)  
+* Node.js 18+  
+* Docker (optional but recommended for parity)
 
-### Running with Docker
-
-1. Clone the repository
-```bash
-git clone https://github.com/albapepper/scoracle.git
-cd scoracle
+### Run Entire Stack (Docker)
+```powershell
+git clone https://github.com/albapepper/Scoracle.git
+cd Scoracle
+docker compose up --build
 ```
 
-2. Start the application
-```bash
-docker-compose up
-```
+Frontend: [http://localhost:3000](http://localhost:3000)  
+API Docs: [http://localhost:8000/api/docs](http://localhost:8000/api/docs)  
+Health: [http://localhost:8000/api/health](http://localhost:8000/api/health)
 
-3. Access the application at http://localhost:3000
-
-### Development Setup
-
-#### Backend (FastAPI)
-
-1. Navigate to the backend directory
-```bash
-cd backend
-```
-
-2. Create a virtual environment
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies
-```bash
-pip install -r requirements.txt
-```
-
-4. Run the development server
-```bash
-uvicorn app.main:app --reload
-```
-
-5. Access the API documentation at http://localhost:8000/api/docs
-
-### Local Development Quick Start (Copy/Paste)
-
-These snippets let you spin up just what you need without Docker while iterating.
-
-#### Backend (FastAPI) – Windows PowerShell
+### Backend Local Dev (Windows PowerShell)
 
 ```powershell
 cd backend
@@ -124,126 +76,206 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-#### Backend (macOS / Linux bash)
+API docs: [http://localhost:8000/api/docs](http://localhost:8000/api/docs)
 
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
-
-API docs: http://localhost:8000/api/docs
-
-#### Frontend (React) – Windows PowerShell / macOS / Linux
+### Frontend Local Dev
 
 ```powershell
 cd frontend
 npm install
 npm start
 ```
+React dev server proxies to `http://localhost:8000` (see `package.json` `proxy`).
 
-The React dev server proxies API calls to http://localhost:8000 via the `proxy` field in `frontend/package.json`.
+### Quick One-Liners
 
-#### One-Liner (already installed deps & venv exists)
-
-PowerShell:
 ```powershell
 cd backend; ./venv/Scripts/Activate.ps1; uvicorn app.main:app --reload --port 8000
 ```
 
-macOS/Linux:
 ```bash
 cd backend && source venv/bin/activate && uvicorn app.main:app --reload --port 8000
 ```
 
-#### Stopping Services
-- Backend (Ctrl+C in the uvicorn terminal)
-- Frontend (Ctrl+C in the React dev server terminal)
-- Docker stack (if running): `docker-compose down`
+## 🔐 Configuration & Environment
 
-#### Troubleshooting Quick Notes
-- If imports fail after refactor, ensure the virtualenv is activated.
-- Port already in use? Change with `--port 8001` (update frontend `proxy` if needed).
-- If API key changes, expose it via an `.env` and load in `settings` (future enhancement).
+Environment variables (optional) via `.env` in project root:
 
-#### Frontend (React)
+```env
 
-1. Navigate to the frontend directory
-```bash
-cd frontend
+```env
+BALLDONTLIE_API_KEY=override_token
+REGISTRY_DB_PATH=instance/registry.db
+BALDONTLIE_DEBUG=0
+```
+Defaults are defined in `app/core/config.py`.
+
+## 📦 Caching Strategy
+
+Layered in-memory TTL caches (`app/services/cache.py`):
+
+* `basic_cache` – Player/team summaries (180–300s TTL)
+* `stats_cache` – Season stats (300s TTL)
+* `percentile_cache` – Derived percentiles (30m TTL)
+
+Cache keys are sport + entity + season namespaced. No manual invalidation yet; rely on TTL + ephemeral process restarts. Future: pluggable Redis backend.
+
+## 🧪 Error Handling
+
+All unexpected exceptions are wrapped into a consistent envelope:
+
+```json
+{
+   "error": {
+      "message": "Internal server error",
+      "code": 500,
+      "path": "http://localhost:8000/api/v1/player/123"
+   }
+}
+
+```json
+```
+HTTPExceptions preserve their code & message. Schema: `ErrorEnvelope`.
+
+## 📘 API Overview
+
+Base prefix: `/api/v1`
+
+### Aggregated "Full" Endpoints (Recommended)
+
+Return summary + stats + percentiles (+ optional mentions):
+
+* `GET /api/v1/player/{player_id}/full?season=2023-2024&include_mentions=true&sport=NBA`
+* `GET /api/v1/team/{team_id}/full?season=2023-2024&include_mentions=false&sport=NBA`
+
+Example response (player):
+
+```json
+{
+   "summary": {"id": "237", "sport": "NBA", "full_name": "LeBron James", ...},
+   "season": "2023-2024",
+   "stats": {"points_per_game": 25.1, ...},
+   "percentiles": {"points_per_game": 92.3, ...},
+   "mentions": [ {"title": "...", "link": "..."} ]
+}
 ```
 
-2. Install dependencies
-```bash
-npm install
+### Classic Resource Endpoints
+
+| Type | Endpoint | Notes |
+|------|----------|-------|
+| Player summary+stats | `GET /api/v1/player/{id}?season=YYYY-YYYY` | Legacy combined format |
+| Player seasons list | `GET /api/v1/player/{id}/seasons` | Placeholder static list currently |
+| Player percentiles | `GET /api/v1/player/{id}/percentiles` | On-demand percentile calc |
+| Team summary+stats | `GET /api/v1/team/{id}?season=...` | Legacy combined format |
+| Team roster | `GET /api/v1/team/{id}/roster` | Placeholder empty list |
+| Team percentiles | `GET /api/v1/team/{id}/percentiles` | On-demand percentile calc |
+| Mentions | `GET /api/v1/mentions/{entity_type}/{id}` | RSS + basic info |
+| Links | `GET /api/v1/links/{entity_type}/{id}` | Related link variants |
+| Search | `GET /api/v1/search?q=lebron&sport=NBA` | Autocomplete/search |
+
+### Sport‑First Variants
+
+Allow future multi-sport frontends to pick a canonical style:
+
+```text
+
+```text
+GET /api/v1/{sport}/players/{player_id}
+GET /api/v1/{sport}/players/{player_id}/stats
+GET /api/v1/{sport}/players/{player_id}/mentions
+GET /api/v1/{sport}/teams/{team_id}
+GET /api/v1/{sport}/teams/{team_id}/stats
+GET /api/v1/{sport}/teams/{team_id}/mentions
 ```
 
-3. Run the development server
-```bash
-npm start
+### Health & Maintenance
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/health` | Liveness probe |
+| `POST /api/v1/registry/refresh/{sport}` | Force registry (re)ingest |
+| `GET /api/v1/registry/counts` | Registry status counts |
+
+## 🧮 Percentile Calculation
+
+Percentiles are computed lazily per unique (entity, sport, season) from fetched stat distributions (service: `stats_percentile_service`). Missing stats yield `null` percentiles. Cached separately with a longer TTL to amortize CPU.
+
+## 🗂 Frontend Data Layer
+
+* React Query caches `playerFull` / `teamFull` keyed by `[typeFull, id, season, sport]`.
+* `EntityCacheContext` stores lightweight summaries (player/team) seeded from Mentions → Stats navigation to eliminate initial spinner (optimistic hydration).
+
+## 🔄 Navigation Flow
+
+1. User searches entity → selects result.
+2. Mentions page loads summary + news.
+3. Clicking "View Stats" preloads summary into `EntityCacheContext`.
+4. Player/Team page mounts: seeds state from cache immediately, then React Query fetch resolves full payload.
+
+## 🛠 Local Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| CORS error | Ensure frontend dev server proxy or add origin to `BACKEND_CORS_ORIGINS`. |
+| 404 on player route | Verify new prefixed route `/api/v1/player/{id}` not old root style. |
+| Empty mentions | RSS may have no hits; try broader name variant or verify internet access. |
+| Stale data | TTL caches keep data warm; restart app or wait for expiry. |
+
+## 🧭 Roadmap (Next Phases)
+
+| Phase | Goal |
+|-------|-----|
+| 2 | Migrate logic: `services/` → `adapters/` & `domain/` (remove duplication) |
+| 2 | Add Redis (optional) for multi-instance cache coherence |
+| 3 | Implement real seasons + roster sources (replace placeholders) |
+| 3 | OpenAPI → TypeScript type generation (`openapi-typescript`) |
+| 4 | Add comparison & trend endpoints |
+| 4 | Auth & favorites |
+
+## 🔑 API Keys
+
+Currently using balldontlie public API key (config default). Override with environment variable `BALLDONTLIE_API_KEY`.
+
+## 📤 Deployment
+
+See `docs/deployment/cloud-run.md` for Google Cloud Run steps (build images, push to Artifact Registry, deploy services, set concurrency/timeouts).
+
+## 🧰 Developer Productivity
+
+### PowerShell Helper (Windows)
+
+Use `dev.ps1` from repository root:
+
+```powershell
+./dev.ps1 backend   # start backend only
+./dev.ps1 frontend  # start frontend only
+./dev.ps1 up        # start both (backend job + frontend)
+./dev.ps1 types     # generate OpenAPI TypeScript types
 ```
 
-4. Access the frontend at http://localhost:3000
+### Make Targets (macOS/Linux)
 
-## API Documentation
+```bash
+make backend    # backend with reload
+make frontend   # react dev server
+make up         # run both concurrently
+make types      # generate TS types from OpenAPI
+```
 
-### API Endpoints
+## 🧾 TypeScript API Types
 
-#### Home Router
-- `GET /api/v1/` - Get home page information and configuration
-- `GET /api/v1/search` - Search for players or teams
+Run after backend schema changes (ensure backend running so OpenAPI is reachable):
 
-#### Mentions Router
+```bash
+npm run api:types
+```
 
-- `GET /api/v1/mentions/{entity_type}/{entity_id}` - Get mentions and basic information for a player or team (namespaced to avoid route conflicts)
+Output: `frontend/src/types/api.ts` (do not edit manually).
 
-#### Links Router
+## 📄 License
 
-- `GET /api/v1/links/{entity_type}/{entity_id}` - Get related links for a player or team (namespaced to avoid route conflicts)
+MIT License. See `LICENSE` (add if not present).
 
-#### Player Router
-
-- `GET /api/v1/player/{player_id}` - Get detailed player information and statistics
-- `GET /api/v1/player/{player_id}/seasons` - Get list of seasons for which a player has statistics
-
-#### Team Router
-
-- `GET /api/v1/team/{team_id}` - Get detailed team information and statistics
-- `GET /api/v1/team/{team_id}/roster` - Get roster of players for a team
-
-### API Keys
-
-The application uses the following API keys:
-
-- **balldontlie.io API**: `fd8788ca-65fe-4ea6-896f-a2c9776977d1`
-
-## Data Flow
-
-1. User selects a sport from the header banner
-2. User enters a player or team name in the search form
-3. Backend searches for matching entities
-4. User is redirected to the mentions page for the selected entity
-5. Mentions page displays:
-   - Basic entity information from the sports API
-   - Recent news mentions from Google RSS
-6. User can navigate to the detailed stats page
-7. Stats page displays interactive D3.js visualizations of entity statistics
-
-## Future Enhancements
-
-- Add support for more sports leagues (MLB, NHL, etc.)
-- Implement user accounts and favorites
-- Add historical statistics and trends
-- Develop mobile app version
-- Add comparison features for players and teams
-- Implement real-time score updates
-
-## Deployment
-
-- [Google Cloud Run guide](docs/deployment/cloud-run.md) — step-by-step instructions for publishing the frontend and backend using Artifact Registry and Cloud Run.
-
-## License
-
-This project is licensed under the MIT License.
+---
+Questions or ideas? Open an issue or start a discussion – contributions welcome.

@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     BALLDONTLIE_API_KEY: str = os.getenv("BALLDONTLIE_API_KEY", "fd8788ca-65fe-4ea6-896f-a2c9776977d1")
     # Registry DB path relative to project root (NOT inside backend/ so file writes don't trigger reloads)
     REGISTRY_DB_PATH: str = os.getenv("REGISTRY_DB_PATH", "instance/registry.db")
+    # Debug flag to enable verbose upstream payload logging / diagnostic endpoints
+    BALLDONTLIE_DEBUG: bool = bool(int(os.getenv("BALDONTLIE_DEBUG", "0")))
     
     class Config:
         case_sensitive = True

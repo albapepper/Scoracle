@@ -90,3 +90,42 @@ class MentionsResponse(BaseModel):
     entity_info: Optional[Dict[str, Any]] = None
     mentions: List[NewsItem]
     missing_entity: bool = False
+
+# --- Unified / Normalized Schemas (new) ---
+
+class PlayerSummary(BaseModel):
+    id: str
+    sport: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    full_name: Optional[str] = None
+    position: Optional[str] = None
+    team_id: Optional[str] = None
+    team_name: Optional[str] = None
+    team_abbreviation: Optional[str] = None
+
+class TeamSummary(BaseModel):
+    id: str
+    sport: str
+    name: Optional[str] = None
+    abbreviation: Optional[str] = None
+    city: Optional[str] = None
+    conference: Optional[str] = None
+    division: Optional[str] = None
+
+class PlayerFullResponse(BaseModel):
+    summary: PlayerSummary
+    season: Optional[str] = None
+    stats: Optional[Dict[str, Any]] = None
+    percentiles: Optional[Dict[str, Any]] = None
+    mentions: Optional[List[NewsItem]] = None
+
+class TeamFullResponse(BaseModel):
+    summary: TeamSummary
+    season: Optional[str] = None
+    stats: Optional[Dict[str, Any]] = None
+    percentiles: Optional[Dict[str, Any]] = None
+    mentions: Optional[List[NewsItem]] = None
+
+class ErrorEnvelope(BaseModel):
+    error: Dict[str, Any]

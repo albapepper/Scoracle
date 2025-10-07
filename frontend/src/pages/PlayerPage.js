@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Container, Title, Text, Card, Group, Button, Loader, Stack, Tabs, Select, Switch, Badge, Tooltip } from '@mantine/core';
 import { useSportContext } from '../context/SportContext';
-import { getPlayerDetails, getPlayerSeasons, getPlayerPercentiles } from '../services/api';
+import { getPlayerFull, getPlayerSeasons } from '../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { useEntityCache } from '../context/EntityCacheContext';
 import theme from '../theme';
 
 // Import D3 visualization component
@@ -11,7 +13,8 @@ import PlayerStatsRadarChart from '../visualizations/PlayerStatsRadarChart';
 function PlayerPage() {
   const { playerId } = useParams();
   const { activeSport } = useSportContext();
-  const [playerInfo, setPlayerInfo] = useState(null);
+  const { getSummary, putSummary } = useEntityCache();
+  const [playerInfo, setPlayerInfo] = useState(() => getSummary(activeSport, 'player', playerId) || null); // seed from cache if exists
   const [playerStats, setPlayerStats] = useState(null);
   const [playerPercentiles, setPlayerPercentiles] = useState(null);
   const [availableSeasons, setAvailableSeasons] = useState([]);
@@ -37,35 +40,31 @@ function PlayerPage() {
     fetchSeasons();
   }, [playerId, activeSport]);
   
-  // Fetch player details, stats and percentiles when season changes
+  const { data: fullData, isLoading: fullLoading, error: fullError } = useQuery({
+    queryKey: ['playerFull', playerId, selectedSeason, activeSport],
+    enabled: !!selectedSeason,
+    queryFn: () => getPlayerFull(playerId, selectedSeason, activeSport, { includeMentions: false }),
+  });
+
   useEffect(() => {
-    const fetchPlayerData = async () => {
-      if (!selectedSeason) return;
-      
-      setIsLoading(true);
-      setError('');
-      
-      try {
-        // Fetch basic player details
-        const detailsData = await getPlayerDetails(playerId, selectedSeason, activeSport);
-        setPlayerInfo(detailsData.info || null);
-        setPlayerStats(detailsData.statistics || null);
-        
-        // Fetch percentile data
-        const percentilesData = await getPlayerPercentiles(playerId, selectedSeason, activeSport);
-        setPlayerPercentiles(percentilesData.percentiles || null);
-      } catch (err) {
-        setError('Failed to load player data. Please try again later.');
-        console.error(err);
-      } finally {
-        setIsLoading(false);
+    if (fullData) {
+      if (fullData.summary) {
+        setPlayerInfo(fullData.summary);
+        putSummary(activeSport, 'player', playerId, fullData.summary);
       }
-    };
-    
-    if (selectedSeason) {
-      fetchPlayerData();
+      setPlayerStats(fullData.stats || null);
+      setPlayerPercentiles(fullData.percentiles || null);
+      setIsLoading(false);
+    } else if (fullLoading) {
+      setIsLoading(true);
     }
-  }, [playerId, selectedSeason, activeSport]);
+  }, [fullData, fullLoading, playerId, activeSport, putSummary]);
+
+  useEffect(() => {
+    if (fullError) {
+      setError('Failed to load player data. Please try again later.');
+    }
+  }, [fullError]);
   
   // Helper function to get color for percentile
   const getPercentileColor = (percentile) => {

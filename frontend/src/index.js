@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { MantineProvider, createTheme } from '@mantine/core';
 import App from './App';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './index.css';
 import '@mantine/core/styles.css';
 
@@ -15,12 +16,23 @@ const theme = createTheme({
   fontFamily: 'Roboto, sans-serif',
 });
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      staleTime: 60 * 1000,
+    },
+  },
+});
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <BrowserRouter>
       <MantineProvider theme={theme}>
-        <App />
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
       </MantineProvider>
     </BrowserRouter>
   </React.StrictMode>

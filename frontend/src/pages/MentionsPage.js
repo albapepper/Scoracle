@@ -17,10 +17,12 @@ import {
 import { useSportContext } from '../context/SportContext';
 import { getEntityMentions } from '../services/api';
 import theme from '../theme';
+import { useEntityCache } from '../context/EntityCacheContext';
 
 function MentionsPage() {
   const { entityType, entityId } = useParams();
   const { activeSport } = useSportContext();
+  const { putSummary } = useEntityCache();
   const [mentions, setMentions] = useState([]);
   const [entityInfo, setEntityInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -154,7 +156,35 @@ function MentionsPage() {
             <Box mt="md">
               <Button
                 component={Link}
-                to={`/${entityType}/${entityId}`}
+                to={`/${entityType}/${entityId}?sport=${activeSport}`}
+                onClick={() => {
+                  if (entityInfo) {
+                    // Normalize summary shape similar to backend full summary
+                    if (entityType === 'player') {
+                      putSummary(activeSport, 'player', entityId, {
+                        id: entityId,
+                        sport: activeSport,
+                        first_name: entityInfo.first_name,
+                        last_name: entityInfo.last_name,
+                        full_name: `${entityInfo.first_name||''} ${entityInfo.last_name||''}`.trim(),
+                        position: entityInfo.position,
+                        team_id: entityInfo.team?.id,
+                        team_name: entityInfo.team?.name,
+                        team_abbreviation: entityInfo.team?.abbreviation,
+                      });
+                    } else {
+                      putSummary(activeSport, 'team', entityId, {
+                        id: entityId,
+                        sport: activeSport,
+                        name: entityInfo.name,
+                        abbreviation: entityInfo.abbreviation,
+                        city: entityInfo.city,
+                        conference: entityInfo.conference,
+                        division: entityInfo.division,
+                      });
+                    }
+                  }
+                }}
                 style={{ 
                   backgroundColor: theme.colors.ui.primary,
                   color: 'white'

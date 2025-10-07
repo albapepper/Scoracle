@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Container, Title, Text, Card, Group, Button, Loader, Stack, Tabs, Select, Grid, Avatar } from '@mantine/core';
 import { useSportContext } from '../context/SportContext';
-import { getTeamDetails, getTeamRoster } from '../services/api';
+import { getTeamFull, getTeamRoster } from '../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { useEntityCache } from '../context/EntityCacheContext';
 
 // Import D3 visualization component
 import TeamStatsBarChart from '../visualizations/TeamStatsBarChart';
@@ -10,7 +12,8 @@ import TeamStatsBarChart from '../visualizations/TeamStatsBarChart';
 function TeamPage() {
   const { teamId } = useParams();
   const { activeSport } = useSportContext();
-  const [teamInfo, setTeamInfo] = useState(null);
+  const { getSummary, putSummary } = useEntityCache();
+  const [teamInfo, setTeamInfo] = useState(() => getSummary(activeSport, 'team', teamId) || null);
   const [teamStats, setTeamStats] = useState(null);
   const [teamRoster, setTeamRoster] = useState([]);
   const availableSeasons = ['2023-2024', '2022-2023', '2021-2022'];
@@ -18,32 +21,41 @@ function TeamPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // Fetch team details when season changes
+  const { data: fullData, isLoading: fullLoading, error: fullError } = useQuery({
+    queryKey: ['teamFull', teamId, selectedSeason, activeSport],
+    enabled: !!selectedSeason,
+    queryFn: () => getTeamFull(teamId, selectedSeason, activeSport, { includeMentions: false }),
+  });
+
   useEffect(() => {
-    const fetchTeamData = async () => {
-      setIsLoading(true);
-      setError('');
-      
+    const fetchRoster = async () => {
+      if (!selectedSeason) return;
       try {
-        const data = await getTeamDetails(teamId, selectedSeason, activeSport);
-        setTeamInfo(data.info || null);
-        setTeamStats(data.statistics || null);
-        
-        // Fetch roster in the same season
         const rosterData = await getTeamRoster(teamId, selectedSeason, activeSport);
         setTeamRoster(rosterData.roster || []);
-      } catch (err) {
-        setError('Failed to load team data. Please try again later.');
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
+      } catch (e) { /* ignore roster errors for now */ }
     };
-    
-    if (selectedSeason) {
-      fetchTeamData();
-    }
+    fetchRoster();
   }, [teamId, selectedSeason, activeSport]);
+
+  useEffect(() => {
+    if (fullData) {
+      if (fullData.summary) {
+        setTeamInfo(fullData.summary);
+        putSummary(activeSport, 'team', teamId, fullData.summary);
+      }
+      setTeamStats(fullData.stats || null);
+      setIsLoading(false);
+    } else if (fullLoading) {
+      setIsLoading(true);
+    }
+  }, [fullData, fullLoading, teamId, activeSport, putSummary]);
+
+  useEffect(() => {
+    if (fullError) {
+      setError('Failed to load team data. Please try again later.');
+    }
+  }, [fullError]);
   
   if (isLoading) {
     return (

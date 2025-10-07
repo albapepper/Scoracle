@@ -1,13 +1,15 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import logging
 from contextlib import asynccontextmanager
 import httpx
 import asyncio
 
-from app.routers import home, autocomplete, mentions, links, player, team
+from app.api import home, autocomplete, mentions, links, player, team, sport
 from app.core.config import settings
-from app.db.registry import entity_registry
+from app.repositories.registry import entity_registry
+from app.models.schemas import ErrorEnvelope
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +64,12 @@ app.include_router(home.router, prefix="/api/v1", tags=["home"])
 app.include_router(autocomplete.router, prefix="/api/v1", tags=["autocomplete"])
 app.include_router(mentions.router, prefix="/api/v1", tags=["mentions"])
 app.include_router(links.router, prefix="/api/v1", tags=["links"])
-app.include_router(player.router, prefix="/api/v1", tags=["player"])
-app.include_router(team.router, prefix="/api/v1", tags=["team"])
+# Player & team routers previously mounted at /api/v1 creating path collisions like /api/v1/{player_id}
+# and /api/v1/{team_id} while the frontend calls /api/v1/player/{id} and /api/v1/team/{id}.
+# Mount them under explicit resource prefixes to align with frontend and avoid ambiguous parameter-only paths.
+app.include_router(player.router, prefix="/api/v1/player", tags=["player"])
+app.include_router(team.router, prefix="/api/v1/team", tags=["team"])
+app.include_router(sport.router, prefix="/api/v1", tags=["sport"])
 
 # Maintenance / registry router
 maintenance_router = APIRouter(prefix="/api/v1/registry", tags=["registry"])
@@ -102,3 +108,25 @@ async def root():
         "openapi": "/api/openapi.json",
         "health": "/api/health"
     }
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    # Let HTTPExceptions pass through (FastAPI default will handle)
+    from fastapi import HTTPException
+    if isinstance(exc, HTTPException):
+        # rely on existing behavior; we could still wrap if desired
+        return JSONResponse(status_code=exc.status_code, content={
+            "error": {
+                "message": getattr(exc, 'detail', 'HTTP error'),
+                "code": exc.status_code,
+                "path": str(request.url)
+            }
+        })
+    logger.exception("Unhandled server error")
+    return JSONResponse(status_code=500, content=ErrorEnvelope(
+        error={
+            "message": "Internal server error",
+            "code": 500,
+            "path": str(request.url)
+        }
+    ).dict())

@@ -8,6 +8,7 @@ import { ThemeProvider } from './ThemeProvider';
 
 // Context provider
 import { SportContextProvider } from './context/SportContext';
+import { EntityCacheProvider } from './context/EntityCacheContext';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -24,6 +25,7 @@ function App() {
   return (
     <ThemeProvider>
       <SportContextProvider>
+        <EntityCacheProvider>
         <AppShell
           header={{ height: 60 }}
           footer={{ height: 60 }}
@@ -50,6 +52,7 @@ function App() {
           <Footer />
         </AppShell.Footer>
       </AppShell>
+        </EntityCacheProvider>
     </SportContextProvider>
   </ThemeProvider>
   );

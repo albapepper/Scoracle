@@ -61,6 +61,17 @@ export const getPlayerSeasons = async (playerId, sport) => {
   return response.data;
 };
 
+// Player full aggregate
+export const getPlayerFull = async (playerId, season, sport, options = {}) => {
+  const params = {
+    ...(season && { season }),
+    ...(sport && { sport }),
+    ...(options.includeMentions === false ? { include_mentions: false } : {}),
+  };
+  const response = await apiClient.get(`/player/${playerId}/full`, { params });
+  return response.data;
+};
+
 // Team services
 export const getTeamDetails = async (teamId, season, sport) => {
   const params = {
@@ -89,5 +100,16 @@ export const getTeamRoster = async (teamId, season, sport) => {
   };
   
   const response = await apiClient.get(`/team/${teamId}/roster`, { params });
+  return response.data;
+};
+
+// Team full aggregate
+export const getTeamFull = async (teamId, season, sport, options = {}) => {
+  const params = {
+    ...(season && { season }),
+    ...(sport && { sport }),
+    ...(options.includeMentions === false ? { include_mentions: false } : {}),
+  };
+  const response = await apiClient.get(`/team/${teamId}/full`, { params });
   return response.data;
 };

@@ -3,13 +3,57 @@ import httpx
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 import urllib.parse
+from app.repositories.registry import entity_registry
+from app.adapters.balldontlie_api import get_player_info, get_team_info
+
+async def _resolve_entity_name(entity_type: str, entity_id: str, sport: Optional[str]) -> str:
+    """Resolve a human-friendly entity name for RSS queries.
+    Order: registry -> upstream basic info -> raw id fallback.
+    """
+    sport_upper = (sport or "NBA").upper()
+    # Try registry first
+    try:
+        if entity_type in ("player", "team"):
+            await entity_registry.connect()
+            basic = await entity_registry.get_basic(sport_upper, entity_type, int(entity_id))
+            if basic:
+                if entity_type == "player":
+                    fn = basic.get("first_name") or ""
+                    ln = basic.get("last_name") or ""
+                    name = f"{fn} {ln}".strip()
+                    if name:
+                        return name
+                else:
+                    name = basic.get("full_name") or basic.get("team_abbr")
+                    if name:
+                        return name
+    except Exception:
+        pass
+    # Upstream basic info fallback
+    try:
+        if entity_type == "player":
+            info = await get_player_info(entity_id, sport_upper, basic_only=True)
+            fn = info.get("first_name") or ""
+            ln = info.get("last_name") or ""
+            name = f"{fn} {ln}".strip()
+            if name:
+                return name
+        elif entity_type == "team":
+            info = await get_team_info(entity_id, sport_upper, basic_only=True)
+            name = info.get("name") or info.get("abbreviation")
+            if name:
+                return name
+    except Exception:
+        pass
+    return entity_id  # final fallback
 
 async def get_entity_mentions(entity_type: str, entity_id: str, sport: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     Get mentions of a player or team from Google RSS feed.
     """
     # Format the search query based on entity type, ID, and sport
-    search_term = format_search_term(entity_type, entity_id, sport)
+    resolved_name = await _resolve_entity_name(entity_type, entity_id, sport)
+    search_term = format_search_term(entity_type, resolved_name, sport)
     
     # Calculate timestamp for 36 hours ago
     time_period = (datetime.now() - timedelta(hours=36)).strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -32,7 +76,8 @@ async def get_related_links(entity_type: str, entity_id: str, category: Optional
     Get related links for an entity, optionally filtered by category.
     """
     # Format the search query based on entity type, ID, category, and sport
-    search_term = format_search_term(entity_type, entity_id)
+    resolved_name = await _resolve_entity_name(entity_type, entity_id, None)
+    search_term = format_search_term(entity_type, resolved_name)
     if category:
         search_term += f" {category}"
     

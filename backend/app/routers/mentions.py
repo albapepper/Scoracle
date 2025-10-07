@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 from typing import Dict, Optional, List, Any
 from pydantic import BaseModel, Field
 from app.services.google_rss import get_entity_mentions
@@ -45,6 +45,7 @@ async def get_sport_teams(
 
 @router.get("/mentions/{entity_type}/{entity_id}", response_model=MentionsResponse)
 async def get_mentions(
+    response: Response,
     entity_type: str = Path(..., description="Type of entity: player or team"),
     entity_id: str = Path(..., description="ID of the entity to fetch mentions for"),
     sport: str = Query(None, description="Sport type (NBA, NFL, EPL)")
@@ -67,11 +68,12 @@ async def get_mentions(
             entity_info = await get_player_info(entity_id, sport, basic_only=True)
         else:
             entity_info = await get_team_info(entity_id, sport, basic_only=True)
+        # If fallback marker present, set response header
+        if isinstance(entity_info, dict) and entity_info.get("fallback_source"):
+            response.headers["X-Entity-Source"] = entity_info["fallback_source"]
     except ValueError:
-        # Unsupported sport requested; mark missing but preserve mentions
         missing_entity = True
     except Exception as e:
-        # For now, log silently via print (later replace with structured logging)
         print(f"entity_info fetch failed: {e}")
         missing_entity = True
 

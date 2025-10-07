@@ -44,12 +44,18 @@ class BallDontLieService:
         """Get NBA player information by ID"""
         headers = {"Authorization": f"Bearer {self.api_key}"}
         # Prefer shared client if available on app state (set by lifespan)
+        raw_text = None
         try:
             async with httpx.AsyncClient(timeout=30.0) as fallback_client:
                 client = fallback_client
                 response = await client.get(f"{self.get_base_url('NBA')}/players/{player_id}", headers=headers)
                 response.raise_for_status()
-                data = response.json()
+                raw_text = response.text
+                try:
+                    data = response.json()
+                except ValueError:
+                    logger.error("Upstream player payload not JSON", extra={"player_id": player_id, "snippet": (raw_text or "")[:300]})
+                    raise HTTPException(status_code=502, detail="Malformed upstream player payload (non-json)")
         except httpx.HTTPStatusError as e:
             logger.warning("Upstream player fetch failed", extra={"player_id": player_id, "status": e.response.status_code})
             raise HTTPException(status_code=502, detail=f"Upstream player service error ({e.response.status_code})")
@@ -73,10 +79,12 @@ class BallDontLieService:
         # KeyErrors propagating into generic logs in the mentions route.
         if basic_only:
             if data.get("id") is None:
-                logger.error(
-                    "Malformed upstream player payload: missing id", 
-                    extra={"player_id": player_id, "keys": list(data.keys())[:15]}
-                )
+                # Only emit raw snippet if debug flag enabled
+                from app.core.config import settings
+                log_extra = {"player_id": player_id, "keys": list(data.keys())[:15]}
+                if settings.BALLDONTLIE_DEBUG and raw_text:
+                    log_extra["raw_snippet"] = raw_text[:400]
+                logger.error("Malformed upstream player payload: missing id", extra=log_extra)
                 # Surface a structured upstream error so caller can mark missing_entity
                 raise HTTPException(status_code=502, detail="Malformed upstream player payload (missing id)")
             team_obj = data.get("team", {}) or {}

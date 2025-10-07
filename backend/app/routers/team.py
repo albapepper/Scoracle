@@ -3,7 +3,10 @@ from typing import Optional, Dict, Any, List
 from app.services.balldontlie_api import get_team_info, get_team_stats, get_standings
 from app.services.sports_context import get_sports_context
 from app.services.stats_percentile import stats_percentile_service
+from app.services.google_rss import get_entity_mentions
+from app.services.cache import basic_cache, stats_cache, percentile_cache
 from pydantic import BaseModel
+from app.models.schemas import TeamFullResponse
 
 router = APIRouter()
 
@@ -11,13 +14,14 @@ router = APIRouter()
 async def get_team_details(
     team_id: str = Path(..., description="ID of the team to fetch"),
     season: Optional[str] = Query(None, description="Season to fetch stats for"),
+    sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, EPL)"),
     sports_context = Depends(get_sports_context)
 ):
     """
     Get detailed team information and statistics.
     """
     # Get active sport from context
-    sport = sports_context.get_active_sport()
+    sport = (sport or sports_context.get_active_sport() or "NBA").upper()
     
     # Fetch team details
     team_info = await get_team_info(team_id, sport)
@@ -33,16 +37,79 @@ async def get_team_details(
         "statistics": stats
     }
 
+@router.get("/{team_id}/full", response_model=TeamFullResponse)
+async def get_team_full(
+    team_id: str = Path(..., description="ID of the team"),
+    season: Optional[str] = Query(None, description="Season to fetch stats for"),
+    include_mentions: bool = Query(True, description="Include recent mentions"),
+    sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, EPL)"),
+    sports_context = Depends(get_sports_context)
+):
+    """Aggregate endpoint returning summary + stats + percentiles (+ mentions)."""
+    resolved_sport = (sport or sports_context.get_active_sport() or "NBA").upper()
+    season_key = season or "current"
+    cache_key_summary = f"team:summary:{resolved_sport}:{team_id}"
+    cache_key_stats = f"team:stats:{resolved_sport}:{team_id}:{season_key}"
+    cache_key_pct = f"team:percentiles:{resolved_sport}:{team_id}:{season_key}"
+
+    summary = basic_cache.get(cache_key_summary)
+    if summary is None:
+        info = await get_team_info(team_id, resolved_sport, basic_only=True)
+        summary = {
+            "id": str(info.get("id")),
+            "sport": resolved_sport,
+            "name": info.get("name"),
+            "abbreviation": info.get("abbreviation"),
+            "city": info.get("city"),
+            "conference": info.get("conference"),
+            "division": info.get("division"),
+        }
+        basic_cache.set(cache_key_summary, summary, ttl=300)
+
+    stats = stats_cache.get(cache_key_stats)
+    if stats is None:
+        try:
+            raw_stats = await get_team_stats(team_id, resolved_sport, season=season)
+            stats = (raw_stats[0] if isinstance(raw_stats, list) and raw_stats else raw_stats) or None
+        except Exception:
+            stats = None
+        stats_cache.set(cache_key_stats, stats, ttl=300)
+
+    percentiles = percentile_cache.get(cache_key_pct)
+    if percentiles is None and stats:
+        try:
+            percentiles = await stats_percentile_service.calculate_percentiles(stats, resolved_sport, season)
+        except Exception:
+            percentiles = None
+        percentile_cache.set(cache_key_pct, percentiles, ttl=1800)
+
+    mentions = None
+    if include_mentions:
+        try:
+            rss = await get_entity_mentions("team", team_id, resolved_sport)
+            mentions = rss or []
+        except Exception:
+            mentions = []
+
+    return {
+        "summary": summary,
+        "season": season_key,
+        "stats": stats,
+        "percentiles": percentiles,
+        "mentions": mentions
+    }
+
 @router.get("/{team_id}/roster")
 async def get_team_roster(
     team_id: str = Path(..., description="ID of the team to fetch roster for"),
     season: Optional[str] = Query(None, description="Season to fetch roster for"),
+    sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, EPL)"),
     sports_context = Depends(get_sports_context)
 ):
     """
     Get roster of players for a team in a specific season.
     """
-    sport = sports_context.get_active_sport()
+    sport = (sport or sports_context.get_active_sport() or "NBA").upper()
     
     # This would call a service to get the team roster
     # For now, return a placeholder
@@ -190,13 +257,14 @@ async def get_epl_standings(
 async def get_team_stats_percentiles(
     team_id: str = Path(..., description="ID of the team to fetch stats for"),
     season: Optional[str] = Query(None, description="Season to fetch stats for"),
+    sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, EPL)"),
     sports_context = Depends(get_sports_context)
 ):
     """
     Get team statistics with percentile rankings compared to other teams.
     """
     # Get active sport from context
-    sport = sports_context.get_active_sport()
+    sport = (sport or sports_context.get_active_sport() or "NBA").upper()
     
     try:
         # First get the team's stats
