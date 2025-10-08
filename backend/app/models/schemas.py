@@ -116,9 +116,14 @@ class TeamSummary(BaseModel):
 class PlayerFullResponse(BaseModel):
     summary: PlayerSummary
     season: Optional[str] = None
+    # Back-compat simple aggregates (mirror of base metrics group)
     stats: Optional[Dict[str, Any]] = None
     percentiles: Optional[Dict[str, Any]] = None
     mentions: Optional[List[NewsItem]] = None
+    # Extended profile containing richer bio / draft / physical data
+    profile: Optional[Dict[str, Any]] = None
+    # Structured metrics groups: each group has raw stats + percentiles
+    metrics: Optional[Dict[str, Any]] = None
 
 class TeamFullResponse(BaseModel):
     summary: TeamSummary
@@ -126,6 +131,8 @@ class TeamFullResponse(BaseModel):
     stats: Optional[Dict[str, Any]] = None
     percentiles: Optional[Dict[str, Any]] = None
     mentions: Optional[List[NewsItem]] = None
+    profile: Optional[Dict[str, Any]] = None
+    metrics: Optional[Dict[str, Any]] = None
 
 class ErrorEnvelope(BaseModel):
     error: Dict[str, Any]

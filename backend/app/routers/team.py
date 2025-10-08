@@ -7,6 +7,7 @@ from app.services.google_rss import get_entity_mentions
 from app.services.cache import basic_cache, stats_cache, percentile_cache
 from pydantic import BaseModel
 from app.models.schemas import TeamFullResponse
+from app.services.metrics_utils import build_metrics_group
 
 router = APIRouter()
 
@@ -49,8 +50,11 @@ async def get_team_full(
     resolved_sport = (sport or sports_context.get_active_sport() or "NBA").upper()
     season_key = season or "current"
     cache_key_summary = f"team:summary:{resolved_sport}:{team_id}"
-    cache_key_stats = f"team:stats:{resolved_sport}:{team_id}:{season_key}"
-    cache_key_pct = f"team:percentiles:{resolved_sport}:{team_id}:{season_key}"
+    cache_key_profile = f"team:profile:{resolved_sport}:{team_id}"
+    cache_key_stats = f"team:stats:base:{resolved_sport}:{team_id}:{season_key}"
+    cache_key_pct = f"team:percentiles:base:{resolved_sport}:{team_id}:{season_key}"
+    cache_key_standings = f"team:stats:standings:{resolved_sport}:{team_id}:{season_key}"
+    cache_key_standings_pct = f"team:percentiles:standings:{resolved_sport}:{team_id}:{season_key}"
 
     summary = basic_cache.get(cache_key_summary)
     if summary is None:
@@ -65,6 +69,24 @@ async def get_team_full(
             "division": info.get("division"),
         }
         basic_cache.set(cache_key_summary, summary, ttl=300)
+
+    # Full profile (richer fields)
+    profile = basic_cache.get(cache_key_profile)
+    if profile is None:
+        try:
+            full_info = await get_team_info(team_id, resolved_sport, basic_only=False)
+            if isinstance(full_info, dict):
+                profile = {
+                    "city": full_info.get("city"),
+                    "full_name": full_info.get("full_name") or full_info.get("name"),
+                    "conference": full_info.get("conference"),
+                    "division": full_info.get("division"),
+                }
+            else:
+                profile = None
+        except Exception:
+            profile = None
+        basic_cache.set(cache_key_profile, profile, ttl=600)
 
     stats = stats_cache.get(cache_key_stats)
     if stats is None:
@@ -83,6 +105,35 @@ async def get_team_full(
             percentiles = None
         percentile_cache.set(cache_key_pct, percentiles, ttl=1800)
 
+    # Standings group
+    standings_entry = stats_cache.get(cache_key_standings)
+    if standings_entry is None:
+        try:
+            standings_payload = await get_standings(resolved_sport, season=season)
+            # standings payload shape: {"data": [ ... ]}
+            data_list = standings_payload.get('data') if isinstance(standings_payload, dict) else None
+            found = None
+            if isinstance(data_list, list):
+                for d in data_list:
+                    team_obj = (d.get('team') or {}) if isinstance(d, dict) else {}
+                    if str(team_obj.get('id')) == str(team_id):
+                        found = d
+                        break
+            standings_entry = found
+        except Exception:
+            standings_entry = None
+        stats_cache.set(cache_key_standings, standings_entry, ttl=600)
+
+    standings_percentiles = percentile_cache.get(cache_key_standings_pct)
+    if standings_percentiles is None and standings_entry:
+        try:
+            # Extract numeric subset
+            numeric_subset = {k: v for k, v in standings_entry.items() if isinstance(v, (int, float))}
+            standings_percentiles = await stats_percentile_service.calculate_percentiles(numeric_subset, resolved_sport, season)
+        except Exception:
+            standings_percentiles = None
+        percentile_cache.set(cache_key_standings_pct, standings_percentiles, ttl=1800)
+
     mentions = None
     if include_mentions:
         try:
@@ -91,12 +142,20 @@ async def get_team_full(
         except Exception:
             mentions = []
 
+    metrics_groups = {}
+    if stats:
+        metrics_groups['base'] = build_metrics_group('base', stats, percentiles)
+    if standings_entry:
+        metrics_groups['standings'] = build_metrics_group('standings', standings_entry, standings_percentiles)
+
     return {
         "summary": summary,
         "season": season_key,
         "stats": stats,
         "percentiles": percentiles,
-        "mentions": mentions
+        "mentions": mentions,
+        "profile": profile,
+        "metrics": {"groups": metrics_groups}
     }
 
 @router.get("/{team_id}/roster")

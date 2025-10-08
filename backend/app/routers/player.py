@@ -8,6 +8,7 @@ from app.services.google_rss import get_entity_mentions
 from app.services.cache import basic_cache, stats_cache, percentile_cache
 from pydantic import BaseModel
 from app.models.schemas import PlayerFullResponse
+from app.services.metrics_utils import normalize_season_average, remap_percentile_keys, build_metrics_group
 from pydantic import ValidationError
 
 from app.core.config import settings
@@ -90,8 +91,11 @@ async def get_player_full(
     normalized_season = _normalize_season_for_upstream(resolved_sport, season)
 
     cache_key_summary = f"player:summary:{resolved_sport}:{player_id}"
-    cache_key_stats = f"player:stats:{resolved_sport}:{player_id}:{season_key}"
-    cache_key_pct = f"player:percentiles:{resolved_sport}:{player_id}:{season_key}"
+    cache_key_profile = f"player:profile:{resolved_sport}:{player_id}"
+    cache_key_stats = f"player:stats:base:{resolved_sport}:{player_id}:{season_key}"
+    cache_key_pct = f"player:percentiles:base:{resolved_sport}:{player_id}:{season_key}"
+    cache_key_shooting_stats = f"player:stats:shooting:{resolved_sport}:{player_id}:{season_key}"
+    cache_key_shooting_pct = f"player:percentiles:shooting:{resolved_sport}:{player_id}:{season_key}"
 
     try:
         # Summary (basic info)
@@ -119,26 +123,86 @@ async def get_player_full(
                 summary["team_id"] = str(summary.get("team_id"))
                 basic_cache.set(cache_key_summary, summary, ttl=180)
 
-        # Stats
+        # Full profile (richer fields). Cached separately to avoid heavier fetch if only summary needed elsewhere.
+        profile = basic_cache.get(cache_key_profile)
+        if profile is None:
+            try:
+                full_info = await get_player_info(player_id, resolved_sport, basic_only=False)
+                if isinstance(full_info, dict):
+                    team_full = full_info.get("team") or {}
+                    profile = {
+                        "height": full_info.get("height"),
+                        "weight": full_info.get("weight"),
+                        "jersey_number": full_info.get("jersey_number"),
+                        "college": full_info.get("college"),
+                        "country": full_info.get("country"),
+                        "draft_year": full_info.get("draft_year"),
+                        "draft_round": full_info.get("draft_round"),
+                        "draft_number": full_info.get("draft_number"),
+                        "team_conference": team_full.get("conference"),
+                        "team_division": team_full.get("division"),
+                        "team_city": team_full.get("city"),
+                        "team_full_name": team_full.get("full_name") or team_full.get("name"),
+                    }
+                else:
+                    profile = None
+            except Exception as e:
+                logger.warning("Failed fetching full profile", extra={"player_id": player_id, "error": str(e)})
+                profile = None
+            basic_cache.set(cache_key_profile, profile, ttl=600)
+
+        # Base stats group
         stats = stats_cache.get(cache_key_stats)
         if stats is None:
+            raw_stats = None
             try:
-                raw_stats = await get_player_stats(player_id, resolved_sport, season=normalized_season)
-                stats = (raw_stats[0] if isinstance(raw_stats, list) and raw_stats else raw_stats) or None
+                raw_stats_list = await get_player_stats(player_id, resolved_sport, season=normalized_season)
+                raw_stats = (raw_stats_list[0] if isinstance(raw_stats_list, list) and raw_stats_list else None)
             except Exception as e:
                 logger.warning("Failed fetching stats", extra={"player_id": player_id, "sport": resolved_sport, "season": season, "normalized": normalized_season, "error": str(e)})
-                stats = None
+            stats = normalize_season_average(raw_stats) if raw_stats else None
             stats_cache.set(cache_key_stats, stats, ttl=300)
 
-        # Percentiles (requires stats)
         percentiles = percentile_cache.get(cache_key_pct)
         if percentiles is None and stats:
+            # We use the raw key version for percentile calculation; reconstruct raw-like dict subset
             try:
-                percentiles = await stats_percentile_service.calculate_percentiles(stats, resolved_sport, normalized_season)
+                # Rebuild a dict mapping back to raw keys for percentile service compatibility
+                reverse_map = {v: k for k, v in {'min': 'minutes_per_game','pts':'points_per_game','ast':'assists_per_game','reb':'rebounds_per_game','stl':'steals_per_game','blk':'blocks_per_game','fg_pct':'field_goal_percentage','fg3_pct':'three_point_percentage','ft_pct':'free_throw_percentage','turnover':'turnovers_per_game'}.items()}
+                raw_like = {reverse_map.get(k, k): v for k, v in stats.items()}
+                raw_percentiles = await stats_percentile_service.calculate_percentiles(raw_like, resolved_sport, normalized_season)
+                percentiles = remap_percentile_keys(raw_percentiles)
             except Exception as e:
                 logger.warning("Percentile calculation failed", extra={"player_id": player_id, "sport": resolved_sport, "season": season, "normalized": normalized_season, "error": str(e)})
                 percentiles = None
             percentile_cache.set(cache_key_pct, percentiles, ttl=1800)
+
+        # Shooting stats group (placeholder retrieval; actual upstream already available in service layer)
+        shooting_stats = stats_cache.get(cache_key_shooting_stats)
+        if shooting_stats is None:
+            try:
+                from app.services.balldontlie_api import get_player_shooting_stats
+                shooting_raw = await get_player_shooting_stats(player_id, resolved_sport, season=normalized_season)
+                # shooting_raw format: {'data': [...]} or list; Keep as-is under stats for now
+                shooting_stats = shooting_raw.get('data')[0] if isinstance(shooting_raw, dict) and shooting_raw.get('data') else shooting_raw
+            except Exception as e:
+                logger.warning("Shooting stats fetch failed", extra={"player_id": player_id, "sport": resolved_sport, "error": str(e)})
+                shooting_stats = None
+            stats_cache.set(cache_key_shooting_stats, shooting_stats, ttl=600)
+
+        shooting_percentiles = percentile_cache.get(cache_key_shooting_pct)
+        if shooting_percentiles is None and shooting_stats and isinstance(shooting_stats, dict):
+            try:
+                shooting_numeric = shooting_stats.get('stats') if 'stats' in shooting_stats else shooting_stats
+                if isinstance(shooting_numeric, dict):
+                    raw_shooting_percentiles = await stats_percentile_service.calculate_percentiles(shooting_numeric, resolved_sport, normalized_season)
+                    shooting_percentiles = raw_shooting_percentiles  # keys already descriptive
+                else:
+                    shooting_percentiles = None
+            except Exception as e:
+                logger.warning("Shooting percentile calc failed", extra={"player_id": player_id, "sport": resolved_sport, "error": str(e)})
+                shooting_percentiles = None
+            percentile_cache.set(cache_key_shooting_pct, shooting_percentiles, ttl=1800)
 
         # Mentions (optional, no caching for now—RSS ttl would be separate if added)
         mentions = None
@@ -150,13 +214,22 @@ async def get_player_full(
                 logger.warning("Mentions fetch failed", extra={"player_id": player_id, "sport": resolved_sport, "error": str(e)})
                 mentions = []
 
+        # Build metrics groups collection
+        metrics_groups = {}
+        if stats:
+            metrics_groups['base'] = build_metrics_group('base', stats, percentiles)
+        if shooting_stats:
+            metrics_groups['shooting'] = build_metrics_group('shooting', shooting_stats, shooting_percentiles)
+
         try:
             model_obj = PlayerFullResponse(
-                summary=summary,  # Pydantic will coerce dict -> PlayerSummary
+                summary=summary,
                 season=season_key,
-                stats=stats,
-                percentiles=percentiles,
-                mentions=mentions
+                stats=stats,  # back-compat
+                percentiles=percentiles,  # back-compat
+                mentions=mentions,
+                profile=profile,
+                metrics={'groups': metrics_groups}
             )
         except ValidationError as ve:
             logger.error("PlayerFullResponse validation failed", extra={
