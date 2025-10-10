@@ -428,20 +428,38 @@ async def get_player_info(player_id: str, sport: str, basic_only: bool = False):
     sport_upper = sport.upper()
     if sport_upper == "NBA":
         try:
-            return await balldontlie_service.get_player_by_id(player_id, basic_only=basic_only)
+            data = await balldontlie_service.get_player_by_id(player_id, basic_only=basic_only)
+            # Write-through upsert (best-effort)
+            try:
+                from app.db.registry import entity_registry
+                await entity_registry.connect()
+                full_name = f"{data.get('first_name','')} {data.get('last_name','')}".strip()
+                team = data.get('team') or {}
+                row = {
+                    'sport': 'NBA',
+                    'entity_type': 'player',
+                    'id': data.get('id'),
+                    'first_name': data.get('first_name'),
+                    'last_name': data.get('last_name'),
+                    'full_name': full_name,
+                    'team_id': team.get('id'),
+                    'team_abbr': team.get('abbreviation'),
+                    'position': data.get('position'),
+                    'search_blob': (full_name + ' ' + (team.get('abbreviation') or '')).lower().strip()
+                }
+                await entity_registry.upsert_entity(row)
+                await entity_registry._conn.commit()
+            except Exception as reg_ex:
+                logger.debug("Registry write-through failed for player %s: %s", player_id, reg_ex)
+            return data
         except HTTPException as e:
-            # Attempt registry fallback only for basic_only (mentions view); if fallback succeeds, mark source
             if basic_only:
+                # Attempt registry fallback only if single-object fetch failed
                 try:
-                    from app.db.registry import entity_registry  # local import to avoid circular
-                    # Ensure connection (best-effort)
-                    try:
-                        await entity_registry.connect()
-                    except Exception:
-                        pass
+                    from app.db.registry import entity_registry
+                    await entity_registry.connect()
                     row = await entity_registry.get_basic('NBA', 'player', int(player_id))
                     if row:
-                        logger.info("Using registry fallback for player %s", player_id)
                         return {
                             "id": row.get("id"),
                             "first_name": row.get("first_name"),
@@ -455,8 +473,7 @@ async def get_player_info(player_id: str, sport: str, basic_only: bool = False):
                             "fallback_source": "registry"
                         }
                 except Exception as reg_ex:
-                    logger.warning("Registry fallback failed for player %s: %s", player_id, reg_ex)
-            # Re-raise original if no fallback
+                    logger.debug("Player registry fallback failed %s: %s", player_id, reg_ex)
             raise e
     elif sport_upper == "NFL":
         return await balldontlie_service.get_nfl_player_by_id(player_id, basic_only=basic_only)
@@ -497,7 +514,32 @@ async def get_team_info(team_id: str, sport: str, basic_only: bool = False):
     """Get team information, respecting the sport context"""
     sport_upper = sport.upper()
     if sport_upper == "NBA":
-        return await balldontlie_service.get_team_by_id(team_id, basic_only=basic_only)
+        try:
+            data = await balldontlie_service.get_team_by_id(team_id, basic_only=basic_only)
+            # Write-through upsert for team basic row
+            try:
+                from app.db.registry import entity_registry
+                await entity_registry.connect()
+                full_name = data.get('full_name') or data.get('name') or ''
+                row = {
+                    'sport': 'NBA',
+                    'entity_type': 'team',
+                    'id': data.get('id'),
+                    'first_name': None,
+                    'last_name': None,
+                    'full_name': full_name,
+                    'team_id': None,
+                    'team_abbr': data.get('abbreviation'),
+                    'position': None,
+                    'search_blob': (full_name + ' ' + (data.get('abbreviation') or '')).lower().strip()
+                }
+                await entity_registry.upsert_entity(row)
+                await entity_registry._conn.commit()
+            except Exception as reg_ex:
+                logger.debug("Registry write-through failed for team %s: %s", team_id, reg_ex)
+            return data
+        except HTTPException:
+            raise
     elif sport_upper == "NFL":
         return await balldontlie_service.get_nfl_team_by_id(team_id, basic_only=basic_only)
     elif sport_upper == "EPL":

@@ -9,6 +9,7 @@ import theme from '../theme';
 
 // Import D3 visualization component
 import PlayerStatsRadarChart from '../visualizations/PlayerStatsRadarChart';
+import GenericStatsBarChart from '../visualizations/GenericStatsBarChart';
 
 function PlayerPage() {
   const { playerId } = useParams();
@@ -17,6 +18,9 @@ function PlayerPage() {
   const [playerInfo, setPlayerInfo] = useState(() => getSummary(activeSport, 'player', playerId) || null); // seed from cache if exists
   const [playerStats, setPlayerStats] = useState(null);
   const [playerPercentiles, setPlayerPercentiles] = useState(null);
+  const [playerProfile, setPlayerProfile] = useState(null);
+  const [metricsGroups, setMetricsGroups] = useState({});
+  const [selectedGroup, setSelectedGroup] = useState('base');
   const [availableSeasons, setAvailableSeasons] = useState([]);
   const [selectedSeason, setSelectedSeason] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -54,6 +58,12 @@ function PlayerPage() {
       }
       setPlayerStats(fullData.stats || null);
       setPlayerPercentiles(fullData.percentiles || null);
+      setPlayerProfile(fullData.profile || null);
+      const groups = fullData.metrics?.groups || {};
+      setMetricsGroups(groups);
+      // Default selected group: base if present; otherwise first available group
+      const defaultKey = groups.base ? 'base' : Object.keys(groups)[0];
+      if (defaultKey) setSelectedGroup(defaultKey);
       setIsLoading(false);
     } else if (fullLoading) {
       setIsLoading(true);
@@ -127,6 +137,19 @@ function PlayerPage() {
                   {playerInfo.position} | {playerInfo.team.name}
                 </Text>
               )}
+              {/* Profile details, if available */}
+              {playerProfile && (
+                <Group spacing="xs" mt="xs">
+                  {playerProfile.jersey_number && <Text>#{playerProfile.jersey_number}</Text>}
+                  {playerProfile.height && <Text>| {playerProfile.height}</Text>}
+                  {playerProfile.weight && <Text>| {playerProfile.weight}</Text>}
+                  {playerProfile.college && <Text>| {playerProfile.college}</Text>}
+                  {playerProfile.country && <Text>| {playerProfile.country}</Text>}
+                  {(playerProfile.draft_year !== undefined && playerProfile.draft_year !== null) && (
+                    <Text>| Draft {playerProfile.draft_year}{playerProfile.draft_round ? ` R${playerProfile.draft_round}` : ''}{playerProfile.draft_number ? ` #${playerProfile.draft_number}` : ''}</Text>
+                  )}
+                </Group>
+              )}
             </div>
             
             <Group>
@@ -170,6 +193,10 @@ function PlayerPage() {
           <Tabs defaultValue="overview">
             <Tabs.List>
               <Tabs.Tab value="overview">Overview</Tabs.Tab>
+              {/* Show a second tab when there is at least one additional metrics group */}
+              {Object.keys(metricsGroups).filter(k => k !== 'base').length > 0 && (
+                <Tabs.Tab value="metrics">Metrics</Tabs.Tab>
+              )}
               <Tabs.Tab value="shooting">Shooting</Tabs.Tab>
               <Tabs.Tab value="advanced">Advanced</Tabs.Tab>
             </Tabs.List>
@@ -412,6 +439,36 @@ function PlayerPage() {
                     </Card>
                   </Group>
                 </Stack>
+              </Card>
+            </Tabs.Panel>
+
+            {/* Generic metrics tab for additional groups (e.g., NFL/EPL) */}
+            <Tabs.Panel value="metrics" pt="md">
+              <Card withBorder p="lg">
+                {Object.keys(metricsGroups).filter(k => k !== 'base').length === 0 ? (
+                  <Text>No additional metrics available.</Text>
+                ) : (
+                  <>
+                    <Group position="apart" mb="sm">
+                      <Text fw={600}>Metric Group</Text>
+                      <Select
+                        value={selectedGroup}
+                        onChange={setSelectedGroup}
+                        data={Object.keys(metricsGroups).map(k => ({ value: k, label: k.replace(/_/g, ' ') }))}
+                        w={240}
+                      />
+                    </Group>
+                    {metricsGroups[selectedGroup] ? (
+                      <GenericStatsBarChart
+                        stats={metricsGroups[selectedGroup].stats}
+                        percentiles={metricsGroups[selectedGroup].percentiles}
+                        title={`Metrics: ${selectedGroup.replace(/_/g, ' ')}`}
+                      />
+                    ) : (
+                      <Text>No data for the selected group.</Text>
+                    )}
+                  </>
+                )}
               </Card>
             </Tabs.Panel>
 

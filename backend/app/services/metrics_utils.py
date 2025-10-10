@@ -46,3 +46,44 @@ def build_metrics_group(name: str, stats: Dict[str, Any], percentiles: Dict[str,
         'stats': stats,
         'percentiles': percentiles
     }
+
+def epl_stats_list_to_map(stats_list: Any) -> Dict[str, Any]:
+    """Convert EPL season_stats list format [{name, value, ...}, ...] to a flat dict {name: value}.
+    If input is already a dict, return as-is.
+    """
+    if isinstance(stats_list, dict):
+        return stats_list
+    result: Dict[str, Any] = {}
+    if isinstance(stats_list, list):
+        for item in stats_list:
+            if not isinstance(item, dict):
+                continue
+            name = item.get('name')
+            if not name:
+                continue
+            result[str(name)] = item.get('value')
+    return result
+
+def compute_percentiles_from_cohort(target_values: Dict[str, Any], cohort: Any) -> Dict[str, float]:
+    """Compute simple percentiles for numeric keys in target_values using a cohort list of dicts.
+    Percentile = proportion of cohort with value <= target value, in 0-100.
+    Non-numeric or missing values are ignored.
+    """
+    if not isinstance(target_values, dict) or not isinstance(cohort, list):
+        return {}
+    out: Dict[str, float] = {}
+    for key, val in target_values.items():
+        if not isinstance(val, (int, float)):
+            continue
+        values = []
+        for entry in cohort:
+            if not isinstance(entry, dict):
+                continue
+            v = entry.get(key)
+            if isinstance(v, (int, float)):
+                values.append(v)
+        if not values:
+            continue
+        rank = sum(1 for v in values if v <= val)
+        out[key] = round((rank / len(values)) * 100, 1)
+    return out

@@ -96,6 +96,12 @@ async def get_player_full(
     cache_key_pct = f"player:percentiles:base:{resolved_sport}:{player_id}:{season_key}"
     cache_key_shooting_stats = f"player:stats:shooting:{resolved_sport}:{player_id}:{season_key}"
     cache_key_shooting_pct = f"player:percentiles:shooting:{resolved_sport}:{player_id}:{season_key}"
+    # NFL advanced stats groups (light mode: no percentile cohort yet)
+    cache_key_nfl_rushing = f"player:stats:nfl_rushing:{resolved_sport}:{player_id}:{season_key}"
+    cache_key_nfl_passing = f"player:stats:nfl_passing:{resolved_sport}:{player_id}:{season_key}"
+    cache_key_nfl_receiving = f"player:stats:nfl_receiving:{resolved_sport}:{player_id}:{season_key}"
+    # EPL season stats group
+    cache_key_epl_player_stats = f"player:stats:epl_season_stats:{resolved_sport}:{player_id}:{season_key}"
 
     try:
         # Summary (basic info)
@@ -220,6 +226,72 @@ async def get_player_full(
             metrics_groups['base'] = build_metrics_group('base', stats, percentiles)
         if shooting_stats:
             metrics_groups['shooting'] = build_metrics_group('shooting', shooting_stats, shooting_percentiles)
+
+        # NFL-specific advanced groups (only if sport is NFL)
+        if resolved_sport == 'NFL':
+            # Light mode: fetch single-player rows from advanced endpoints (raw only)
+            from app.services.cache import stats_cache as _sc
+            async def _fetch_adv(endpoint: str, cache_key: str):
+                cached = _sc.get(cache_key)
+                if cached is not None:
+                    return cached
+                import httpx
+                headers = {"Authorization": f"Bearer {settings.BALLDONTLIE_API_KEY}"}
+                url_base = "https://api.balldontlie.io/nfl/v1/advanced_stats"
+                final_url = f"{url_base}/{endpoint}"
+                params = {}
+                if normalized_season:
+                    params['season'] = normalized_season
+                params['player_ids[]'] = player_id
+                try:
+                    async with httpx.AsyncClient(timeout=20.0) as client:
+                        r = await client.get(final_url, headers=headers, params=params)
+                        r.raise_for_status()
+                        payload = r.json()
+                        data_list = payload.get('data') if isinstance(payload, dict) else None
+                        row = data_list[0] if data_list else None
+                except Exception as e:
+                    logger.warning("NFL advanced stats fetch failed", extra={"endpoint": endpoint, "player_id": player_id, "error": str(e)})
+                    row = None
+                _sc.set(cache_key, row, ttl=600)
+                return row
+            nfl_rushing = await _fetch_adv('rushing', cache_key_nfl_rushing)
+            nfl_passing = await _fetch_adv('passing', cache_key_nfl_passing)
+            nfl_receiving = await _fetch_adv('receiving', cache_key_nfl_receiving)
+            # Build groups with percentiles = None and meta flag
+            if nfl_rushing:
+                g = build_metrics_group('nfl_rushing', nfl_rushing, None)
+                g['meta'] = {'percentiles_available': False, 'mode': 'light'}
+                metrics_groups['nfl_rushing'] = g
+            if nfl_passing:
+                g = build_metrics_group('nfl_passing', nfl_passing, None)
+                g['meta'] = {'percentiles_available': False, 'mode': 'light'}
+                metrics_groups['nfl_passing'] = g
+            if nfl_receiving:
+                g = build_metrics_group('nfl_receiving', nfl_receiving, None)
+                g['meta'] = {'percentiles_available': False, 'mode': 'light'}
+                metrics_groups['nfl_receiving'] = g
+
+        # EPL player season stats (list of {name,value}) → flatten to map; light mode percentiles
+        if resolved_sport == 'EPL':
+            from app.services.cache import stats_cache as _sc
+            from app.services.metrics_utils import epl_stats_list_to_map
+            cached = _sc.get(cache_key_epl_player_stats)
+            if cached is None:
+                try:
+                    from app.services.balldontlie_api import get_epl_player_season_stats
+                    season_int = int(season) if season and str(season).isdigit() else None
+                    payload = await get_epl_player_season_stats(player_id, season_int)
+                    stats_list = payload.get('data') if isinstance(payload, dict) else None
+                    cached = epl_stats_list_to_map(stats_list)
+                except Exception as e:
+                    logger.warning("EPL player season stats fetch failed", extra={"player_id": player_id, "error": str(e)})
+                    cached = None
+                _sc.set(cache_key_epl_player_stats, cached, ttl=900)
+            if cached:
+                g = build_metrics_group('epl_player_season_stats', cached, None)
+                g['meta'] = {'percentiles_available': False, 'mode': 'light'}
+                metrics_groups['epl_player_season_stats'] = g
 
         try:
             model_obj = PlayerFullResponse(

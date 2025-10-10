@@ -8,6 +8,7 @@ import { useEntityCache } from '../context/EntityCacheContext';
 
 // Import D3 visualization component
 import TeamStatsBarChart from '../visualizations/TeamStatsBarChart';
+import GenericStatsBarChart from '../visualizations/GenericStatsBarChart';
 
 function TeamPage() {
   const { teamId } = useParams();
@@ -16,6 +17,9 @@ function TeamPage() {
   const [teamInfo, setTeamInfo] = useState(() => getSummary(activeSport, 'team', teamId) || null);
   const [teamStats, setTeamStats] = useState(null);
   const [teamRoster, setTeamRoster] = useState([]);
+  const [teamProfile, setTeamProfile] = useState(null);
+  const [metricsGroups, setMetricsGroups] = useState({});
+  const [selectedGroup, setSelectedGroup] = useState('base');
   const availableSeasons = ['2023-2024', '2022-2023', '2021-2022'];
   const [selectedSeason, setSelectedSeason] = useState('2023-2024'); // Default to current season
   const [isLoading, setIsLoading] = useState(true);
@@ -44,7 +48,12 @@ function TeamPage() {
         setTeamInfo(fullData.summary);
         putSummary(activeSport, 'team', teamId, fullData.summary);
       }
-      setTeamStats(fullData.stats || null);
+  setTeamStats(fullData.stats || null);
+  setTeamProfile(fullData.profile || null);
+  const groups = fullData.metrics?.groups || {};
+  setMetricsGroups(groups);
+  const defaultKey = groups.standings ? 'standings' : (groups.base ? 'base' : Object.keys(groups)[0]);
+  if (defaultKey) setSelectedGroup(defaultKey);
       setIsLoading(false);
     } else if (fullLoading) {
       setIsLoading(true);
@@ -90,6 +99,14 @@ function TeamPage() {
                 {teamInfo?.conference && <Text>| {teamInfo.conference} Conference</Text>}
                 {teamInfo?.division && <Text>| {teamInfo.division} Division</Text>}
               </Group>
+              {teamProfile && (
+                <Group spacing="xs" mt="xs">
+                  {teamProfile.arena && <Text>{teamProfile.arena}</Text>}
+                  {teamProfile.city && <Text>| {teamProfile.city}</Text>}
+                  {teamProfile.state && <Text>| {teamProfile.state}</Text>}
+                  {teamProfile.coach && <Text>| Coach: {teamProfile.coach}</Text>}
+                </Group>
+              )}
             </div>
             
             <Group>
@@ -133,6 +150,9 @@ function TeamPage() {
           <Tabs.List>
             <Tabs.Tab value="overview">Overview</Tabs.Tab>
             <Tabs.Tab value="roster">Roster</Tabs.Tab>
+            {Object.keys(metricsGroups).length > 0 && (
+              <Tabs.Tab value="metrics">Metrics</Tabs.Tab>
+            )}
             <Tabs.Tab value="advanced">Advanced</Tabs.Tab>
           </Tabs.List>
 
@@ -184,6 +204,35 @@ function TeamPage() {
                 </>
               ) : (
                 <Text>No statistics available for this team in the selected season.</Text>
+              )}
+            </Card>
+          </Tabs.Panel>
+
+          <Tabs.Panel value="metrics" pt="md">
+            <Card withBorder p="lg">
+              {Object.keys(metricsGroups).length === 0 ? (
+                <Text>No additional metrics available.</Text>
+              ) : (
+                <>
+                  <Group position="apart" mb="sm">
+                    <Text fw={600}>Metric Group</Text>
+                    <Select
+                      value={selectedGroup}
+                      onChange={setSelectedGroup}
+                      data={Object.keys(metricsGroups).map(k => ({ value: k, label: k.replace(/_/g, ' ') }))}
+                      w={240}
+                    />
+                  </Group>
+                  {metricsGroups[selectedGroup] ? (
+                    <GenericStatsBarChart
+                      stats={metricsGroups[selectedGroup].stats}
+                      percentiles={metricsGroups[selectedGroup].percentiles}
+                      title={`Metrics: ${selectedGroup.replace(/_/g, ' ')}`}
+                    />
+                  ) : (
+                    <Text>No data for the selected group.</Text>
+                  )}
+                </>
               )}
             </Card>
           </Tabs.Panel>

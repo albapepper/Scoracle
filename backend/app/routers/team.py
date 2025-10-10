@@ -7,7 +7,7 @@ from app.services.google_rss import get_entity_mentions
 from app.services.cache import basic_cache, stats_cache, percentile_cache
 from pydantic import BaseModel
 from app.models.schemas import TeamFullResponse
-from app.services.metrics_utils import build_metrics_group
+from app.services.metrics_utils import build_metrics_group, epl_stats_list_to_map, compute_percentiles_from_cohort
 
 router = APIRouter()
 
@@ -129,10 +129,39 @@ async def get_team_full(
         try:
             # Extract numeric subset
             numeric_subset = {k: v for k, v in standings_entry.items() if isinstance(v, (int, float))}
-            standings_percentiles = await stats_percentile_service.calculate_percentiles(numeric_subset, resolved_sport, season)
+            # For EPL, the standings payload is the cohort already; compute directly
+            if resolved_sport == 'EPL':
+                standings_payload = await get_standings(resolved_sport, season=season)
+                data_list = standings_payload.get('data') if isinstance(standings_payload, dict) else []
+                # Map cohort entries to numeric dicts for percentile
+                cohort = []
+                if isinstance(data_list, list):
+                    for d in data_list:
+                        cohort.append({k: v for k, v in d.items() if isinstance(v, (int, float))})
+                standings_percentiles = compute_percentiles_from_cohort(numeric_subset, cohort)
+            else:
+                standings_percentiles = await stats_percentile_service.calculate_percentiles(numeric_subset, resolved_sport, season)
         except Exception:
             standings_percentiles = None
         percentile_cache.set(cache_key_standings_pct, standings_percentiles, ttl=1800)
+
+    # EPL team season_stats endpoint integration as its own metrics group
+    epl_team_stats_group = None
+    if resolved_sport == 'EPL':
+        cache_key_epl_team_stats = f"team:stats:epl_team_stats:{resolved_sport}:{team_id}:{season_key}"
+        cached_epl = stats_cache.get(cache_key_epl_team_stats)
+        if cached_epl is None:
+            try:
+                from app.services.balldontlie_api import get_epl_team_season_stats
+                season_int = int(season) if season and str(season).isdigit() else None
+                payload = await get_epl_team_season_stats(team_id, season_int)
+                stats_list = payload.get('data') if isinstance(payload, dict) else None
+                stats_map = epl_stats_list_to_map(stats_list)
+            except Exception:
+                stats_map = None
+            stats_cache.set(cache_key_epl_team_stats, stats_map, ttl=900)
+            cached_epl = stats_map
+        epl_team_stats_group = cached_epl
 
     mentions = None
     if include_mentions:
@@ -147,6 +176,11 @@ async def get_team_full(
         metrics_groups['base'] = build_metrics_group('base', stats, percentiles)
     if standings_entry:
         metrics_groups['standings'] = build_metrics_group('standings', standings_entry, standings_percentiles)
+    if epl_team_stats_group:
+        # We could compute cohort percentiles for team season_stats if/when a global cohort is available. Use light mode here.
+        g = build_metrics_group('epl_team_season_stats', epl_team_stats_group, None)
+        g['meta'] = {'percentiles_available': False, 'mode': 'light'}
+        metrics_groups['epl_team_season_stats'] = g
 
     return {
         "summary": summary,
