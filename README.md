@@ -68,6 +68,15 @@ Health: [http://localhost:8000/api/health](http://localhost:8000/api/health)
 
 ### Backend Local Dev (Windows PowerShell)
 
+Preferred (venv handled automatically, no activation needed):
+
+```powershell
+./local.ps1 backend            # runs API on :8000
+./local.ps1 backend -Port 9000 # different port
+```
+
+Legacy/manual (if you prefer activating the venv in backend/):
+
 ```powershell
 cd backend
 python -m venv venv
@@ -93,21 +102,22 @@ React dev server proxies to `http://localhost:8000` (see `package.json` `proxy`)
 cd backend; ./venv/Scripts/Activate.ps1; uvicorn app.main:app --reload --port 8000
 ```
 
+ 
 ```bash
 cd backend && source venv/bin/activate && uvicorn app.main:app --reload --port 8000
 ```
 
 ## 🔐 Configuration & Environment
 
-Environment variables (optional) via `.env` in project root:
-
-```env
+Environment variables (optional) via `.env` in project root (see `.env.example`):
 
 ```env
 BALLDONTLIE_API_KEY=override_token
+API_SPORTS_KEY=
 REGISTRY_DB_PATH=instance/registry.db
 BALDONTLIE_DEBUG=0
 ```
+The local handler (`local.ps1`) will read `.env` automatically.
 Defaults are defined in `app/core/config.py`.
 
 ### API Provider: API-Sports
@@ -150,8 +160,8 @@ All unexpected exceptions are wrapped into a consistent envelope:
    }
 }
 
-```json
 ```
+ 
 HTTPExceptions preserve their code & message. Schema: `ErrorEnvelope`.
 
 ## 📘 API Overview
@@ -194,8 +204,6 @@ Example response (player):
 ### Sport‑First Variants
 
 Allow future multi-sport frontends to pick a canonical style:
-
-```text
 
 ```text
 GET /api/v1/{sport}/players/{player_id}
@@ -260,7 +268,7 @@ See `docs/deployment/cloud-run.md` for Google Cloud Run steps (build images, pus
 
 ## 🧰 Developer Productivity
 
-### PowerShell Helper (Windows)
+### PowerShell Helpers (Windows)
 
 Use `dev.ps1` from repository root:
 
@@ -269,6 +277,15 @@ Use `dev.ps1` from repository root:
 ./dev.ps1 frontend  # start frontend only
 ./dev.ps1 up        # start both (backend job + frontend)
 ./dev.ps1 types     # generate OpenAPI TypeScript types
+```
+
+Or use the new local handler that avoids activation scripts and centralizes the venv at `./.venv`:
+
+```powershell
+./local.ps1 backend     # start FastAPI with reload
+./local.ps1 frontend    # start React dev server
+./local.ps1 up          # both (backend as background job + frontend)
+./local.ps1 pip "list"  # run pip in the managed venv
 ```
 
 ### Make Targets (macOS/Linux)
