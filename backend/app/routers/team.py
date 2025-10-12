@@ -68,6 +68,8 @@ async def get_team_full(
             "conference": info.get("conference"),
             "division": info.get("division"),
         }
+        if isinstance(info, dict) and info.get("fallback_source"):
+            summary["source"] = info.get("fallback_source")
         basic_cache.set(cache_key_summary, summary, ttl=300)
 
     # Full profile (richer fields)
@@ -97,13 +99,8 @@ async def get_team_full(
             stats = None
         stats_cache.set(cache_key_stats, stats, ttl=300)
 
-    percentiles = percentile_cache.get(cache_key_pct)
-    if percentiles is None and stats:
-        try:
-            percentiles = await stats_percentile_service.calculate_percentiles(stats, resolved_sport, season)
-        except Exception:
-            percentiles = None
-        percentile_cache.set(cache_key_pct, percentiles, ttl=1800)
+    # Temporarily disable percentile calculation during debugging
+    percentiles = None
 
     # Standings group
     standings_entry = stats_cache.get(cache_key_standings)
@@ -124,26 +121,8 @@ async def get_team_full(
             standings_entry = None
         stats_cache.set(cache_key_standings, standings_entry, ttl=600)
 
-    standings_percentiles = percentile_cache.get(cache_key_standings_pct)
-    if standings_percentiles is None and standings_entry:
-        try:
-            # Extract numeric subset
-            numeric_subset = {k: v for k, v in standings_entry.items() if isinstance(v, (int, float))}
-            # For EPL, the standings payload is the cohort already; compute directly
-            if resolved_sport == 'EPL':
-                standings_payload = await get_standings(resolved_sport, season=season)
-                data_list = standings_payload.get('data') if isinstance(standings_payload, dict) else []
-                # Map cohort entries to numeric dicts for percentile
-                cohort = []
-                if isinstance(data_list, list):
-                    for d in data_list:
-                        cohort.append({k: v for k, v in d.items() if isinstance(v, (int, float))})
-                standings_percentiles = compute_percentiles_from_cohort(numeric_subset, cohort)
-            else:
-                standings_percentiles = await stats_percentile_service.calculate_percentiles(numeric_subset, resolved_sport, season)
-        except Exception:
-            standings_percentiles = None
-        percentile_cache.set(cache_key_standings_pct, standings_percentiles, ttl=1800)
+    # Temporarily disable standings percentiles during debugging
+    standings_percentiles = None
 
     # EPL team season_stats endpoint integration as its own metrics group
     epl_team_stats_group = None

@@ -4,8 +4,7 @@ from pydantic import BaseModel
 import time
 import logging
 
-from app.services.balldontlie_api import balldontlie_service
-from app.db.registry import entity_registry
+from app.services.apisports import apisports_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -89,57 +88,26 @@ async def autocomplete(
         response.headers["X-Autocomplete-Cache"] = "MISS"
         response.headers["X-Autocomplete-Cache-Hits"] = str(_CACHE_HITS)
         response.headers["X-Autocomplete-Cache-Misses"] = str(_CACHE_MISSES)
-        # Try registry first
-        try:
-            registry_results = await entity_registry.search(sport, entity_type, q, limit=limit)
-            if registry_results:
-                data = [{
-                    'id': r['id'],
-                    'label': r.get('full_name') or r.get('team_abbr') or str(r['id']),
-                    'team_abbr': r.get('team_abbr'),
-                    'sport': r.get('sport'),
-                    'entity_type': r.get('entity_type')
-                } for r in registry_results]
-                _cache_set(cache_key, data)
-                return AutocompleteResponse(
-                    query=q,
-                    entity_type=entity_type,
-                    sport=sport,
-                    results=data[:limit]
-                )
-        except Exception as e:
-            logger.warning("Registry search failed, falling back to upstream: %s", e)
-
-        # Fallback to upstream service (currently only NBA implemented)
-        service = None
-        if sport.upper() == 'NBA':
-            service = balldontlie_service
-        if service is None:
-            # Gracefully return empty result set for unsupported sports (future sports may be registry-only)
-            response.headers["X-Autocomplete-Supported"] = "false"
-            empty = AutocompleteResponse(query=q, entity_type=entity_type, sport=sport, results=[])
-            _cache_set(cache_key, [])
-            return empty
-
+        # Primary: query live API-Sports per sport and entity type
         try:
             if entity_type == 'player':
-                results = await service.search_players(q)
+                results = await apisports_service.search_players(q, sport)
                 data = [
                     {
-                        'id': p['id'],
-                        'label': f"{p.get('first_name','')} {p.get('last_name','')}".strip(),
-                        'team_abbr': (p.get('team') or {}).get('abbreviation'),
+                        'id': p.get('id'),
+                        'label': f"{(p.get('first_name') or '').strip()} {(p.get('last_name') or '').strip()}".strip(),
+                        'team_abbr': p.get('team_abbr'),
                         'sport': sport,
                         'entity_type': 'player'
                     }
                     for p in results
                 ]
             elif entity_type == 'team':
-                results = await service.search_teams(q)
+                results = await apisports_service.search_teams(q, sport)
                 data = [
                     {
-                        'id': t['id'],
-                        'label': t.get('full_name') or t.get('name'),
+                        'id': t.get('id'),
+                        'label': t.get('name') or t.get('abbreviation') or str(t.get('id')),
                         'team_abbr': t.get('abbreviation'),
                         'sport': sport,
                         'entity_type': 'team'
@@ -148,8 +116,10 @@ async def autocomplete(
                 ]
             else:
                 raise HTTPException(status_code=400, detail="entity_type must be 'player' or 'team'")
+        except HTTPException:
+            raise
         except Exception as e:
-            logger.error("Autocomplete upstream error: %s", e)
+            logger.error("Autocomplete API-Sports error: %s", e)
             raise HTTPException(status_code=502, detail="Upstream service error")
 
         _cache_set(cache_key, data)

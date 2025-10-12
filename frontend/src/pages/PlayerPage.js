@@ -26,6 +26,7 @@ function PlayerPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [showPercentiles, setShowPercentiles] = useState(true);
+  const [idSource, setIdSource] = useState('');
   
   // Fetch available seasons for player
   useEffect(() => {
@@ -54,6 +55,7 @@ function PlayerPage() {
     if (fullData) {
       if (fullData.summary) {
         setPlayerInfo(fullData.summary);
+        if (fullData.summary.source) setIdSource(fullData.summary.source);
         putSummary(activeSport, 'player', playerId, fullData.summary);
       }
       setPlayerStats(fullData.stats || null);
@@ -137,6 +139,9 @@ function PlayerPage() {
                   {playerInfo.position} | {playerInfo.team.name}
                 </Text>
               )}
+              {idSource && (
+                <Badge size="xs" color="gray" mt="xs" variant="outline">ID: {idSource}</Badge>
+              )}
               {/* Profile details, if available */}
               {playerProfile && (
                 <Group spacing="xs" mt="xs">
@@ -199,6 +204,9 @@ function PlayerPage() {
               )}
               <Tabs.Tab value="shooting">Shooting</Tabs.Tab>
               <Tabs.Tab value="advanced">Advanced</Tabs.Tab>
+              {Object.keys(metricsGroups).length > 0 && (
+                <Tabs.Tab value="raw">Raw Groups</Tabs.Tab>
+              )}
             </Tabs.List>
 
             <Tabs.Panel value="overview" pt="md">
@@ -503,6 +511,35 @@ function PlayerPage() {
                 </Text>
               </Card>
             </Tabs.Panel>
+            {/* Debug: Render raw metrics groups stacked as cards */}
+            {metricsGroups && Object.keys(metricsGroups).length > 0 && (
+              <Tabs.Panel value="raw" pt="md">
+                <Stack>
+                  {Object.entries(metricsGroups).map(([groupKey, groupObj]) => (
+                    <Card key={groupKey} withBorder p="md">
+                      <Group position="apart" mb="sm">
+                        <Text fw={600}>{groupKey.replace(/_/g, ' ')}</Text>
+                        {groupObj?.meta?.mode && (
+                          <Text size="sm" c="dimmed">mode: {groupObj.meta.mode}</Text>
+                        )}
+                      </Group>
+                      {groupObj?.stats ? (
+                        <Stack spacing="xs">
+                          {Object.entries(groupObj.stats).map(([k, v]) => (
+                            <Group key={k} position="apart">
+                              <Text size="sm" c="dimmed">{k.replace(/_/g, ' ')}</Text>
+                              <Text fw={500}>{typeof v === 'number' ? v.toFixed(3).replace(/\.000$/, '') : String(v)}</Text>
+                            </Group>
+                          ))}
+                        </Stack>
+                      ) : (
+                        <Text size="sm" c="dimmed">No stats for this group.</Text>
+                      )}
+                    </Card>
+                  ))}
+                </Stack>
+              </Tabs.Panel>
+            )}
           </Tabs>
         ) : (
           <Text>No statistics available for this player in the selected season.</Text>

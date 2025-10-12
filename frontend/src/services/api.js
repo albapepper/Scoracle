@@ -10,106 +10,69 @@ const apiClient = axios.create({
 
 // Home/search services
 export const getHomeInfo = async (sport) => {
-  const params = sport ? { sport } : {};
-  const response = await apiClient.get('/', { params });
+  const response = await apiClient.get(`/${sport}`);
   return response.data;
 };
 
 export const searchEntities = async (query, entityType, sport) => {
-  const params = {
-    query,
-    ...(entityType && { entity_type: entityType }),
-    ...(sport && { sport }),
-  };
-  
-  const response = await apiClient.get('/search', { params });
+  const params = { query, ...(entityType && { entity_type: entityType }) };
+  const response = await apiClient.get(`/${sport}/search`, { params });
   return response.data;
 };
 
 // Mentions services
 export const getEntityMentions = async (entityType, entityId, sport) => {
-  const params = sport ? { sport } : {};
-  // Backend route now namespaced under /mentions
-  const response = await apiClient.get(`/mentions/${entityType}/${entityId}`, { params });
+  const response = await apiClient.get(`/${sport}/${entityType}s/${entityId}/mentions`);
   return response.data;
 };
 
 // Player services
 export const getPlayerDetails = async (playerId, season, sport) => {
-  const params = {
-    ...(season && { season }),
-    ...(sport && { sport }),
-  };
-  
-  const response = await apiClient.get(`/player/${playerId}`, { params });
+  const params = { ...(season && { season }) };
+  const response = await apiClient.get(`/${sport}/players/${playerId}`, { params });
   return response.data;
 };
 
 export const getPlayerPercentiles = async (playerId, season, sport) => {
-  const params = {
-    ...(season && { season }),
-    ...(sport && { sport }),
-  };
-  
-  const response = await apiClient.get(`/player/${playerId}/percentiles`, { params });
+  const params = { ...(season && { season }) };
+  const response = await apiClient.get(`/${sport}/players/${playerId}/percentiles`, { params });
   return response.data;
 };
 
 export const getPlayerSeasons = async (playerId, sport) => {
-  const params = sport ? { sport } : {};
-  const response = await apiClient.get(`/player/${playerId}/seasons`, { params });
+  const response = await apiClient.get(`/${sport}/players/${playerId}/seasons`);
   return response.data;
 };
 
 // Player full aggregate
 export const getPlayerFull = async (playerId, season, sport, options = {}) => {
-  const params = {
-    ...(season && { season }),
-    ...(sport && { sport }),
-    ...(options.includeMentions === false ? { include_mentions: false } : {}),
-  };
-  const response = await apiClient.get(`/player/${playerId}/full`, { params });
+  const params = { ...(season && { season }), ...(options.includeMentions === false ? { include_mentions: false } : {}) };
+  const response = await apiClient.get(`/${sport}/players/${playerId}/full`, { params });
   return response.data;
 };
 
 // Team services
 export const getTeamDetails = async (teamId, season, sport) => {
-  const params = {
-    ...(season && { season }),
-    ...(sport && { sport }),
-  };
-  
-  const response = await apiClient.get(`/team/${teamId}`, { params });
+  const params = { ...(season && { season }) };
+  const response = await apiClient.get(`/${sport}/teams/${teamId}`, { params });
   return response.data;
 };
 
 export const getTeamPercentiles = async (teamId, season, sport) => {
-  const params = {
-    ...(season && { season }),
-    ...(sport && { sport }),
-  };
-  
-  const response = await apiClient.get(`/team/${teamId}/percentiles`, { params });
+  const params = { ...(season && { season }) };
+  const response = await apiClient.get(`/${sport}/teams/${teamId}/percentiles`, { params });
   return response.data;
 };
 
 export const getTeamRoster = async (teamId, season, sport) => {
-  const params = {
-    ...(season && { season }),
-    ...(sport && { sport }),
-  };
-  
-  const response = await apiClient.get(`/team/${teamId}/roster`, { params });
+  const params = { ...(season && { season }) };
+  const response = await apiClient.get(`/${sport}/teams/${teamId}/roster`, { params });
   return response.data;
 };
 
 // Team full aggregate
 export const getTeamFull = async (teamId, season, sport, options = {}) => {
-  const params = {
-    ...(season && { season }),
-    ...(sport && { sport }),
-    ...(options.includeMentions === false ? { include_mentions: false } : {}),
-  };
-  const response = await apiClient.get(`/team/${teamId}/full`, { params });
+  const params = { ...(season && { season }), ...(options.includeMentions === false ? { include_mentions: false } : {}) };
+  const response = await apiClient.get(`/${sport}/teams/${teamId}/full`, { params });
   return response.data;
 };

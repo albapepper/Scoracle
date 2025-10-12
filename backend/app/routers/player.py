@@ -122,6 +122,9 @@ async def get_player_full(
                 "team_name": team_obj.get("name"),
                 "team_abbreviation": team_obj.get("abbreviation"),
             }
+            # If the service indicated a fallback source (e.g., registry), expose it in the summary
+            if isinstance(info, dict) and info.get("fallback_source"):
+                summary["source"] = info.get("fallback_source")
             basic_cache.set(cache_key_summary, summary, ttl=180)
         else:
             # Sanitize cached summary if earlier version stored int team_id
@@ -169,19 +172,8 @@ async def get_player_full(
             stats = normalize_season_average(raw_stats) if raw_stats else None
             stats_cache.set(cache_key_stats, stats, ttl=300)
 
-        percentiles = percentile_cache.get(cache_key_pct)
-        if percentiles is None and stats:
-            # We use the raw key version for percentile calculation; reconstruct raw-like dict subset
-            try:
-                # Rebuild a dict mapping back to raw keys for percentile service compatibility
-                reverse_map = {v: k for k, v in {'min': 'minutes_per_game','pts':'points_per_game','ast':'assists_per_game','reb':'rebounds_per_game','stl':'steals_per_game','blk':'blocks_per_game','fg_pct':'field_goal_percentage','fg3_pct':'three_point_percentage','ft_pct':'free_throw_percentage','turnover':'turnovers_per_game'}.items()}
-                raw_like = {reverse_map.get(k, k): v for k, v in stats.items()}
-                raw_percentiles = await stats_percentile_service.calculate_percentiles(raw_like, resolved_sport, normalized_season)
-                percentiles = remap_percentile_keys(raw_percentiles)
-            except Exception as e:
-                logger.warning("Percentile calculation failed", extra={"player_id": player_id, "sport": resolved_sport, "season": season, "normalized": normalized_season, "error": str(e)})
-                percentiles = None
-            percentile_cache.set(cache_key_pct, percentiles, ttl=1800)
+        # Temporarily disable percentile calculation during debugging; return raw stats only
+        percentiles = None
 
         # Shooting stats group (placeholder retrieval; actual upstream already available in service layer)
         shooting_stats = stats_cache.get(cache_key_shooting_stats)
@@ -196,19 +188,8 @@ async def get_player_full(
                 shooting_stats = None
             stats_cache.set(cache_key_shooting_stats, shooting_stats, ttl=600)
 
-        shooting_percentiles = percentile_cache.get(cache_key_shooting_pct)
-        if shooting_percentiles is None and shooting_stats and isinstance(shooting_stats, dict):
-            try:
-                shooting_numeric = shooting_stats.get('stats') if 'stats' in shooting_stats else shooting_stats
-                if isinstance(shooting_numeric, dict):
-                    raw_shooting_percentiles = await stats_percentile_service.calculate_percentiles(shooting_numeric, resolved_sport, normalized_season)
-                    shooting_percentiles = raw_shooting_percentiles  # keys already descriptive
-                else:
-                    shooting_percentiles = None
-            except Exception as e:
-                logger.warning("Shooting percentile calc failed", extra={"player_id": player_id, "sport": resolved_sport, "error": str(e)})
-                shooting_percentiles = None
-            percentile_cache.set(cache_key_shooting_pct, shooting_percentiles, ttl=1800)
+        # Temporarily disable shooting percentiles during debugging
+        shooting_percentiles = None
 
         # Mentions (optional, no caching for now—RSS ttl would be separate if added)
         mentions = None

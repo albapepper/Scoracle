@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Container, Title, Text, Card, Group, Button, Loader, Stack, Tabs, Select, Grid, Avatar } from '@mantine/core';
+import { Container, Title, Text, Card, Group, Button, Loader, Stack, Tabs, Select, Grid, Avatar, Badge } from '@mantine/core';
 import { useSportContext } from '../context/SportContext';
 import { getTeamFull, getTeamRoster } from '../services/api';
 import { useQuery } from '@tanstack/react-query';
@@ -24,6 +24,7 @@ function TeamPage() {
   const [selectedSeason, setSelectedSeason] = useState('2023-2024'); // Default to current season
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [idSource, setIdSource] = useState('');
   
   const { data: fullData, isLoading: fullLoading, error: fullError } = useQuery({
     queryKey: ['teamFull', teamId, selectedSeason, activeSport],
@@ -46,6 +47,7 @@ function TeamPage() {
     if (fullData) {
       if (fullData.summary) {
         setTeamInfo(fullData.summary);
+        if (fullData.summary.source) setIdSource(fullData.summary.source);
         putSummary(activeSport, 'team', teamId, fullData.summary);
       }
   setTeamStats(fullData.stats || null);
@@ -99,6 +101,9 @@ function TeamPage() {
                 {teamInfo?.conference && <Text>| {teamInfo.conference} Conference</Text>}
                 {teamInfo?.division && <Text>| {teamInfo.division} Division</Text>}
               </Group>
+              {idSource && (
+                <Badge size="xs" color="gray" mt="xs" variant="outline">ID: {idSource}</Badge>
+              )}
               {teamProfile && (
                 <Group spacing="xs" mt="xs">
                   {teamProfile.arena && <Text>{teamProfile.arena}</Text>}
@@ -151,7 +156,10 @@ function TeamPage() {
             <Tabs.Tab value="overview">Overview</Tabs.Tab>
             <Tabs.Tab value="roster">Roster</Tabs.Tab>
             {Object.keys(metricsGroups).length > 0 && (
-              <Tabs.Tab value="metrics">Metrics</Tabs.Tab>
+              <>
+                <Tabs.Tab value="metrics">Metrics</Tabs.Tab>
+                <Tabs.Tab value="raw">Raw Groups</Tabs.Tab>
+              </>
             )}
             <Tabs.Tab value="advanced">Advanced</Tabs.Tab>
           </Tabs.List>
@@ -288,6 +296,36 @@ function TeamPage() {
               </Text>
             </Card>
           </Tabs.Panel>
+
+          {/* Debug: Render raw metrics groups stacked as cards */}
+          {metricsGroups && Object.keys(metricsGroups).length > 0 && (
+            <Tabs.Panel value="raw" pt="md">
+              <Stack>
+                {Object.entries(metricsGroups).map(([groupKey, groupObj]) => (
+                  <Card key={groupKey} withBorder p="md">
+                    <Group position="apart" mb="sm">
+                      <Text fw={600}>{groupKey.replace(/_/g, ' ')}</Text>
+                      {groupObj?.meta?.mode && (
+                        <Text size="sm" c="dimmed">mode: {groupObj.meta.mode}</Text>
+                      )}
+                    </Group>
+                    {groupObj?.stats ? (
+                      <Stack spacing="xs">
+                        {Object.entries(groupObj.stats).map(([k, v]) => (
+                          <Group key={k} position="apart">
+                            <Text size="sm" c="dimmed">{k.replace(/_/g, ' ')}</Text>
+                            <Text fw={500}>{typeof v === 'number' ? v.toFixed(3).replace(/\.000$/, '') : String(v)}</Text>
+                          </Group>
+                        ))}
+                      </Stack>
+                    ) : (
+                      <Text size="sm" c="dimmed">No stats for this group.</Text>
+                    )}
+                  </Card>
+                ))}
+              </Stack>
+            </Tabs.Panel>
+          )}
         </Tabs>
       </Stack>
     </Container>

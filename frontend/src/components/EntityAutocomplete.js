@@ -34,8 +34,8 @@ export default function EntityAutocomplete({ entityType, onSelect, placeholder }
       setLoading(true);
       setError('');
       try {
-        const resp = await axios.get(`/api/v1/autocomplete/${entityType}`, {
-          params: { q: debounced, sport: activeSport },
+        const resp = await axios.get(`/api/v1/${activeSport}/autocomplete/${entityType}`, {
+          params: { q: debounced },
           signal: controller.signal,
         });
         setResults(resp.data.results || []);

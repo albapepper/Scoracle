@@ -116,7 +116,8 @@ class BallDontLieService:
         headers = {"Authorization": f"Bearer {self.api_key}"}
         params = {"player_ids[]": player_id}
         if season:
-            params["seasons[]"] = season
+            # balldontlie season_averages expects 'season' (single year), not 'seasons[]'
+            params["season"] = int(season) if str(season).isdigit() else season
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(f"{self.get_base_url('NBA')}/season_averages", params=params, headers=headers)
             response.raise_for_status()
@@ -141,24 +142,52 @@ class BallDontLieService:
             return response.json()
     
     async def get_team_by_id(self, team_id: str, basic_only: bool = False):
-        """Get NBA team information by ID"""
+        """Get NBA team information by ID with defensive normalization."""
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(f"{self.get_base_url('NBA')}/teams/{team_id}", headers=headers)
-            response.raise_for_status()
-            data = response.json()
-        
+        raw_text = None
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(f"{self.get_base_url('NBA')}/teams/{team_id}", headers=headers)
+                response.raise_for_status()
+                raw_text = response.text
+                try:
+                    data = response.json()
+                except ValueError:
+                    logger.error("Upstream team payload not JSON", extra={"team_id": team_id, "snippet": (raw_text or "")[:300]})
+                    raise HTTPException(status_code=502, detail="Malformed upstream team payload (non-json)")
+        except httpx.HTTPStatusError as e:
+            logger.warning("Upstream team fetch failed", extra={"team_id": team_id, "status": e.response.status_code})
+            raise HTTPException(status_code=502, detail=f"Upstream team service error ({e.response.status_code})")
+        except httpx.HTTPError as e:
+            logger.error("Upstream team fetch network error", extra={"team_id": team_id, "error": str(e)})
+            raise HTTPException(status_code=502, detail="Upstream team service unreachable")
+
+        # Normalize potential wrappers (e.g., {"data": {...}} or list)
+        if isinstance(data, dict) and "data" in data and not isinstance(data.get("data"), list):
+            data = data["data"]
+        elif isinstance(data, dict) and "data" in data and isinstance(data.get("data"), list):
+            for item in data["data"]:
+                if item.get("id") == int(team_id):
+                    data = item
+                    break
+
         if basic_only:
-            # Return only basic information
+            if data.get("id") is None:
+                from app.core.config import settings
+                log_extra = {"team_id": team_id, "keys": list(data.keys())[:15] if isinstance(data, dict) else type(data).__name__}
+                if settings.BALLDONTLIE_DEBUG and raw_text:
+                    log_extra["raw_snippet"] = raw_text[:400]
+                logger.error("Malformed upstream team payload: missing id", extra=log_extra)
+                raise HTTPException(status_code=502, detail="Malformed upstream team payload (missing id)")
             return {
-                "id": data["id"],
-                "name": data["full_name"],
-                "abbreviation": data["abbreviation"],
-                "city": data["city"],
-                "conference": data["conference"],
-                "division": data["division"],
+                "id": data.get("id"),
+                "name": data.get("full_name") or data.get("name"),
+                "abbreviation": data.get("abbreviation"),
+                "city": data.get("city"),
+                "conference": data.get("conference"),
+                "division": data.get("division"),
             }
-        
+
         return data
     
     async def get_team_stats(self, team_id: str, season: Optional[str] = None):
@@ -167,7 +196,8 @@ class BallDontLieService:
         params = {"team_ids[]": team_id}
         
         if season:
-            params["seasons[]"] = season
+            # team_stats endpoint expects 'season' as a single year value
+            params["season"] = int(season) if str(season).isdigit() else season
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(f"{self.get_base_url('NBA')}/team_stats", params=params, headers=headers)
             response.raise_for_status()
@@ -346,7 +376,8 @@ class BallDontLieService:
         params = {}
         
         if season:
-            params["seasons[]"] = season
+            # standings endpoint expects 'season'
+            params["season"] = int(season)
             
         url = f"{self.get_base_url('NBA')}/standings"
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -478,7 +509,12 @@ async def get_player_info(player_id: str, sport: str, basic_only: bool = False):
     elif sport_upper == "NFL":
         return await balldontlie_service.get_nfl_player_by_id(player_id, basic_only=basic_only)
     elif sport_upper == "EPL":
-        return await balldontlie_service.get_epl_player_by_id(player_id, basic_only=basic_only)
+        if basic_only:
+            from app.services.apisports import apisports_service
+            return await apisports_service.get_football_player_basic(player_id)
+        # Non-basic EPL profile via API-Sports not yet implemented; return basic for now
+        from app.services.apisports import apisports_service
+        return await apisports_service.get_football_player_basic(player_id)
     else:
         raise ValueError(f"Unsupported sport: {sport}")
 
@@ -538,12 +574,35 @@ async def get_team_info(team_id: str, sport: str, basic_only: bool = False):
             except Exception as reg_ex:
                 logger.debug("Registry write-through failed for team %s: %s", team_id, reg_ex)
             return data
-        except HTTPException:
-            raise
+        except HTTPException as e:
+            if basic_only:
+                # Attempt registry fallback similar to players
+                try:
+                    from app.db.registry import entity_registry
+                    await entity_registry.connect()
+                    row = await entity_registry.get_basic('NBA', 'team', int(team_id))
+                    if row:
+                        return {
+                            "id": row.get("id"),
+                            "name": row.get("full_name"),
+                            "abbreviation": row.get("team_abbr"),
+                            "city": row.get("city"),
+                            "conference": row.get("conference"),
+                            "division": row.get("division"),
+                            "fallback_source": "registry"
+                        }
+                except Exception as reg_ex:
+                    logger.debug("Team registry fallback failed %s: %s", team_id, reg_ex)
+            raise e
     elif sport_upper == "NFL":
         return await balldontlie_service.get_nfl_team_by_id(team_id, basic_only=basic_only)
     elif sport_upper == "EPL":
-        return await balldontlie_service.get_epl_team_by_id(team_id, basic_only=basic_only)
+        if basic_only:
+            from app.services.apisports import apisports_service
+            return await apisports_service.get_football_team_basic(team_id)
+        # Non-basic EPL profile via API-Sports not yet implemented; return basic for now
+        from app.services.apisports import apisports_service
+        return await apisports_service.get_football_team_basic(team_id)
     else:
         raise ValueError(f"Unsupported sport: {sport}")
 

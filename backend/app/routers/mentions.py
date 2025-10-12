@@ -71,17 +71,25 @@ async def get_mentions(
         # If fallback marker present, set response header
         if isinstance(entity_info, dict) and entity_info.get("fallback_source"):
             response.headers["X-Entity-Source"] = entity_info["fallback_source"]
+        # Guarantee id presence in response entity_info
+        if isinstance(entity_info, dict):
+            entity_info.setdefault("id", int(entity_id) if str(entity_id).isdigit() else entity_id)
     except ValueError:
         missing_entity = True
     except Exception as e:
         print(f"entity_info fetch failed: {e}")
         missing_entity = True
 
+    # If missing entity, still return a minimal entity_info with id to prevent downstream KeyErrors
+    safe_entity_info = entity_info
+    if missing_entity and not isinstance(entity_info, dict):
+        safe_entity_info = {"id": int(entity_id) if str(entity_id).isdigit() else entity_id}
+
     return MentionsResponse(
         entity_type=entity_type,
         entity_id=entity_id,
         sport=sport,
-        entity_info=entity_info,
+        entity_info=safe_entity_info,
         mentions=mentions,
         missing_entity=missing_entity
     )

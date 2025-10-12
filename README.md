@@ -110,6 +110,23 @@ BALDONTLIE_DEBUG=0
 ```
 Defaults are defined in `app/core/config.py`.
 
+### API Provider: API-Sports
+
+Autocomplete and global search now use API-Sports across sports. Configure your key:
+
+* Windows PowerShell (local runs):
+   * `$env:API_SPORTS_KEY = "<your-key>"`
+* Docker Compose:
+   * Ensure `API_SPORTS_KEY` is set in your shell environment before `docker compose up`.
+
+Optional league/season overrides:
+
+* `API_SPORTS_EPL_SEASON` (e.g., `2024`)
+* `API_SPORTS_NBA_LEAGUE`, `API_SPORTS_NBA_SEASON`
+* `API_SPORTS_NFL_LEAGUE`, `API_SPORTS_NFL_SEASON`
+
+EPL basic player/team lookups are served via API-Sports. NBA/NFL detailed stats still use legacy routes while migration proceeds.
+
 ## 📦 Caching Strategy
 
 Layered in-memory TTL caches (`app/services/cache.py`):

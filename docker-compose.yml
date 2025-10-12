@@ -7,6 +7,7 @@ services:
       - ./backend:/app
     environment:
       - BALLDONTLIE_API_KEY=fd8788ca-65fe-4ea6-896f-a2c9776977d1
+      - API_SPORTS_KEY=${API_SPORTS_KEY}
     command: uvicorn app.main:app --reload --host 0.0.0.0
     restart: unless-stopped
 
