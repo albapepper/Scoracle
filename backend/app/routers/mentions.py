@@ -2,46 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 from typing import Dict, Optional, List, Any
 from pydantic import BaseModel, Field
 from app.services.google_rss import get_entity_mentions
-from app.services.balldontlie_api import get_player_info, get_team_info, get_players, get_teams
 from app.models.schemas import PlayerBase, TeamBase, MentionsResponse
 
 router = APIRouter()
 
-@router.get("/sport/{sport}/players")
-async def get_sport_players(
-    sport: str = Path(..., description="Sport type (NBA, NFL, EPL)"),
-    page: int = Query(1, description="Page number for pagination"),
-    per_page: int = Query(25, description="Number of results per page")
-):
-    """
-    Get players for a specific sport.
-    Returns a list of players based on the sport.
-    """
-    try:
-        # Set up pagination parameters
-        params = {"page": page, "per_page": per_page}
-        players_data = await get_players(sport, params)
-        return players_data
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching players: {str(e)}")
-
-@router.get("/sport/{sport}/teams")
-async def get_sport_teams(
-    sport: str = Path(..., description="Sport type (NBA, NFL, EPL)")
-):
-    """
-    Get teams for a specific sport.
-    Returns a list of teams based on the sport.
-    """
-    try:
-        teams_data = await get_teams(sport)
-        return teams_data
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching teams: {str(e)}")
+"""
+Note: legacy /sport/{sport}/players and /sport/{sport}/teams endpoints using balldontlie were removed
+to standardize on API-Sports and sport-first routes under app/api/sport.py
+"""
 
 @router.get("/mentions/{entity_type}/{entity_id}", response_model=MentionsResponse)
 async def get_mentions(
@@ -65,9 +33,31 @@ async def get_mentions(
     missing_entity = False
     try:
         if entity_type == "player":
-            entity_info = await get_player_info(entity_id, sport, basic_only=True)
+            if sport.upper() == 'NBA':
+                try:
+                    from app.services.apisports import apisports_service
+                    entity_info = await apisports_service.get_basketball_player_basic(entity_id)
+                except Exception:
+                    entity_info = None
+            else:
+                if sport.upper() == 'EPL':
+                    from app.services.apisports import apisports_service
+                    entity_info = await apisports_service.get_football_player_basic(entity_id)
+                else:
+                    entity_info = None
         else:
-            entity_info = await get_team_info(entity_id, sport, basic_only=True)
+            if sport.upper() == 'NBA':
+                try:
+                    from app.services.apisports import apisports_service
+                    entity_info = await apisports_service.get_basketball_team_basic(entity_id)
+                except Exception:
+                    entity_info = None
+            else:
+                if sport.upper() == 'EPL':
+                    from app.services.apisports import apisports_service
+                    entity_info = await apisports_service.get_football_team_basic(entity_id)
+                else:
+                    entity_info = None
         # If fallback marker present, set response header
         if isinstance(entity_info, dict) and entity_info.get("fallback_source"):
             response.headers["X-Entity-Source"] = entity_info["fallback_source"]

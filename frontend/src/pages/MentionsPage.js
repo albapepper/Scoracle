@@ -15,6 +15,7 @@ import {
   List
 } from '@mantine/core';
 import { useSportContext } from '../context/SportContext';
+import ApiSportsWidget from '../components/ApiSportsWidget';
 import { getEntityMentions } from '../services/api';
 import theme from '../theme';
 import { useEntityCache } from '../context/EntityCacheContext';
@@ -198,6 +199,43 @@ function MentionsPage() {
           </Stack>
         </Card>
         
+        {/* API-Sports Widgets (optional) */}
+        <Card shadow="sm" p="lg" radius="md" withBorder>
+          <Stack>
+            <Title order={3}>Widget Preview</Title>
+            {/* Render a widget matching the entity type, when we have a numeric ID */}
+            {entityType === 'team' && entityInfo?.id && (
+              <>
+                <ApiSportsWidget
+                  type="team"
+                  data={{ teamId: entityInfo.id, targetPlayer: '#player-container' }}
+                />
+                <div id="player-container" />
+              </>
+            )}
+            {entityType === 'player' && entityInfo?.id && (
+              <>
+                <ApiSportsWidget
+                  type="player"
+                  data={{
+                    playerId: entityInfo.id,
+                    playerStatistics: 'true',
+                    playerTrophies: 'true',
+                    playerInjuries: 'true',
+                    season: new Date().getFullYear().toString()
+                  }}
+                />
+                {/* Container to receive clicked player details from other widgets via data-target-player */}
+                <div id="player-container" />
+              </>
+            )}
+            {/* If we don't have the apisports ID yet, show a hint */}
+            {(!entityInfo?.id) && (
+              <Text c="dimmed" size="sm">No API-Sports ID mapped for this {entityType}. Add apisports_id to enable widgets.</Text>
+            )}
+          </Stack>
+        </Card>
+
         {/* Recent Mentions */}
         <div>
           <Title order={3} mb="sm" style={{ color: theme.colors.text.accent }}>

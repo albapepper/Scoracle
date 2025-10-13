@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.services.sports_context import get_sports_context
 from app.services.apisports import apisports_service
 from app.models.schemas import SearchResult, SearchResponse
-from app.db.registry import entity_registry
 import httpx
 import logging
 

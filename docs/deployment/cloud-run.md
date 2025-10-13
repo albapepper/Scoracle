@@ -22,7 +22,8 @@ This guide walks through publishing both the FastAPI backend and the React front
 
 You can keep both images in a single repo or separate them. The examples below use one repo named `scoracle` in region `us-central1`—adjust to your preferred region.
 
-```bash
+
+  ```bash
 gcloud artifacts repositories create scoracle \
   --repository-format=docker \
   --location=us-central1 \
@@ -43,11 +44,13 @@ export AR="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}"
 ### 3.1 Backend (FastAPI)
 
 1. Build the image from the repo root:
-   ```bash
+   
+  ```bash
    docker build -t ${AR}/backend:latest ./backend
-   ```
+  ```
 2. Push the image:
-   ```bash
+   
+  ```bash
    docker push ${AR}/backend:latest
    ```
 
@@ -76,11 +79,12 @@ gcloud run deploy scoracle-backend \
   --platform=managed \
   --allow-unauthenticated \
   --port=8000 \
-  --set-env-vars=BALLDONTLIE_API_KEY=<API_KEY> \
+  --set-env-vars=API_SPORTS_KEY=<API_KEY> \
   --set-env-vars=BACKEND_CORS_ORIGINS=https://<FRONTEND_DOMAIN>,https://<FRONTEND_DEFAULT_URL>
 ```
 
 Key notes:
+
 - `BACKEND_CORS_ORIGINS` should include the eventual frontend URL (the default Cloud Run URL and any custom domain).
 - Consider adding `--min-instances=0` for cost savings or `--min-instances=1` if you want to avoid cold starts.
 - Secrets can be stored in Secret Manager and mounted with `--set-secrets` instead of inline values.

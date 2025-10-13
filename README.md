@@ -2,7 +2,7 @@ git clone https://github.com/albapepper/scoracle.git
 docker-compose up
 # Scoracle – Sports News & Advanced Statistics Platform
 
-Scoracle is a modern web application that aggregates near‑real‑time sports news (Google News RSS) and statistics (balldontlie and future data providers) across multiple leagues. It delivers unified, cached API responses and rich interactive visualizations via a React frontend.
+Scoracle is a modern web application that aggregates near‑real‑time sports news (Google News RSS) and statistics (API‑Sports provider) across multiple leagues. It delivers unified, cached API responses and rich interactive visualizations via a React frontend.
 
 ## ✨ Key Features
 
@@ -32,7 +32,7 @@ scoracle/
 │   │   ├── models/                # Pydantic schemas (PlayerFullResponse, ErrorEnvelope, etc.)
 │   │   ├── routers/               # (Legacy) routed endpoints (player, team, mentions, links, autocomplete, home)
 │   │   ├── api/                   # (New) sport-first + re-export bridging layer
-│   │   ├── adapters/              # (New) Re-export wrappers for external services (RSS, balldontlie)
+│   │   ├── adapters/              # (New) Re-export wrappers for external services (RSS)
 │   │   ├── services/              # (Legacy) External integration logic (to be relocated)
 │   │   ├── repositories/          # Entity registry abstraction (SQLite)
 │   │   └── domain/                # (Future) Core domain logic (stats transforms, percentile calc wrappers)
@@ -68,21 +68,9 @@ Health: [http://localhost:8000/api/health](http://localhost:8000/api/health)
 
 ### Backend Local Dev (Windows PowerShell)
 
-Preferred (venv handled automatically, no activation needed):
-
 ```powershell
+Copy-Item .env.example .env -Force
 ./local.ps1 backend            # runs API on :8000
-./local.ps1 backend -Port 9000 # different port
-```
-
-Legacy/manual (if you prefer activating the venv in backend/):
-
-```powershell
-cd backend
-python -m venv venv
-./venv/Scripts/Activate.ps1
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
 ```
 
 API docs: [http://localhost:8000/api/docs](http://localhost:8000/api/docs)
@@ -90,35 +78,9 @@ API docs: [http://localhost:8000/api/docs](http://localhost:8000/api/docs)
 ### Frontend Local Dev
 
 ```powershell
-cd frontend
-npm install
-npm start
+.local.ps1 frontend
 ```
 React dev server proxies to `http://localhost:8000` (see `package.json` `proxy`).
-
-### Quick One-Liners
-
-```powershell
-cd backend; ./venv/Scripts/Activate.ps1; uvicorn app.main:app --reload --port 8000
-```
-
- 
-```bash
-cd backend && source venv/bin/activate && uvicorn app.main:app --reload --port 8000
-```
-
-## 🔐 Configuration & Environment
-
-Environment variables (optional) via `.env` in project root (see `.env.example`):
-
-```env
-BALLDONTLIE_API_KEY=override_token
-API_SPORTS_KEY=
-REGISTRY_DB_PATH=instance/registry.db
-BALDONTLIE_DEBUG=0
-```
-The local handler (`local.ps1`) will read `.env` automatically.
-Defaults are defined in `app/core/config.py`.
 
 ### API Provider: API-Sports
 
@@ -129,13 +91,6 @@ Autocomplete and global search now use API-Sports across sports. Configure your 
 * Docker Compose:
    * Ensure `API_SPORTS_KEY` is set in your shell environment before `docker compose up`.
 
-Optional league/season overrides:
-
-* `API_SPORTS_EPL_SEASON` (e.g., `2024`)
-* `API_SPORTS_NBA_LEAGUE`, `API_SPORTS_NBA_SEASON`
-* `API_SPORTS_NFL_LEAGUE`, `API_SPORTS_NFL_SEASON`
-
-EPL basic player/team lookups are served via API-Sports. NBA/NFL detailed stats still use legacy routes while migration proceeds.
 
 ## 📦 Caching Strategy
 
@@ -233,83 +188,19 @@ Percentiles are computed lazily per unique (entity, sport, season) from fetched 
 
 ## 🔄 Navigation Flow
 
-1. User searches entity → selects result.
-2. Mentions page loads summary + news.
+1. User selects sport and entity type (player or team) and searches.
+2. Mentions page loads basic summary entity info (API provided) + news (Google RSS provided).
 3. Clicking "View Stats" preloads summary into `EntityCacheContext`.
 4. Player/Team page mounts: seeds state from cache immediately, then React Query fetch resolves full payload.
 
-## 🛠 Local Troubleshooting
-
-| Issue | Fix |
-|-------|-----|
-| CORS error | Ensure frontend dev server proxy or add origin to `BACKEND_CORS_ORIGINS`. |
-| 404 on player route | Verify new prefixed route `/api/v1/player/{id}` not old root style. |
-| Empty mentions | RSS may have no hits; try broader name variant or verify internet access. |
-| Stale data | TTL caches keep data warm; restart app or wait for expiry. |
-
-## 🧭 Roadmap (Next Phases)
-
-| Phase | Goal |
-|-------|-----|
-| 2 | Migrate logic: `services/` → `adapters/` & `domain/` (remove duplication) |
-| 2 | Add Redis (optional) for multi-instance cache coherence |
-| 3 | Implement real seasons + roster sources (replace placeholders) |
-| 3 | OpenAPI → TypeScript type generation (`openapi-typescript`) |
-| 4 | Add comparison & trend endpoints |
-| 4 | Auth & favorites |
-
 ## 🔑 API Keys
 
-Currently using balldontlie public API key (config default). Override with environment variable `BALLDONTLIE_API_KEY`.
+Provider: API‑Sports. Set your key via environment variable `API_SPORTS_KEY`.
 
 ## 📤 Deployment
 
 See `docs/deployment/cloud-run.md` for Google Cloud Run steps (build images, push to Artifact Registry, deploy services, set concurrency/timeouts).
 
-## 🧰 Developer Productivity
-
-### PowerShell Helpers (Windows)
-
-Use `dev.ps1` from repository root:
-
-```powershell
-./dev.ps1 backend   # start backend only
-./dev.ps1 frontend  # start frontend only
-./dev.ps1 up        # start both (backend job + frontend)
-./dev.ps1 types     # generate OpenAPI TypeScript types
-```
-
-Or use the new local handler that avoids activation scripts and centralizes the venv at `./.venv`:
-
-```powershell
-./local.ps1 backend     # start FastAPI with reload
-./local.ps1 frontend    # start React dev server
-./local.ps1 up          # both (backend as background job + frontend)
-./local.ps1 pip "list"  # run pip in the managed venv
-```
-
-### Make Targets (macOS/Linux)
-
-```bash
-make backend    # backend with reload
-make frontend   # react dev server
-make up         # run both concurrently
-make types      # generate TS types from OpenAPI
-```
-
-## 🧾 TypeScript API Types
-
-Run after backend schema changes (ensure backend running so OpenAPI is reachable):
-
-```bash
-npm run api:types
-```
-
-Output: `frontend/src/types/api.ts` (do not edit manually).
-
 ## 📄 License
 
-MIT License. See `LICENSE` (add if not present).
-
----
-Questions or ideas? Open an issue or start a discussion – contributions welcome.
+MIT License.

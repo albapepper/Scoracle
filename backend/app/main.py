@@ -4,31 +4,22 @@ from fastapi.responses import JSONResponse
 import logging
 from contextlib import asynccontextmanager
 import httpx
-import asyncio
 
 from app.api import home, autocomplete, mentions, links, player, team, sport
 from app.core.config import settings
-from app.repositories.registry import entity_registry
 from app.models.schemas import ErrorEnvelope
 
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
+    # Startup – keep it simple; no DB or background jobs
     app.state.http_client = httpx.AsyncClient(timeout=15.0)
-    await entity_registry.connect()
-    # Kick off non-blocking background ingestion if needed
-    async def _bg_ingest():
-        try:
-            await entity_registry.ensure_ingested_if_empty("NBA")
-        except Exception:
-            logger.exception("Background ingestion crashed")
-    asyncio.create_task(_bg_ingest())
+    if not settings.API_SPORTS_KEY:
+        logger.warning("API_SPORTS_KEY is not set – upstream API calls will fail until configured")
     yield
     # Shutdown
     await app.state.http_client.aclose()
-    await entity_registry.close()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -56,42 +47,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
-# IMPORTANT: Register specific/static path segments before very generic dynamic ones
-# The mentions and links routers each define a very broad pattern '/{entity_type}/{entity_id}'
-# which was previously capturing '/autocomplete/player' and returning 400.
+# Include routers (sport-first API plus thin legacy routes)
 app.include_router(home.router, prefix="/api/v1", tags=["home"])
 app.include_router(autocomplete.router, prefix="/api/v1", tags=["autocomplete"])
 app.include_router(mentions.router, prefix="/api/v1", tags=["mentions"])
 app.include_router(links.router, prefix="/api/v1", tags=["links"])
-# Player & team routers previously mounted at /api/v1 creating path collisions like /api/v1/{player_id}
-# and /api/v1/{team_id} while the frontend calls /api/v1/player/{id} and /api/v1/team/{id}.
-# Mount them under explicit resource prefixes to align with frontend and avoid ambiguous parameter-only paths.
 app.include_router(player.router, prefix="/api/v1/player", tags=["player"])
 app.include_router(team.router, prefix="/api/v1/team", tags=["team"])
 app.include_router(sport.router, prefix="/api/v1", tags=["sport"])
 
-# Maintenance / registry router
-maintenance_router = APIRouter(prefix="/api/v1/registry", tags=["registry"])
-
-@maintenance_router.post("/refresh/{sport}")
-async def refresh_registry(sport: str):
-    # Simple reingest (future: diff / incremental)
-    await entity_registry.ingest_sport(sport)
-    return {"status": "ok", "sport": sport.upper()}
-
-@maintenance_router.get("/counts")
-async def registry_counts():
-    counts = {}
-    for sport in ["NBA"]:  # extend when more sports added
-        counts[sport] = {
-            "players": await entity_registry.count(sport, "player"),
-            "teams": await entity_registry.count(sport, "team"),
-        }
-    counts["status"] = entity_registry.status()
-    return counts
-
-app.include_router(maintenance_router)
+# Registry-related maintenance endpoints removed to keep server lean
 
 @app.get("/api/health")
 def health_check():

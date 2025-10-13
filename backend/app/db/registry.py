@@ -2,7 +2,6 @@ import aiosqlite
 import asyncio
 import logging
 from typing import List, Optional, Dict, Any
-from app.services.balldontlie_api import balldontlie_service
 from app.core.config import settings
 import os
 from pathlib import Path
@@ -108,26 +107,12 @@ class EntityRegistry:
         return cnt
 
     async def ingest_sport(self, sport: str):
-        # Currently only NBA is truly supported via balldontlie; placeholder for NFL/EPL.
-        sport_upper = sport.upper()
-        if self.ingesting:
-            logger.info("Ingestion already in progress; skipping duplicate request")
-            return
-        self.ingesting = True
+        # Registry ingestion disabled during migration away from balldontlie.
+        # Future: implement ingestion via API‑Sports endpoints if needed.
+        logger.info("Registry ingestion skipped for %s (disabled)", sport.upper())
+        self.last_error = None
         self.players_ingested = 0
         self.teams_ingested = 0
-        self.last_error = None
-        try:
-            if sport_upper == "NBA":
-                await self._ingest_nba_players()
-                await self._ingest_nba_teams()
-            else:
-                logger.warning("Ingestion for sport %s not implemented; skipping", sport_upper)
-        except Exception as e:
-            self.last_error = str(e)
-            logger.error("Ingestion error: %s", e)
-        finally:
-            self.ingesting = False
 
     async def ensure_ingested_if_empty(self, sport: str):
         # Non-blocking helper: call from background task
@@ -141,82 +126,10 @@ class EntityRegistry:
             logger.error("ensure_ingested_if_empty failed: %s", e)
 
     async def _ingest_nba_players(self):
-        logger.info("Ingesting NBA players from upstream API")
-        import httpx
-        per_page = 100
-        page = 1
-        total = 0
-        headers = {"Authorization": f"Bearer {balldontlie_service.api_key}"}
-        base_url = balldontlie_service.get_base_url('NBA')
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            while True:
-                try:
-                    resp = await client.get(f"{base_url}/players", params={"per_page": per_page, "page": page}, headers=headers)
-                    resp.raise_for_status()
-                    data = resp.json()
-                    players = data.get("data", [])
-                    if not players:
-                        break
-                    rows = []
-                    for p in players:
-                        team = p.get("team", {}) or {}
-                        full_name = f"{p.get('first_name','')} {p.get('last_name','')}".strip()
-                        search_blob = " ".join(filter(None, [full_name.lower(), team.get('abbreviation','').lower()]))
-                        rows.append({
-                            "sport": "NBA",
-                            "entity_type": "player",
-                            "id": p.get("id"),
-                            "first_name": p.get("first_name"),
-                            "last_name": p.get("last_name"),
-                            "full_name": full_name,
-                            "team_id": team.get("id"),
-                            "team_abbr": team.get("abbreviation"),
-                            "position": p.get("position"),
-                            "search_blob": search_blob,
-                        })
-                    await self.bulk_upsert(rows)
-                    total += len(rows)
-                    self.players_ingested = total
-                    logger.info("Ingested %d NBA players (page %d)", total, page)
-                    if data.get("meta", {}).get("next_page") is None:
-                        break
-                    page += 1
-                except Exception as e:
-                    self.last_error = str(e)
-                    logger.error("Error ingesting NBA players page %d: %s", page, e)
-                    break
+        logger.info("NBA registry ingestion disabled (balldontlie removed)")
 
     async def _ingest_nba_teams(self):
-        logger.info("Ingesting NBA teams from upstream API")
-        import httpx
-        headers = {"Authorization": f"Bearer {balldontlie_service.api_key}"}
-        try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                resp = await client.get(f"{balldontlie_service.get_base_url('NBA')}/teams", headers=headers)
-                resp.raise_for_status()
-                teams = resp.json().get("data", [])
-            rows = []
-            for t in teams:
-                full_name = t.get("full_name") or t.get("name") or "Unknown Team"
-                search_blob = " ".join(filter(None, [full_name.lower(), t.get("abbreviation","" ).lower(), t.get("city","" ).lower()]))
-                rows.append({
-                    "sport": "NBA",
-                    "entity_type": "team",
-                    "id": t.get("id"),
-                    "first_name": None,
-                    "last_name": None,
-                    "full_name": full_name,
-                    "team_id": None,
-                    "team_abbr": t.get("abbreviation"),
-                    "position": None,
-                    "search_blob": search_blob,
-                })
-            await self.bulk_upsert(rows)
-            self.teams_ingested = len(rows)
-            logger.info("Ingested %d NBA teams", len(rows))
-        except Exception as e:
-            self.last_error = str(e)
-            logger.error("Error ingesting NBA teams: %s", e)
+        logger.info("NBA registry ingestion disabled (balldontlie removed)")
 
     def status(self):
         return {

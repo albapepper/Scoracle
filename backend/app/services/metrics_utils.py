@@ -1,6 +1,6 @@
 from typing import Dict, Any
 
-# Mapping from upstream balldontlie season averages raw keys to expanded names
+# Mapping from upstream season averages raw keys to expanded names (legacy keys; keep for back-compat)
 SEASON_AVG_KEY_MAP = {
     'min': 'minutes_per_game',
     'pts': 'points_per_game',
@@ -15,7 +15,7 @@ SEASON_AVG_KEY_MAP = {
 }
 
 def normalize_season_average(raw: Dict[str, Any]) -> Dict[str, Any]:
-    """Convert a single season average row from balldontlie into extended key form.
+    """Convert a single season average row with short keys into extended key form.
 
     Unknown keys are copied through unchanged so we don't silently lose data.
     """

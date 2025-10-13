@@ -55,6 +55,7 @@ async def autocomplete(
     sport: str = Query("NBA", description="Sport (currently NBA supported)"),
     limit: int = Query(8, ge=1, le=15)
 ):
+    _t0 = time.perf_counter()
     raw_entity_type = entity_type
     entity_type = (entity_type or "").strip().lower()
     if entity_type not in {"player", "team"}:
@@ -67,6 +68,9 @@ async def autocomplete(
 
     # Minimum 2 chars before hitting upstream to reduce noise
     if len(q.strip()) < 2:
+        # add diagnostics headers
+        response.headers["X-Autocomplete-Q-Len"] = str(len(q.strip()))
+        response.headers["X-Autocomplete-Elapsed-ms"] = f"{(time.perf_counter()-_t0)*1000:.0f}"
         return AutocompleteResponse(query=q, entity_type=entity_type, sport=sport, results=[])
 
     try:
@@ -78,6 +82,8 @@ async def autocomplete(
             response.headers["X-Autocomplete-Cache"] = "HIT"
             response.headers["X-Autocomplete-Cache-Hits"] = str(_CACHE_HITS)
             response.headers["X-Autocomplete-Cache-Misses"] = str(_CACHE_MISSES)
+            response.headers["X-Autocomplete-Q-Len"] = str(len(q.strip()))
+            response.headers["X-Autocomplete-Elapsed-ms"] = f"{(time.perf_counter()-_t0)*1000:.0f}"
             return AutocompleteResponse(
                 query=q,
                 entity_type=entity_type,
@@ -123,6 +129,9 @@ async def autocomplete(
             raise HTTPException(status_code=502, detail="Upstream service error")
 
         _cache_set(cache_key, data)
+        response.headers["X-Autocomplete-Q-Len"] = str(len(q.strip()))
+        response.headers["X-Autocomplete-Elapsed-ms"] = f"{(time.perf_counter()-_t0)*1000:.0f}"
+        response.headers["X-Upstream-Provider"] = "api-sports"
         return AutocompleteResponse(
             query=q,
             entity_type=entity_type,

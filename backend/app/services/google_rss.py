@@ -3,46 +3,42 @@ import httpx
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 import urllib.parse
-from app.repositories.registry import entity_registry
-from app.services.balldontlie_api import get_player_info, get_team_info
+from app.services.apisports import apisports_service
 
 async def _resolve_entity_name(entity_type: str, entity_id: str, sport: Optional[str]) -> str:
     """Resolve a human-friendly entity name for RSS queries.
     Order: registry -> upstream basic info -> raw id fallback.
     """
     sport_upper = (sport or "NBA").upper()
-    # Try registry first
-    try:
-        if entity_type in ("player", "team"):
-            await entity_registry.connect()
-            basic = await entity_registry.get_basic(sport_upper, entity_type, int(entity_id))
-            if basic:
-                if entity_type == "player":
-                    fn = basic.get("first_name") or ""
-                    ln = basic.get("last_name") or ""
-                    name = f"{fn} {ln}".strip()
-                    if name:
-                        return name
-                else:
-                    name = basic.get("full_name") or basic.get("team_abbr")
-                    if name:
-                        return name
-    except Exception:
-        pass
+    # Registry lookup removed for simplicity; resolve via upstream only
     # Upstream basic info fallback
     try:
-        if entity_type == "player":
-            info = await get_player_info(entity_id, sport_upper, basic_only=True)
-            fn = info.get("first_name") or ""
-            ln = info.get("last_name") or ""
-            name = f"{fn} {ln}".strip()
-            if name:
-                return name
-        elif entity_type == "team":
-            info = await get_team_info(entity_id, sport_upper, basic_only=True)
-            name = info.get("name") or info.get("abbreviation")
-            if name:
-                return name
+        if sport_upper == 'NBA':
+            if entity_type == "player":
+                info = await apisports_service.get_basketball_player_basic(entity_id)
+                fn = info.get("first_name") or ""
+                ln = info.get("last_name") or ""
+                name = f"{fn} {ln}".strip()
+                if name:
+                    return name
+            elif entity_type == "team":
+                info = await apisports_service.get_basketball_team_basic(entity_id)
+                name = info.get("name") or info.get("abbreviation")
+                if name:
+                    return name
+        elif sport_upper == 'EPL':
+            if entity_type == "player":
+                info = await apisports_service.get_football_player_basic(entity_id)
+                fn = info.get("first_name") or ""
+                ln = info.get("last_name") or ""
+                name = f"{fn} {ln}".strip()
+                if name:
+                    return name
+            elif entity_type == "team":
+                info = await apisports_service.get_football_team_basic(entity_id)
+                name = info.get("name") or info.get("abbreviation")
+                if name:
+                    return name
     except Exception:
         pass
     return entity_id  # final fallback

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from typing import Optional, Dict, Any, List
-from app.services.balldontlie_api import get_team_info, get_team_stats, get_standings
+from fastapi import HTTPException
+from app.services.apisports import apisports_service
 from app.services.sports_context import get_sports_context
-from app.services.stats_percentile import stats_percentile_service
 from app.services.google_rss import get_entity_mentions
 from app.services.cache import basic_cache, stats_cache, percentile_cache
 from pydantic import BaseModel
@@ -24,11 +24,15 @@ async def get_team_details(
     # Get active sport from context
     sport = (sport or sports_context.get_active_sport() or "NBA").upper()
     
-    # Fetch team details
-    team_info = await get_team_info(team_id, sport)
-    
-    # Fetch team statistics (defaults to current/most recent season if not specified)
-    stats = await get_team_stats(team_id, sport, season=season)
+    # Fetch team details and stats
+    if sport == 'NBA':
+        team_info = await apisports_service.get_basketball_team_basic(team_id)
+        stats = await apisports_service.get_basketball_team_statistics(team_id, season)
+    elif sport == 'EPL':
+        team_info = await apisports_service.get_football_team_basic(team_id)
+        stats = None
+    else:
+        raise HTTPException(status_code=501, detail=f"Team details not implemented for sport {sport}")
     
     return {
         "team_id": team_id,
@@ -58,7 +62,13 @@ async def get_team_full(
 
     summary = basic_cache.get(cache_key_summary)
     if summary is None:
-        info = await get_team_info(team_id, resolved_sport, basic_only=True)
+        # Prefer API-Sports for NBA basic identity
+        if resolved_sport == 'NBA':
+            info = await apisports_service.get_basketball_team_basic(team_id)
+        elif resolved_sport == 'EPL':
+            info = await apisports_service.get_football_team_basic(team_id)
+        else:
+            raise HTTPException(status_code=501, detail=f"Team summary not implemented for sport {resolved_sport}")
         summary = {
             "id": str(info.get("id")),
             "sport": resolved_sport,
@@ -75,26 +85,18 @@ async def get_team_full(
     # Full profile (richer fields)
     profile = basic_cache.get(cache_key_profile)
     if profile is None:
-        try:
-            full_info = await get_team_info(team_id, resolved_sport, basic_only=False)
-            if isinstance(full_info, dict):
-                profile = {
-                    "city": full_info.get("city"),
-                    "full_name": full_info.get("full_name") or full_info.get("name"),
-                    "conference": full_info.get("conference"),
-                    "division": full_info.get("division"),
-                }
-            else:
-                profile = None
-        except Exception:
-            profile = None
+        profile = None
         basic_cache.set(cache_key_profile, profile, ttl=600)
 
     stats = stats_cache.get(cache_key_stats)
     if stats is None:
         try:
-            raw_stats = await get_team_stats(team_id, resolved_sport, season=season)
-            stats = (raw_stats[0] if isinstance(raw_stats, list) and raw_stats else raw_stats) or None
+            if resolved_sport == 'NBA':
+                stats = await apisports_service.get_basketball_team_statistics(team_id, season)
+            elif resolved_sport == 'EPL':
+                stats = None
+            else:
+                raise HTTPException(status_code=501, detail=f"Team stats not implemented for sport {resolved_sport}")
         except Exception:
             stats = None
         stats_cache.set(cache_key_stats, stats, ttl=300)
@@ -106,16 +108,47 @@ async def get_team_full(
     standings_entry = stats_cache.get(cache_key_standings)
     if standings_entry is None:
         try:
-            standings_payload = await get_standings(resolved_sport, season=season)
-            # standings payload shape: {"data": [ ... ]}
-            data_list = standings_payload.get('data') if isinstance(standings_payload, dict) else None
+            if resolved_sport == 'NBA':
+                standings_payload = await apisports_service.get_basketball_standings(season)
+            else:
+                standings_payload = None
+            # Attempt to find this team in the standings payload (shape differs per provider)
             found = None
-            if isinstance(data_list, list):
-                for d in data_list:
-                    team_obj = (d.get('team') or {}) if isinstance(d, dict) else {}
-                    if str(team_obj.get('id')) == str(team_id):
-                        found = d
-                        break
+            def try_extract_list(payload):
+                if not isinstance(payload, dict):
+                    return None
+                # API-Sports: response -> [ { league: { standings: [[...]] } } ]
+                # But some sports return {response:[...]}
+                if 'response' in payload and isinstance(payload['response'], list):
+                    return payload['response']
+                if 'data' in payload and isinstance(payload['data'], list):
+                    return payload['data']
+                return None
+            lst = try_extract_list(standings_payload)
+            if isinstance(lst, list):
+                # Try nested standings arrays
+                for item in lst:
+                    league = item.get('league') if isinstance(item, dict) else None
+                    standings = None
+                    if league and isinstance(league, dict):
+                        standings = league.get('standings')
+                    if isinstance(standings, list):
+                        # API-Sports returns list of groups; pick the first group list
+                        grp = standings[0] if standings and isinstance(standings[0], list) else standings
+                        for row in grp:
+                            tid = (row.get('team') or {}).get('id') if isinstance(row, dict) else None
+                            if str(tid) == str(team_id):
+                                found = row
+                                break
+                        if found:
+                            break
+                # Fallback flat list
+                if not found:
+                    for d in lst:
+                        team_obj = (d.get('team') or {}) if isinstance(d, dict) else {}
+                        if str(team_obj.get('id')) == str(team_id):
+                            found = d
+                            break
             standings_entry = found
         except Exception:
             standings_entry = None
@@ -124,23 +157,8 @@ async def get_team_full(
     # Temporarily disable standings percentiles during debugging
     standings_percentiles = None
 
-    # EPL team season_stats endpoint integration as its own metrics group
+    # EPL metrics groups TBD via API-Sports
     epl_team_stats_group = None
-    if resolved_sport == 'EPL':
-        cache_key_epl_team_stats = f"team:stats:epl_team_stats:{resolved_sport}:{team_id}:{season_key}"
-        cached_epl = stats_cache.get(cache_key_epl_team_stats)
-        if cached_epl is None:
-            try:
-                from app.services.balldontlie_api import get_epl_team_season_stats
-                season_int = int(season) if season and str(season).isdigit() else None
-                payload = await get_epl_team_season_stats(team_id, season_int)
-                stats_list = payload.get('data') if isinstance(payload, dict) else None
-                stats_map = epl_stats_list_to_map(stats_list)
-            except Exception:
-                stats_map = None
-            stats_cache.set(cache_key_epl_team_stats, stats_map, ttl=900)
-            cached_epl = stats_map
-        epl_team_stats_group = cached_epl
 
     mentions = None
     if include_mentions:
@@ -192,137 +210,12 @@ async def get_team_roster(
         "roster": []  # Will be populated by the actual service
     }
 
-@router.get("/nfl/{team_id}")
-async def get_nfl_team(
-    team_id: str = Path(..., description="ID of the NFL team to fetch")
-):
-    """
-    Get detailed NFL team information with the specified JSON structure.
-    """
-    try:
-        team_info = await get_team_info(team_id, "NFL")
-        
-        # Return the data in the required format
-        return {
-            "data": [team_info]
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching NFL team: {str(e)}")
-        
-@router.get("/nba/{team_id}")
-async def get_nba_team(
-    team_id: str = Path(..., description="ID of the NBA team to fetch")
-):
-    """
-    Get detailed NBA team information with the specified JSON structure.
-    """
-    try:
-        team_info = await get_team_info(team_id, "NBA")
-        
-        # Return the data in the required format
-        return {
-            "data": [team_info]
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching NBA team: {str(e)}")
-        
-@router.get("/epl/{team_id}")
-async def get_epl_team(
-    team_id: str = Path(..., description="ID of the EPL team to fetch")
-):
-    """
-    Get detailed EPL team information with the specified JSON structure.
-    """
-    try:
-        team_info = await get_team_info(team_id, "EPL")
-        
-        # Return the data in the required format
-        return {
-            "data": [team_info]
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching EPL team: {str(e)}")
-        
-@router.get("/epl/{team_id}/season_stats")
-async def get_epl_team_season_stats(
-    team_id: str = Path(..., description="ID of the EPL team to fetch stats for"),
-    season: Optional[int] = Query(None, description="Season to fetch stats for (year)")
-):
-    """
-    Get EPL team season statistics with the specified JSON structure.
-    """
-    try:
-        # Use the helper function to get EPL team stats
-        stats = await get_team_stats(team_id, "EPL", season=str(season) if season else None)
-        
-        # Return the data in the required format
-        return {
-            "data": stats
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching EPL team season stats: {str(e)}")
+# Removed legacy sport-specific team endpoints tied to balldontlie; prefer sport-first routes in app/api/sport.py
 
-@router.get("/nfl/standings")
-async def get_nfl_standings(
-    season: Optional[int] = Query(None, description="Season to fetch standings for (year)")
-):
-    """
-    Get NFL team standings with the specified JSON structure.
-    """
-    try:
-        # Use the helper function to get NFL standings
-        standings = await get_standings("NFL", season=str(season) if season else None)
-        
-        # The standings are already in the expected format
-        return standings
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching NFL standings: {str(e)}")
-        
 @router.get("/nba/standings")
-async def get_nba_standings(
-    season: Optional[int] = Query(None, description="Season to fetch standings for (year)")
-):
-    """
-    Get NBA team standings with the specified JSON structure.
-    """
-    try:
-        # Use the helper function to get NBA standings
-        standings = await get_standings("NBA", season=str(season) if season else None)
-        
-        # The standings are already in the expected format
-        return standings
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching NBA standings: {str(e)}")
-        
-@router.get("/epl/standings")
-async def get_epl_standings(
-    season: Optional[int] = Query(None, description="Season to fetch standings for (year)")
-):
-    """
-    Get EPL team standings with the specified JSON structure.
-    """
-    try:
-        # Use the helper function to get EPL standings
-        standings = await get_standings("EPL", season=str(season) if season else None)
-        
-        # The standings are already in the expected format
-        return standings
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching EPL standings: {str(e)}")
+async def get_nba_standings_legacy_proxy(season: Optional[int] = Query(None, description="Season to fetch standings for (year)")):
+    """Temporary legacy route to fetch NBA standings via API-Sports. Prefer sport-first routes."""
+    return await apisports_service.get_basketball_standings(season)
 
 
 @router.get("/{team_id}/percentiles")
@@ -339,11 +232,13 @@ async def get_team_stats_percentiles(
     sport = (sport or sports_context.get_active_sport() or "NBA").upper()
     
     try:
-        # First get the team's stats
-        stats = await get_team_stats(team_id, sport, season=season)
-        
-        # Then calculate percentiles based on all teams in that season
-        percentiles = await stats_percentile_service.calculate_percentiles(stats, sport, season)
+        # First get the team's stats (NBA only for now)
+        if sport == 'NBA':
+            stats = await apisports_service.get_basketball_team_statistics(team_id, season)
+        else:
+            stats = None
+        # Then calculate percentiles based on all teams in that season (disabled)
+        percentiles = None
         
         return {
             "team_id": team_id,
