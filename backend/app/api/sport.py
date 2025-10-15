@@ -133,14 +133,6 @@ async def sport_team_mentions(sport: str, team_id: str):
     mentions = await get_entity_mentions("team", team_id, sport)
     return {"team_id": team_id, "sport": sport.upper(), "mentions": mentions}
 
-# --- Stubs to keep frontend flowing while we build metrics ---
-@router.get("/{sport}/players/{player_id}/percentiles")
-async def sport_player_percentiles_stub(sport: str, player_id: str, season: str | None = Query(None)):
-    return {"player_id": player_id, "sport": sport.upper(), "season": season or "current", "percentiles": {}}
-
-@router.get("/{sport}/teams/{team_id}/percentiles")
-async def sport_team_percentiles_stub(sport: str, team_id: str, season: str | None = Query(None)):
-    return {"team_id": team_id, "sport": sport.upper(), "season": season or "current", "percentiles": {}}
 
 @router.get("/{sport}/teams/{team_id}/roster")
 async def sport_team_roster_stub(sport: str, team_id: str, season: str | None = Query(None)):

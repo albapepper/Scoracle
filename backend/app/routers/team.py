@@ -4,10 +4,10 @@ from fastapi import HTTPException
 from app.services.apisports import apisports_service
 from app.services.sports_context import get_sports_context
 from app.services.google_rss import get_entity_mentions
-from app.services.cache import basic_cache, stats_cache, percentile_cache
+from app.services.cache import basic_cache, stats_cache
 from pydantic import BaseModel
 from app.models.schemas import TeamFullResponse
-from app.services.metrics_utils import build_metrics_group, epl_stats_list_to_map, compute_percentiles_from_cohort
+from app.services.metrics_utils import build_metrics_group, epl_stats_list_to_map
 
 router = APIRouter()
 
@@ -50,15 +50,13 @@ async def get_team_full(
     sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, EPL)"),
     sports_context = Depends(get_sports_context)
 ):
-    """Aggregate endpoint returning summary + stats + percentiles (+ mentions)."""
+    """Aggregate endpoint returning summary + stats (+ mentions). Percentiles removed."""
     resolved_sport = (sport or sports_context.get_active_sport() or "NBA").upper()
     season_key = season or "current"
     cache_key_summary = f"team:summary:{resolved_sport}:{team_id}"
     cache_key_profile = f"team:profile:{resolved_sport}:{team_id}"
     cache_key_stats = f"team:stats:base:{resolved_sport}:{team_id}:{season_key}"
-    cache_key_pct = f"team:percentiles:base:{resolved_sport}:{team_id}:{season_key}"
     cache_key_standings = f"team:stats:standings:{resolved_sport}:{team_id}:{season_key}"
-    cache_key_standings_pct = f"team:percentiles:standings:{resolved_sport}:{team_id}:{season_key}"
 
     summary = basic_cache.get(cache_key_summary)
     if summary is None:
@@ -101,8 +99,7 @@ async def get_team_full(
             stats = None
         stats_cache.set(cache_key_stats, stats, ttl=300)
 
-    # Temporarily disable percentile calculation during debugging
-    percentiles = None
+    # Percentiles removed
 
     # Standings group
     standings_entry = stats_cache.get(cache_key_standings)
@@ -154,8 +151,7 @@ async def get_team_full(
             standings_entry = None
         stats_cache.set(cache_key_standings, standings_entry, ttl=600)
 
-    # Temporarily disable standings percentiles during debugging
-    standings_percentiles = None
+    standings_percentiles = None  # Backward compatibility placeholder
 
     # EPL metrics groups TBD via API-Sports
     epl_team_stats_group = None
@@ -170,20 +166,20 @@ async def get_team_full(
 
     metrics_groups = {}
     if stats:
-        metrics_groups['base'] = build_metrics_group('base', stats, percentiles)
+        metrics_groups['base'] = build_metrics_group('base', stats)
     if standings_entry:
-        metrics_groups['standings'] = build_metrics_group('standings', standings_entry, standings_percentiles)
+        metrics_groups['standings'] = build_metrics_group('standings', standings_entry)
     if epl_team_stats_group:
-        # We could compute cohort percentiles for team season_stats if/when a global cohort is available. Use light mode here.
-        g = build_metrics_group('epl_team_season_stats', epl_team_stats_group, None)
-        g['meta'] = {'percentiles_available': False, 'mode': 'light'}
+        # We keep meta to indicate absence of percentiles
+        g = build_metrics_group('epl_team_season_stats', epl_team_stats_group)
+        g['meta'] = {'percentiles_available': False, 'mode': 'raw'}
         metrics_groups['epl_team_season_stats'] = g
 
     return {
         "summary": summary,
         "season": season_key,
         "stats": stats,
-        "percentiles": percentiles,
+    "percentiles": None,
         "mentions": mentions,
         "profile": profile,
         "metrics": {"groups": metrics_groups}
@@ -218,36 +214,3 @@ async def get_nba_standings_legacy_proxy(season: Optional[int] = Query(None, des
     return await apisports_service.get_basketball_standings(season)
 
 
-@router.get("/{team_id}/percentiles")
-async def get_team_stats_percentiles(
-    team_id: str = Path(..., description="ID of the team to fetch stats for"),
-    season: Optional[str] = Query(None, description="Season to fetch stats for"),
-    sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, EPL)"),
-    sports_context = Depends(get_sports_context)
-):
-    """
-    Get team statistics with percentile rankings compared to other teams.
-    """
-    # Get active sport from context
-    sport = (sport or sports_context.get_active_sport() or "NBA").upper()
-    
-    try:
-        # First get the team's stats (NBA only for now)
-        if sport == 'NBA':
-            stats = await apisports_service.get_basketball_team_statistics(team_id, season)
-        else:
-            stats = None
-        # Then calculate percentiles based on all teams in that season (disabled)
-        percentiles = None
-        
-        return {
-            "team_id": team_id,
-            "sport": sport,
-            "season": season or "current",
-            "statistics": stats,
-            "percentiles": percentiles
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error calculating team percentiles: {str(e)}")

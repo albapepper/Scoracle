@@ -3,10 +3,10 @@ from typing import Optional, Dict, Any, List
 import logging
 from app.services.sports_context import get_sports_context
 from app.services.google_rss import get_entity_mentions
-from app.services.cache import basic_cache, stats_cache, percentile_cache
+from app.services.cache import basic_cache, stats_cache
 from pydantic import BaseModel
 from app.models.schemas import PlayerFullResponse
-from app.services.metrics_utils import normalize_season_average, remap_percentile_keys, build_metrics_group
+from app.services.metrics_utils import build_metrics_group
 from pydantic import ValidationError
 
 from app.core.config import settings
@@ -81,9 +81,7 @@ async def get_player_full(
     cache_key_summary = f"player:summary:{resolved_sport}:{player_id}"
     cache_key_profile = f"player:profile:{resolved_sport}:{player_id}"
     cache_key_stats = f"player:stats:base:{resolved_sport}:{player_id}:{season_key}"
-    cache_key_pct = f"player:percentiles:base:{resolved_sport}:{player_id}:{season_key}"
     cache_key_shooting_stats = f"player:stats:shooting:{resolved_sport}:{player_id}:{season_key}"
-    cache_key_shooting_pct = f"player:percentiles:shooting:{resolved_sport}:{player_id}:{season_key}"
     # NFL advanced stats groups (light mode: no percentile cohort yet)
     cache_key_nfl_rushing = f"player:stats:nfl_rushing:{resolved_sport}:{player_id}:{season_key}"
     cache_key_nfl_passing = f"player:stats:nfl_passing:{resolved_sport}:{player_id}:{season_key}"
@@ -152,12 +150,9 @@ async def get_player_full(
                 stats = None
             stats_cache.set(cache_key_stats, stats, ttl=300)
 
-        # Percentiles disabled for now; API-Sports cohort map TBD
-        percentiles = None
-
-        # Shooting groups removed for now (balldontlie-specific)
+    # Percentiles removed (present raw stats only)
         shooting_stats = None
-        shooting_percentiles = None
+        
 
         # Mentions (optional, no caching for now—RSS ttl would be separate if added)
         mentions = None
@@ -172,7 +167,7 @@ async def get_player_full(
         # Build metrics groups collection
         metrics_groups = {}
         if stats:
-            metrics_groups['base'] = build_metrics_group('base', stats, percentiles)
+            metrics_groups['base'] = build_metrics_group('base', stats)
 
         # NFL support removed in balldontlie deprecation phase; can be reintroduced via API-Sports later
 
@@ -184,8 +179,8 @@ async def get_player_full(
             model_obj = PlayerFullResponse(
                 summary=summary,
                 season=season_key,
-                stats=stats,  # back-compat
-                percentiles=percentiles,  # back-compat
+                stats=stats,
+                percentiles=None,
                 mentions=mentions,
                 profile=profile,
                 metrics={'groups': metrics_groups}
@@ -196,7 +191,7 @@ async def get_player_full(
                 "errors": ve.errors(),
                 "summary_keys": list(summary.keys()) if isinstance(summary, dict) else type(summary).__name__,
                 "stats_type": type(stats).__name__,
-                "percentiles_type": type(percentiles).__name__ if percentiles is not None else None
+                "percentiles_removed": True
             })
             raise HTTPException(status_code=422, detail={"message": "PlayerFullResponse validation failed", "errors": ve.errors()})
         return model_obj

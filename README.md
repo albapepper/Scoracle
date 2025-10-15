@@ -1,5 +1,3 @@
-git clone https://github.com/albapepper/scoracle.git
-docker-compose up
 # Scoracle – Sports News & Advanced Statistics Platform
 
 Scoracle is a modern web application that aggregates near‑real‑time sports news (Google News RSS) and statistics (API‑Sports provider) across multiple leagues. It delivers unified, cached API responses and rich interactive visualizations via a React frontend.
@@ -9,8 +7,8 @@ Scoracle is a modern web application that aggregates near‑real‑time sports n
 | Area | Highlights |
 |------|-----------|
 | Multi‑Sport | Pluggable sport context (currently NBA focus; NFL/EPL scaffolding) |
-| Unified Aggregation | Single `/full` endpoints combine summary + stats + percentiles + mentions |
-| Smart Caching | Tiered in‑memory TTL caches for summaries, stats, percentiles (invalidate naturally via TTL) |
+| Unified Aggregation | Single `/full` endpoints combine summary + stats + mentions |
+| Smart Caching | Tiered in‑memory TTL caches for summaries and stats (invalidate naturally via TTL) |
 | Mentions & Links | Google RSS query refinement w/ entity name resolution |
 | React Query | Automatic request dedupe + caching on frontend |
 | Entity Preload Cache | Client context seeds detail pages to eliminate blank loading states |
@@ -35,7 +33,7 @@ scoracle/
 │   │   ├── adapters/              # (New) Re-export wrappers for external services (RSS)
 │   │   ├── services/              # (Legacy) External integration logic (to be relocated)
 │   │   ├── repositories/          # Entity registry abstraction (SQLite)
-│   │   └── domain/                # (Future) Core domain logic (stats transforms, percentile calc wrappers)
+│   │   └── domain/                # (Future) Core domain logic (stats transforms)
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── frontend/
@@ -51,7 +49,7 @@ scoracle/
 ## 🚀 Getting Started
 
 ### Prerequisites
-* Python 3.11+ (tested)  
+* Python 3.11+ (tested)
 * Node.js 18+  
 * Docker (optional but recommended for parity)
 
@@ -82,23 +80,13 @@ API docs: [http://localhost:8000/api/docs](http://localhost:8000/api/docs)
 ```
 React dev server proxies to `http://localhost:8000` (see `package.json` `proxy`).
 
-### API Provider: API-Sports
-
-Autocomplete and global search now use API-Sports across sports. Configure your key:
-
-* Windows PowerShell (local runs):
-   * `$env:API_SPORTS_KEY = "<your-key>"`
-* Docker Compose:
-   * Ensure `API_SPORTS_KEY` is set in your shell environment before `docker compose up`.
-
-
 ## 📦 Caching Strategy
 
 Layered in-memory TTL caches (`app/services/cache.py`):
 
 * `basic_cache` – Player/team summaries (180–300s TTL)
 * `stats_cache` – Season stats (300s TTL)
-* `percentile_cache` – Derived percentiles (30m TTL)
+* Percentile cache removed – app now presents raw metrics only
 
 Cache keys are sport + entity + season namespaced. No manual invalidation yet; rely on TTL + ephemeral process restarts. Future: pluggable Redis backend.
 
@@ -116,7 +104,6 @@ All unexpected exceptions are wrapped into a consistent envelope:
 }
 
 ```
- 
 HTTPExceptions preserve their code & message. Schema: `ErrorEnvelope`.
 
 ## 📘 API Overview
@@ -125,7 +112,7 @@ Base prefix: `/api/v1`
 
 ### Aggregated "Full" Endpoints (Recommended)
 
-Return summary + stats + percentiles (+ optional mentions):
+Return summary + stats (+ optional mentions):
 
 * `GET /api/v1/player/{player_id}/full?season=2023-2024&include_mentions=true&sport=NBA`
 * `GET /api/v1/team/{team_id}/full?season=2023-2024&include_mentions=false&sport=NBA`
@@ -137,24 +124,9 @@ Example response (player):
    "summary": {"id": "237", "sport": "NBA", "full_name": "LeBron James", ...},
    "season": "2023-2024",
    "stats": {"points_per_game": 25.1, ...},
-   "percentiles": {"points_per_game": 92.3, ...},
    "mentions": [ {"title": "...", "link": "..."} ]
 }
 ```
-
-### Classic Resource Endpoints
-
-| Type | Endpoint | Notes |
-|------|----------|-------|
-| Player summary+stats | `GET /api/v1/player/{id}?season=YYYY-YYYY` | Legacy combined format |
-| Player seasons list | `GET /api/v1/player/{id}/seasons` | Placeholder static list currently |
-| Player percentiles | `GET /api/v1/player/{id}/percentiles` | On-demand percentile calc |
-| Team summary+stats | `GET /api/v1/team/{id}?season=...` | Legacy combined format |
-| Team roster | `GET /api/v1/team/{id}/roster` | Placeholder empty list |
-| Team percentiles | `GET /api/v1/team/{id}/percentiles` | On-demand percentile calc |
-| Mentions | `GET /api/v1/mentions/{entity_type}/{id}` | RSS + basic info |
-| Links | `GET /api/v1/links/{entity_type}/{id}` | Related link variants |
-| Search | `GET /api/v1/search?q=lebron&sport=NBA` | Autocomplete/search |
 
 ### Sport‑First Variants
 

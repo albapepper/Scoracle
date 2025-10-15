@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Container, Title, Text, Card, Group, Button, Loader, Stack, Tabs, Select, Switch, Badge, Tooltip } from '@mantine/core';
+import { Container, Title, Text, Card, Group, Button, Loader, Stack, Tabs, Select } from '@mantine/core';
 import { useSportContext } from '../context/SportContext';
 import { getPlayerFull, getPlayerSeasons } from '../services/api';
 import { useQuery } from '@tanstack/react-query';
 import { useEntityCache } from '../context/EntityCacheContext';
-import theme from '../theme';
+import BasicEntityCard from '../components/BasicEntityCard';
+import ApiSportsWidget from '../components/ApiSportsWidget';
 
 // Import D3 visualization component
-import PlayerStatsRadarChart from '../visualizations/PlayerStatsRadarChart';
 import GenericStatsBarChart from '../visualizations/GenericStatsBarChart';
 
 function PlayerPage() {
@@ -17,7 +17,7 @@ function PlayerPage() {
   const { getSummary, putSummary } = useEntityCache();
   const [playerInfo, setPlayerInfo] = useState(() => getSummary(activeSport, 'player', playerId) || null); // seed from cache if exists
   const [playerStats, setPlayerStats] = useState(null);
-  const [playerPercentiles, setPlayerPercentiles] = useState(null);
+  // Percentiles removed
   const [playerProfile, setPlayerProfile] = useState(null);
   const [metricsGroups, setMetricsGroups] = useState({});
   const [selectedGroup, setSelectedGroup] = useState('base');
@@ -25,8 +25,7 @@ function PlayerPage() {
   const [selectedSeason, setSelectedSeason] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showPercentiles, setShowPercentiles] = useState(true);
-  const [idSource, setIdSource] = useState('');
+  // removed idSource badge in header refactor
   
   // Fetch available seasons for player
   useEffect(() => {
@@ -55,11 +54,10 @@ function PlayerPage() {
     if (fullData) {
       if (fullData.summary) {
         setPlayerInfo(fullData.summary);
-        if (fullData.summary.source) setIdSource(fullData.summary.source);
         putSummary(activeSport, 'player', playerId, fullData.summary);
       }
       setPlayerStats(fullData.stats || null);
-      setPlayerPercentiles(fullData.percentiles || null);
+  // Percentiles removed
       setPlayerProfile(fullData.profile || null);
       const groups = fullData.metrics?.groups || {};
       setMetricsGroups(groups);
@@ -79,26 +77,7 @@ function PlayerPage() {
   }, [fullError]);
   
   // Helper function to get color for percentile
-  const getPercentileColor = (percentile) => {
-    if (!percentile && percentile !== 0) return theme.colors.ui.border;
-    
-    if (percentile >= 80) return theme.colors.visualization.percentiles[4];
-    if (percentile >= 60) return theme.colors.visualization.percentiles[3];
-    if (percentile >= 40) return theme.colors.visualization.percentiles[2];
-    if (percentile >= 20) return theme.colors.visualization.percentiles[1];
-    return theme.colors.visualization.percentiles[0];
-  };
-  
-  // Helper function to get label for percentile
-  const getPercentileLabel = (percentile) => {
-    if (!percentile && percentile !== 0) return 'N/A';
-    
-    if (percentile >= 80) return 'Elite';
-    if (percentile >= 60) return 'Above Avg';
-    if (percentile >= 40) return 'Average';
-    if (percentile >= 20) return 'Below Avg';
-    return 'Low';
-  };
+  // Percentile color helpers removed
   
   // Format player name
   const getPlayerName = () => {
@@ -129,51 +108,46 @@ function PlayerPage() {
   return (
     <Container size="lg" py="xl">
       <Stack spacing="xl">
-        {/* Player Header */}
-        <Card p="md" withBorder>
-          <Group position="apart">
-            <div>
-              <Title order={2}>{getPlayerName()}</Title>
-              {playerInfo?.team && (
-                <Text>
-                  {playerInfo.position} | {playerInfo.team.name}
-                </Text>
-              )}
-              {idSource && (
-                <Badge size="xs" color="gray" mt="xs" variant="outline">ID: {idSource}</Badge>
-              )}
-              {/* Profile details, if available */}
-              {playerProfile && (
-                <Group spacing="xs" mt="xs">
-                  {playerProfile.jersey_number && <Text>#{playerProfile.jersey_number}</Text>}
-                  {playerProfile.height && <Text>| {playerProfile.height}</Text>}
-                  {playerProfile.weight && <Text>| {playerProfile.weight}</Text>}
-                  {playerProfile.college && <Text>| {playerProfile.college}</Text>}
-                  {playerProfile.country && <Text>| {playerProfile.country}</Text>}
-                  {(playerProfile.draft_year !== undefined && playerProfile.draft_year !== null) && (
-                    <Text>| Draft {playerProfile.draft_year}{playerProfile.draft_round ? ` R${playerProfile.draft_round}` : ''}{playerProfile.draft_number ? ` #${playerProfile.draft_number}` : ''}</Text>
-                  )}
-                </Group>
-              )}
-            </div>
-            
-            <Group>
-              <Button
-                component={Link}
-                to={`/mentions/player/${playerId}`}
-                variant="outline"
-              >
-                View News
-              </Button>
-              <Button
-                component={Link}
-                to="/"
-                variant="subtle"
-              >
-                Home
+        {/* Player Header: Basic Entity Card */}
+        <BasicEntityCard
+          entityType="player"
+          sport={activeSport}
+          summary={playerInfo ? {
+            id: String(playerInfo.id),
+            full_name: getPlayerName(),
+            first_name: playerInfo.first_name,
+            last_name: playerInfo.last_name,
+            position: playerInfo.position,
+            team_name: playerInfo.team?.name,
+            team_id: playerInfo.team_id || playerInfo.team?.id,
+            team_abbreviation: playerInfo.team?.abbreviation || playerInfo.team_abbreviation,
+            nationality: playerProfile?.country,
+            age: playerProfile?.age,
+            league: playerProfile?.league,
+            years_pro: playerProfile?.years_pro,
+          } : null}
+          footer={
+            <Group position="apart">
+              <Button component={Link} to={`/mentions/player/${playerId}`} variant="light">
+                Recent Mentions
               </Button>
             </Group>
-          </Group>
+          }
+        />
+
+        {/* API-Sports Player Widget */}
+        <Card withBorder p="lg">
+          <Title order={3}>Player Widget</Title>
+          <ApiSportsWidget
+            type="player"
+            data={{
+              playerId: playerId,
+              playerStatistics: 'true',
+              playerTrophies: 'true',
+              playerInjuries: 'true',
+              season: (selectedSeason && selectedSeason.includes('-')) ? selectedSeason.split('-')[0] : (selectedSeason || new Date().getFullYear().toString()),
+            }}
+          />
         </Card>
         
         {/* Season Selector */}
@@ -211,27 +185,7 @@ function PlayerPage() {
 
             <Tabs.Panel value="overview" pt="md">
               <Card withBorder p="lg">
-                {/* Percentile toggle switch */}
-                <Group position="right" mb="md">
-                  <Group spacing="xs">
-                    <Text size="sm">Raw Stats</Text>
-                    <Switch 
-                      checked={showPercentiles}
-                      onChange={(event) => setShowPercentiles(event.currentTarget.checked)}
-                      color="gray"
-                    />
-                    <Text size="sm">Percentiles</Text>
-                  </Group>
-                </Group>
-                
-                {/* Radar chart */}
-                <Group position="center" mb="xl">
-                  <PlayerStatsRadarChart 
-                    stats={playerStats} 
-                    percentiles={playerPercentiles}
-                    showPercentiles={showPercentiles}
-                  />
-                </Group>
+                {/* Percentiles removed: radar chart and toggle eliminated */}
                 
                 <Stack spacing="md">
                   {/* Stats cards with percentile indicators */}
@@ -240,72 +194,18 @@ function PlayerPage() {
                       <Text fw={700} size="lg" ta="center">{playerStats.points_per_game.toFixed(1)}</Text>
                       <Text size="sm" c="dimmed" ta="center">PPG</Text>
                       
-                      {playerPercentiles && (
-                        <Tooltip 
-                          label={`${playerPercentiles.points_per_game.toFixed(1)}% percentile among all players`}
-                          position="top"
-                        >
-                          <Badge 
-                            style={{ 
-                              position: 'absolute', 
-                              top: '8px', 
-                              right: '8px',
-                              backgroundColor: getPercentileColor(playerPercentiles.points_per_game)
-                            }}
-                            size="sm"
-                          >
-                            {getPercentileLabel(playerPercentiles.points_per_game)}
-                          </Badge>
-                        </Tooltip>
-                      )}
                     </Card>
                     
                     <Card withBorder p="md" style={{ position: 'relative' }}>
                       <Text fw={700} size="lg" ta="center">{playerStats.rebounds_per_game.toFixed(1)}</Text>
                       <Text size="sm" c="dimmed" ta="center">RPG</Text>
                       
-                      {playerPercentiles && (
-                        <Tooltip 
-                          label={`${playerPercentiles.rebounds_per_game.toFixed(1)}% percentile among all players`}
-                          position="top"
-                        >
-                          <Badge 
-                            style={{ 
-                              position: 'absolute', 
-                              top: '8px', 
-                              right: '8px',
-                              backgroundColor: getPercentileColor(playerPercentiles.rebounds_per_game)
-                            }}
-                            size="sm"
-                          >
-                            {getPercentileLabel(playerPercentiles.rebounds_per_game)}
-                          </Badge>
-                        </Tooltip>
-                      )}
                     </Card>
                     
                     <Card withBorder p="md" style={{ position: 'relative' }}>
                       <Text fw={700} size="lg" ta="center">{playerStats.assists_per_game.toFixed(1)}</Text>
                       <Text size="sm" c="dimmed" ta="center">APG</Text>
                       
-                      {playerPercentiles && (
-                        <Tooltip 
-                          label={`${playerPercentiles.assists_per_game.toFixed(1)}% percentile among all players`}
-                          position="top"
-                        >
-                          <Badge 
-                            style={{ 
-                              position: 'absolute', 
-                              top: '8px', 
-                              right: '8px',
-                              backgroundColor: getPercentileColor(playerPercentiles.assists_per_game)
-                            }}
-                            size="sm"
-                          >
-                            {getPercentileLabel(playerPercentiles.assists_per_game)}
-                          </Badge>
-                        </Tooltip>
-                      )}
                     </Card>
                   </Group>
                   
@@ -314,72 +214,18 @@ function PlayerPage() {
                       <Text fw={700} size="lg" ta="center">{playerStats.steals_per_game.toFixed(1)}</Text>
                       <Text size="sm" c="dimmed" ta="center">SPG</Text>
                       
-                      {playerPercentiles && (
-                        <Tooltip 
-                          label={`${playerPercentiles.steals_per_game.toFixed(1)}% percentile among all players`}
-                          position="top"
-                        >
-                          <Badge 
-                            style={{ 
-                              position: 'absolute', 
-                              top: '8px', 
-                              right: '8px',
-                              backgroundColor: getPercentileColor(playerPercentiles.steals_per_game)
-                            }}
-                            size="sm"
-                          >
-                            {getPercentileLabel(playerPercentiles.steals_per_game)}
-                          </Badge>
-                        </Tooltip>
-                      )}
                     </Card>
                     
                     <Card withBorder p="md" style={{ position: 'relative' }}>
                       <Text fw={700} size="lg" ta="center">{playerStats.blocks_per_game.toFixed(1)}</Text>
                       <Text size="sm" c="dimmed" ta="center">BPG</Text>
                       
-                      {playerPercentiles && (
-                        <Tooltip 
-                          label={`${playerPercentiles.blocks_per_game.toFixed(1)}% percentile among all players`}
-                          position="top"
-                        >
-                          <Badge 
-                            style={{ 
-                              position: 'absolute', 
-                              top: '8px', 
-                              right: '8px',
-                              backgroundColor: getPercentileColor(playerPercentiles.blocks_per_game)
-                            }}
-                            size="sm"
-                          >
-                            {getPercentileLabel(playerPercentiles.blocks_per_game)}
-                          </Badge>
-                        </Tooltip>
-                      )}
                     </Card>
                     
                     <Card withBorder p="md" style={{ position: 'relative' }}>
                       <Text fw={700} size="lg" ta="center">{(playerStats.field_goal_percentage * 100).toFixed(1)}%</Text>
                       <Text size="sm" c="dimmed" ta="center">FG%</Text>
                       
-                      {playerPercentiles && (
-                        <Tooltip 
-                          label={`${playerPercentiles.field_goal_percentage.toFixed(1)}% percentile among all players`}
-                          position="top"
-                        >
-                          <Badge 
-                            style={{ 
-                              position: 'absolute', 
-                              top: '8px', 
-                              right: '8px',
-                              backgroundColor: getPercentileColor(playerPercentiles.field_goal_percentage)
-                            }}
-                            size="sm"
-                          >
-                            {getPercentileLabel(playerPercentiles.field_goal_percentage)}
-                          </Badge>
-                        </Tooltip>
-                      )}
                     </Card>
                   </Group>
                   
@@ -396,16 +242,6 @@ function PlayerPage() {
                           <Text fw={700} size="lg">{playerStats.minutes_per_game.toFixed(1)}</Text>
                           <Text size="sm" c="dimmed">MPG</Text>
                           
-                          {playerPercentiles && (
-                            <Badge 
-                              style={{ 
-                                backgroundColor: getPercentileColor(playerPercentiles.minutes_per_game)
-                              }}
-                              size="xs"
-                            >
-                              {playerPercentiles.minutes_per_game.toFixed(0)}%
-                            </Badge>
-                          )}
                         </div>
                       </Group>
                     </Card>
@@ -416,32 +252,12 @@ function PlayerPage() {
                           <Text fw={700} size="lg">{(playerStats.three_point_percentage * 100).toFixed(1)}%</Text>
                           <Text size="sm" c="dimmed">3P%</Text>
                           
-                          {playerPercentiles && (
-                            <Badge 
-                              style={{ 
-                                backgroundColor: getPercentileColor(playerPercentiles.three_point_percentage)
-                              }}
-                              size="xs"
-                            >
-                              {playerPercentiles.three_point_percentage.toFixed(0)}%
-                            </Badge>
-                          )}
                         </div>
                         
                         <div>
                           <Text fw={700} size="lg">{(playerStats.free_throw_percentage * 100).toFixed(1)}%</Text>
                           <Text size="sm" c="dimmed">FT%</Text>
                           
-                          {playerPercentiles && (
-                            <Badge 
-                              style={{ 
-                                backgroundColor: getPercentileColor(playerPercentiles.free_throw_percentage)
-                              }}
-                              size="xs"
-                            >
-                              {playerPercentiles.free_throw_percentage.toFixed(0)}%
-                            </Badge>
-                          )}
                         </div>
                       </Group>
                     </Card>
@@ -469,7 +285,6 @@ function PlayerPage() {
                     {metricsGroups[selectedGroup] ? (
                       <GenericStatsBarChart
                         stats={metricsGroups[selectedGroup].stats}
-                        percentiles={metricsGroups[selectedGroup].percentiles}
                         title={`Metrics: ${selectedGroup.replace(/_/g, ' ')}`}
                       />
                     ) : (

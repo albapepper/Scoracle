@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Container, Title, Text, Card, Group, Button, Loader, Stack, Tabs, Select, Grid, Avatar, Badge } from '@mantine/core';
+import { Container, Title, Text, Card, Group, Button, Loader, Stack, Tabs, Select, Grid, Avatar } from '@mantine/core';
 import { useSportContext } from '../context/SportContext';
 import { getTeamFull, getTeamRoster } from '../services/api';
 import { useQuery } from '@tanstack/react-query';
 import { useEntityCache } from '../context/EntityCacheContext';
+import BasicEntityCard from '../components/BasicEntityCard';
 
 // Import D3 visualization component
 import TeamStatsBarChart from '../visualizations/TeamStatsBarChart';
 import GenericStatsBarChart from '../visualizations/GenericStatsBarChart';
+import ApiSportsWidget from '../components/ApiSportsWidget';
 
 function TeamPage() {
   const { teamId } = useParams();
@@ -17,14 +19,13 @@ function TeamPage() {
   const [teamInfo, setTeamInfo] = useState(() => getSummary(activeSport, 'team', teamId) || null);
   const [teamStats, setTeamStats] = useState(null);
   const [teamRoster, setTeamRoster] = useState([]);
-  const [teamProfile, setTeamProfile] = useState(null);
   const [metricsGroups, setMetricsGroups] = useState({});
   const [selectedGroup, setSelectedGroup] = useState('base');
   const availableSeasons = ['2023-2024', '2022-2023', '2021-2022'];
   const [selectedSeason, setSelectedSeason] = useState('2023-2024'); // Default to current season
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [idSource, setIdSource] = useState('');
+  // removed idSource badge in header refactor
   
   const { data: fullData, isLoading: fullLoading, error: fullError } = useQuery({
     queryKey: ['teamFull', teamId, selectedSeason, activeSport],
@@ -47,11 +48,10 @@ function TeamPage() {
     if (fullData) {
       if (fullData.summary) {
         setTeamInfo(fullData.summary);
-        if (fullData.summary.source) setIdSource(fullData.summary.source);
         putSummary(activeSport, 'team', teamId, fullData.summary);
       }
   setTeamStats(fullData.stats || null);
-  setTeamProfile(fullData.profile || null);
+        // profile omitted
   const groups = fullData.metrics?.groups || {};
   setMetricsGroups(groups);
   const defaultKey = groups.standings ? 'standings' : (groups.base ? 'base' : Object.keys(groups)[0]);
@@ -91,46 +91,34 @@ function TeamPage() {
   return (
     <Container size="lg" py="xl">
       <Stack spacing="xl">
-        {/* Team Header */}
-        <Card p="md" withBorder>
-          <Group position="apart">
-            <div>
-              <Title order={2}>{teamInfo?.name || 'Team'}</Title>
-              <Group spacing="xs">
-                {teamInfo?.city && <Text>{teamInfo.city}</Text>}
-                {teamInfo?.conference && <Text>| {teamInfo.conference} Conference</Text>}
-                {teamInfo?.division && <Text>| {teamInfo.division} Division</Text>}
-              </Group>
-              {idSource && (
-                <Badge size="xs" color="gray" mt="xs" variant="outline">ID: {idSource}</Badge>
-              )}
-              {teamProfile && (
-                <Group spacing="xs" mt="xs">
-                  {teamProfile.arena && <Text>{teamProfile.arena}</Text>}
-                  {teamProfile.city && <Text>| {teamProfile.city}</Text>}
-                  {teamProfile.state && <Text>| {teamProfile.state}</Text>}
-                  {teamProfile.coach && <Text>| Coach: {teamProfile.coach}</Text>}
-                </Group>
-              )}
-            </div>
-            
-            <Group>
-              <Button
-                component={Link}
-                to={`/mentions/team/${teamId}`}
-                variant="outline"
-              >
-                View News
-              </Button>
-              <Button
-                component={Link}
-                to="/"
-                variant="subtle"
-              >
-                Home
-              </Button>
+        {/* Team Header: Basic Entity Card */}
+        <BasicEntityCard
+          entityType="team"
+          sport={activeSport}
+          summary={teamInfo ? {
+            id: String(teamInfo.id),
+            name: teamInfo.name,
+            abbreviation: teamInfo.abbreviation,
+            city: teamInfo.city,
+            conference: teamInfo.conference,
+            division: teamInfo.division,
+            league: teamInfo.league,
+          } : null}
+          footer={
+            <Group position="apart">
+              <Button component={Link} to={`/mentions/team/${teamId}`} variant="light">Recent Mentions</Button>
             </Group>
-          </Group>
+          }
+        />
+
+        {/* API-Sports Team Widget */}
+        <Card withBorder p="lg">
+          <Title order={3}>Team Widget</Title>
+          <ApiSportsWidget
+            type="team"
+            data={{ teamId: teamId, targetPlayer: '#player-container' }}
+          />
+          <div id="player-container" />
         </Card>
         
         {/* Season Selector */}
@@ -234,7 +222,6 @@ function TeamPage() {
                   {metricsGroups[selectedGroup] ? (
                     <GenericStatsBarChart
                       stats={metricsGroups[selectedGroup].stats}
-                      percentiles={metricsGroups[selectedGroup].percentiles}
                       title={`Metrics: ${selectedGroup.replace(/_/g, ' ')}`}
                     />
                   ) : (

@@ -43,4 +43,6 @@ class TTLCache:
 # Singleton instances for different data classes
 basic_cache = TTLCache(default_ttl=120, max_items=1000)
 stats_cache = TTLCache(default_ttl=300, max_items=500)
-percentile_cache = TTLCache(default_ttl=1800, max_items=200)
+# Dedicated cache for widget or profile blobs that can be larger and tolerate longer TTL
+widget_cache = TTLCache(default_ttl=900, max_items=300)
+# Removed percentile_cache after deprecating percentile feature

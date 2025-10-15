@@ -9,13 +9,13 @@ import {
   Button, 
   Loader, 
   Stack, 
-  Grid, 
   Divider,
   Box,
   List
 } from '@mantine/core';
 import { useSportContext } from '../context/SportContext';
 import ApiSportsWidget from '../components/ApiSportsWidget';
+import BasicEntityCard from '../components/BasicEntityCard';
 import { getEntityMentions } from '../services/api';
 import theme from '../theme';
 import { useEntityCache } from '../context/EntityCacheContext';
@@ -33,15 +33,11 @@ function MentionsPage() {
     const fetchData = async () => {
       setIsLoading(true);
       setError('');
-      
       try {
         const data = await getEntityMentions(entityType, entityId, activeSport);
-        
-        // Sort mentions by recency (newest first)
-        const sortedMentions = (data.mentions || []).sort((a, b) => {
-          return new Date(b.pub_date) - new Date(a.pub_date);
-        });
-        
+        const sortedMentions = (data.mentions || []).sort((a, b) => (
+          new Date(b.pub_date) - new Date(a.pub_date)
+        ));
         setMentions(sortedMentions);
         setEntityInfo(data.entity_info || null);
       } catch (err) {
@@ -94,110 +90,78 @@ function MentionsPage() {
   return (
     <Container size="md" py="xl">
       <Stack spacing="xl">
-        {/* Entity Information Box */}
-        <Card 
-          shadow="sm" 
-          p="lg" 
-          radius="md" 
-          withBorder
-          style={{ 
-            backgroundColor: theme.colors.background.secondary,
-            borderColor: theme.colors.ui.border
-          }}
-        >
-          <Stack spacing="md">
-            <Title order={2} style={{ color: theme.colors.text.accent }}>
-              {getEntityName()}
-            </Title>
-            
-            {entityInfo && (
-              <Grid>
-                {entityType === 'player' && (
-                  <>
-                    <Grid.Col span={{ base: 12, md: 6 }}>
-                      <Text><strong>Position:</strong> {entityInfo.position || 'N/A'}</Text>
-                    </Grid.Col>
-                    <Grid.Col span={{ base: 12, md: 6 }}>
-                      <Text><strong>Team:</strong> {entityInfo.team?.name || 'N/A'}</Text>
-                    </Grid.Col>
-                    <Grid.Col span={{ base: 12, md: 6 }}>
-                      <Text><strong>Height:</strong> {entityInfo.height || 'N/A'}</Text>
-                    </Grid.Col>
-                    <Grid.Col span={{ base: 12, md: 6 }}>
-                      <Text><strong>Weight:</strong> {entityInfo.weight || 'N/A'}</Text>
-                    </Grid.Col>
-                    <Grid.Col span={{ base: 12, md: 6 }}>
-                      <Text><strong>Jersey #:</strong> {entityInfo.jersey_number || 'N/A'}</Text>
-                    </Grid.Col>
-                    { (entityInfo.college || entityInfo.draft_year) && (
-                      <Grid.Col span={12}>
-                        <Text>
-                          <strong>Background:</strong> {entityInfo.college ? `${entityInfo.college}` : ''}
-                          {entityInfo.college && entityInfo.draft_year ? ' • ' : ''}
-                          {entityInfo.draft_year ? `Draft ${entityInfo.draft_year}${entityInfo.draft_round ? ` R${entityInfo.draft_round}` : ''}${entityInfo.draft_number ? ` P${entityInfo.draft_number}` : ''}` : ''}
-                        </Text>
-                      </Grid.Col>
-                    ) }
-                  </>
-                )}
-                
-                {entityType === 'team' && (
-                  <>
-                    <Grid.Col span={{ base: 12, md: 6 }}>
-                      <Text><strong>City:</strong> {entityInfo.city || 'N/A'}</Text>
-                    </Grid.Col>
-                    <Grid.Col span={{ base: 12, md: 6 }}>
-                      <Text><strong>Conference:</strong> {entityInfo.conference || 'N/A'}</Text>
-                    </Grid.Col>
-                  </>
-                )}
-              </Grid>
-            )}
-            
-            <Box mt="md">
-              <Button
-                component={Link}
-                to={`/${entityType}/${entityId}?sport=${activeSport}`}
-                onClick={() => {
-                  if (entityInfo) {
-                    // Normalize summary shape similar to backend full summary
-                    if (entityType === 'player') {
-                      putSummary(activeSport, 'player', entityId, {
-                        id: entityId,
-                        sport: activeSport,
-                        first_name: entityInfo.first_name,
-                        last_name: entityInfo.last_name,
-                        full_name: `${entityInfo.first_name||''} ${entityInfo.last_name||''}`.trim(),
-                        position: entityInfo.position,
-                        team_id: entityInfo.team?.id,
-                        team_name: entityInfo.team?.name,
-                        team_abbreviation: entityInfo.team?.abbreviation,
-                      });
-                    } else {
-                      putSummary(activeSport, 'team', entityId, {
-                        id: entityId,
-                        sport: activeSport,
-                        name: entityInfo.name,
-                        abbreviation: entityInfo.abbreviation,
-                        city: entityInfo.city,
-                        conference: entityInfo.conference,
-                        division: entityInfo.division,
-                      });
+            <BasicEntityCard
+              entityType={entityType}
+              sport={activeSport}
+              summary={entityType === 'player' ? (
+                entityInfo ? {
+                  id: String(entityInfo.id),
+                  full_name: `${entityInfo.first_name || ''} ${entityInfo.last_name || ''}`.trim(),
+                  first_name: entityInfo.first_name,
+                  last_name: entityInfo.last_name,
+                  position: entityInfo.position,
+                  team_name: entityInfo.team?.name,
+                  team_id: entityInfo.team?.id ? String(entityInfo.team.id) : null,
+                  team_abbreviation: entityInfo.team?.abbreviation,
+                  nationality: entityInfo.nationality,
+                  age: entityInfo.age,
+                  league: entityInfo.league,
+                  years_pro: entityInfo.years_pro,
+                } : null
+              ) : (
+                entityInfo ? {
+                  id: String(entityInfo.id),
+                  name: entityInfo.name,
+                  abbreviation: entityInfo.abbreviation,
+                  city: entityInfo.city,
+                  conference: entityInfo.conference,
+                  division: entityInfo.division,
+                  league: entityInfo.league,
+                } : null
+              )}
+              actions={
+                <Button
+                  component={Link}
+                  to={entityType === 'player' ? `/player/${entityId}` : `/team/${entityId}`}
+                  onClick={() => {
+                    if (entityInfo) {
+                      // Seed cache for smoother navigation
+                      if (entityType === 'player') {
+                        putSummary(activeSport, 'player', entityId, {
+                          id: String(entityInfo.id),
+                          sport: activeSport,
+                          first_name: entityInfo.first_name,
+                          last_name: entityInfo.last_name,
+                          full_name: `${entityInfo.first_name || ''} ${entityInfo.last_name || ''}`.trim(),
+                          position: entityInfo.position,
+                          team_id: entityInfo.team?.id ? String(entityInfo.team.id) : null,
+                          team_name: entityInfo.team?.name,
+                          team_abbreviation: entityInfo.team?.abbreviation,
+                        });
+                      } else {
+                        putSummary(activeSport, 'team', entityId, {
+                          id: String(entityInfo.id),
+                          sport: activeSport,
+                          name: entityInfo.name,
+                          abbreviation: entityInfo.abbreviation,
+                          city: entityInfo.city,
+                          conference: entityInfo.conference,
+                          division: entityInfo.division,
+                        });
+                      }
                     }
-                  }
-                }}
-                style={{ 
-                  backgroundColor: theme.colors.ui.primary,
-                  color: 'white'
-                }}
-                size="md"
-                fullWidth
-              >
-                View Stats
-              </Button>
-            </Box>
-          </Stack>
-        </Card>
+                  }}
+                  style={{ 
+                    backgroundColor: theme.colors.ui.primary,
+                    color: 'white'
+                  }}
+                  size="md"
+                  fullWidth
+                >
+                  Statistical Profile
+                </Button>
+              }
+            />
         
         {/* API-Sports Widgets (optional) */}
         <Card shadow="sm" p="lg" radius="md" withBorder>

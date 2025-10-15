@@ -21,14 +21,10 @@ class Settings(BaseSettings):
             return v
         raise ValueError(v)
     
-    # API Keys
-    BALLDONTLIE_API_KEY: str = os.getenv("BALLDONTLIE_API_KEY", "fd8788ca-65fe-4ea6-896f-a2c9776977d1")
-    # API-Sports.com key (required for new provider)
+    # API-Sports.com key (required provider)
     API_SPORTS_KEY: str = os.getenv("API_SPORTS_KEY", "")
     # Registry DB path relative to project root (NOT inside backend/ so file writes don't trigger reloads)
     REGISTRY_DB_PATH: str = os.getenv("REGISTRY_DB_PATH", "instance/registry.db")
-    # Debug flag to enable verbose upstream payload logging / diagnostic endpoints
-    BALLDONTLIE_DEBUG: bool = bool(int(os.getenv("BALDONTLIE_DEBUG", "0")))
     # Default seasons/leagues for API-Sports where applicable
     API_SPORTS_DEFAULTS: dict = {
         # Football (soccer) – English Premier League league id 39, current season autodetected if empty
