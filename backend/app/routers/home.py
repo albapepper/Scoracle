@@ -10,13 +10,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.get("/")
-async def get_home_info(sport: str = Query(None, description="Sport type (NBA, NFL, EPL)")):
+async def get_home_info(sport: str = Query(None, description="Sport type (NBA, NFL, FOOTBALL)")):
     """
     Get home page information and configuration.
     """
     return {
         "sport": sport or "NBA",  # Default to NBA if no sport specified
-        "available_sports": ["NBA", "NFL", "EPL"],
+    "available_sports": ["NBA", "NFL", "FOOTBALL"],
         "app_name": "Scoracle",
         "version": "0.1.0"
     }
@@ -25,7 +25,7 @@ async def get_home_info(sport: str = Query(None, description="Sport type (NBA, N
 async def search_entities(
     query: str = Query(..., description="Search query for player or team name"),
     entity_type: str = Query(None, description="Type of entity: player or team"),
-    sport: str = Query(None, description="Sport type (NBA, NFL, EPL)"),
+    sport: str = Query(None, description="Sport type (NBA, NFL, FOOTBALL)"),
     sports_context = Depends(get_sports_context),
 ):
     """

@@ -1,0 +1,19 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Seed local DBs (API)",
+			"type": "shell",
+			"command": "python",
+			"args": [
+				"-m",
+				"app.scripts.seed_local_dbs"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		}
+	]
+}

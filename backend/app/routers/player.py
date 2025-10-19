@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 async def get_player_details(
     player_id: str = Path(..., description="ID of the player to fetch"),
     season: Optional[str] = Query(None, description="Season to fetch stats for"),
-    sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, EPL)"),
+    sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, FOOTBALL)"),
     sports_context = Depends(get_sports_context)
 ):
     """
@@ -66,7 +66,7 @@ async def get_player_full(
     player_id: str = Path(..., description="ID of the player"),
     season: Optional[str] = Query(None, description="Season to fetch stats for (can be 'YYYY' or 'YYYY-YYYY')"),
     include_mentions: bool = Query(True, description="Include recent mentions"),
-    sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, EPL)"),
+    sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, FOOTBALL)"),
     sports_context = Depends(get_sports_context)
 ):
     """Aggregate endpoint returning summary + stats + percentiles (+ mentions).
@@ -116,9 +116,7 @@ async def get_player_full(
                 "team_name": team_obj.get("name"),
                 "team_abbreviation": team_obj.get("abbreviation"),
             }
-            # If the service indicated a fallback source (e.g., registry), expose it in the summary
-            if isinstance(info, dict) and info.get("fallback_source"):
-                summary["source"] = info.get("fallback_source")
+            # Source hint no longer used (registry removed)
             basic_cache.set(cache_key_summary, summary, ttl=180)
         else:
             # Sanitize cached summary if earlier version stored int team_id
@@ -219,7 +217,7 @@ Percentiles will be reintroduced once cohorts are available for API-Sports paylo
 @router.get("/{player_id}/seasons")
 async def get_player_seasons(
     player_id: str = Path(..., description="ID of the player to fetch seasons for"),
-    sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, EPL)"),
+    sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, FOOTBALL)"),
     sports_context = Depends(get_sports_context)
 ):
     """

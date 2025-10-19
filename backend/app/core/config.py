@@ -1,9 +1,15 @@
 import os
 from typing import List, Union
 from pydantic import AnyHttpUrl, validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    # Pydantic v2 settings config
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra="ignore",  # ignore unrelated env vars like PYTHONPATH, legacy keys
+    )
     PROJECT_NAME: str = "Scoracle"
     PROJECT_DESCRIPTION: str = "A one-stop shop for sports news and statistics"
     PROJECT_VERSION: str = "0.1.0"
@@ -23,20 +29,21 @@ class Settings(BaseSettings):
     
     # API-Sports.com key (required provider)
     API_SPORTS_KEY: str = os.getenv("API_SPORTS_KEY", "")
-    # Registry DB path relative to project root (NOT inside backend/ so file writes don't trigger reloads)
-    REGISTRY_DB_PATH: str = os.getenv("REGISTRY_DB_PATH", "instance/registry.db")
+    # Registry removed: local autocomplete uses per-sport localdb files.
+    REGISTRY_DB_PATH: str = os.getenv("REGISTRY_DB_PATH", "instance/registry.db")  # deprecated
     # Default seasons/leagues for API-Sports where applicable
     API_SPORTS_DEFAULTS: dict = {
-        # Football (soccer) – English Premier League league id 39, current season autodetected if empty
-        "EPL": {"sport": "football", "league": 39, "season": os.getenv("API_SPORTS_EPL_SEASON", "")},
-        # Basketball – NBA: sport=basketball; note API-Sports requires league ids by endpoint; placeholder values
-        "NBA": {"sport": "basketball", "league": int(os.getenv("API_SPORTS_NBA_LEAGUE", "12")), "season": os.getenv("API_SPORTS_NBA_SEASON", "")},
+        # Football (soccer) – now "FOOTBALL" umbrella; EPL legacy alias retained in code paths
+        # Default league for football lookups can be any of Top 5 + MLS; we keep EPL (39) for identity fallbacks.
+    # Default seasons set to latest requested: Football/NFL 2025-26 => 2025; NBA 2024-25 => 2024
+    "FOOTBALL": {"sport": "football", "league": int(os.getenv("API_SPORTS_FOOTBALL_LEAGUE", "39")), "season": os.getenv("API_SPORTS_FOOTBALL_SEASON", "2025")},
+    "EPL": {"sport": "football", "league": 39, "season": os.getenv("API_SPORTS_EPL_SEASON", "2025")},
+        # Basketball – NBA
+    "NBA": {"sport": "basketball", "league": os.getenv("API_SPORTS_NBA_LEAGUE", "standard"), "season": os.getenv("API_SPORTS_NBA_SEASON", "2024")},
         # American Football – NFL
-        "NFL": {"sport": "american-football", "league": int(os.getenv("API_SPORTS_NFL_LEAGUE", "1")), "season": os.getenv("API_SPORTS_NFL_SEASON", "")},
+    "NFL": {"sport": "american-football", "league": int(os.getenv("API_SPORTS_NFL_LEAGUE", "1")), "season": os.getenv("API_SPORTS_NFL_SEASON", "2025")},
     }
     
-    class Config:
-        case_sensitive = True
-        env_file = ".env"
+    # Note: Pydantic v2 forbids using both model_config and Config; we only keep model_config above.
 
 settings = Settings()

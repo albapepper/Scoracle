@@ -15,7 +15,7 @@ router = APIRouter()
 async def get_team_details(
     team_id: str = Path(..., description="ID of the team to fetch"),
     season: Optional[str] = Query(None, description="Season to fetch stats for"),
-    sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, EPL)"),
+    sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, FOOTBALL)"),
     sports_context = Depends(get_sports_context)
 ):
     """
@@ -47,7 +47,7 @@ async def get_team_full(
     team_id: str = Path(..., description="ID of the team"),
     season: Optional[str] = Query(None, description="Season to fetch stats for"),
     include_mentions: bool = Query(True, description="Include recent mentions"),
-    sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, EPL)"),
+    sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, FOOTBALL)"),
     sports_context = Depends(get_sports_context)
 ):
     """Aggregate endpoint returning summary + stats (+ mentions). Percentiles removed."""
@@ -189,7 +189,7 @@ async def get_team_full(
 async def get_team_roster(
     team_id: str = Path(..., description="ID of the team to fetch roster for"),
     season: Optional[str] = Query(None, description="Season to fetch roster for"),
-    sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, EPL)"),
+    sport: Optional[str] = Query(None, description="Override sport type (NBA, NFL, FOOTBALL)"),
     sports_context = Depends(get_sports_context)
 ):
     """

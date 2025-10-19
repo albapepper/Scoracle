@@ -31,7 +31,7 @@ class SportsContext:
     
     def get_available_sports(self) -> list[str]:
         """Get list of available sports"""
-        return ["NBA", "NFL", "EPL"]
+        return ["NBA", "NFL", "FOOTBALL"]
 
 # Create a singleton instance
 sports_context = SportsContext()

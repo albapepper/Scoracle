@@ -116,9 +116,9 @@ function TeamPage() {
           <Title order={3}>Team Widget</Title>
           <ApiSportsWidget
             type="team"
-            data={{ teamId: teamId, targetPlayer: '#player-container' }}
+            data={{ teamId: teamId, teamStatistics: 'true', teamSquads: 'true' }}
+            src="https://widgets.api-sports.io/3.1.0/team"
           />
-          <div id="player-container" />
         </Card>
         
         {/* Season Selector */}

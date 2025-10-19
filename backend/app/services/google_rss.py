@@ -26,7 +26,7 @@ async def _resolve_entity_name(entity_type: str, entity_id: str, sport: Optional
                 name = info.get("name") or info.get("abbreviation")
                 if name:
                     return name
-        elif sport_upper == 'EPL':
+        elif sport_upper in ('EPL', 'FOOTBALL'):
             if entity_type == "player":
                 info = await apisports_service.get_football_player_basic(entity_id)
                 fn = info.get("first_name") or ""

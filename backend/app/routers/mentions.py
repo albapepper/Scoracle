@@ -16,7 +16,7 @@ async def get_mentions(
     response: Response,
     entity_type: str = Path(..., description="Type of entity: player or team"),
     entity_id: str = Path(..., description="ID of the entity to fetch mentions for"),
-    sport: str = Query(None, description="Sport type (NBA, NFL, EPL)")
+    sport: str = Query(None, description="Sport type (NBA, NFL, FOOTBALL)")
 ):
     """
     Get mentions and basic information for a player or team.

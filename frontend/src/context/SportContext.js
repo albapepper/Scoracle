@@ -6,8 +6,8 @@ const SportContext = createContext();
 // Sport options
 const SPORTS = [
   { id: 'NBA', name: 'Basketball', display: 'NBA' },
-  { id: 'NFL', name: 'Football', display: 'NFL' },
-  { id: 'EPL', name: 'Soccer', display: 'EPL' },
+  { id: 'NFL', name: 'American Football', display: 'NFL' },
+  { id: 'FOOTBALL', name: 'Soccer', display: 'Football' },
 ];
 
 export const SportContextProvider = ({ children }) => {

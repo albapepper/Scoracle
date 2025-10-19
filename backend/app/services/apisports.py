@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import List, Dict, Any, Optional
 import httpx
 from fastapi import HTTPException
@@ -31,15 +32,31 @@ class ApiSportsService:
         if sport == "football":
             return "https://v3.football.api-sports.io"
         if sport == "basketball":
-            return "https://v2.nba.api-sports.io/"
+            return "https://v2.nba.api-sports.io"
         if sport == "american-football":
             return "https://v1.american-football.api-sports.io"
         raise ValueError(f"Unsupported API-Sports sport key: {sport_key}")
 
-    def _headers(self) -> Dict[str, str]:
+    def _headers_for_base(self, base_url: str) -> Dict[str, str]:
+        """Build headers for API-Sports or RapidAPI access based on env.
+
+        Environment:
+        - API_SPORTS_MODE: 'direct' (default) or 'rapidapi'
+        - API_SPORTS_KEY: used as key for selected mode
+        - RAPIDAPI_KEY: optional separate key when API_SPORTS_MODE='rapidapi'
+        """
+        from urllib.parse import urlparse
+        env_mode = os.getenv("API_SPORTS_MODE")
+        # Auto-switch to rapidapi if RAPIDAPI_KEY is present and mode not explicitly set
+        mode = (env_mode or ("rapidapi" if os.getenv("RAPIDAPI_KEY") else "direct")).lower()
+        host = urlparse(base_url).netloc
+        if mode == "rapidapi":
+            rapid_key = os.getenv("RAPIDAPI_KEY", self.api_key)
+            return {"x-rapidapi-key": rapid_key, "x-rapidapi-host": host}
+        # default: direct header
         return {"x-apisports-key": self.api_key}
 
-    async def search_players(self, q: str, sport_key: str) -> List[Dict[str, Any]]:
+    async def search_players(self, q: str, sport_key: str, *, league_override: Optional[int] = None, season_override: Optional[str] = None) -> List[Dict[str, Any]]:
         """Search players across supported sports.
 
         Returns a list of normalized dicts with minimal fields needed by autocomplete mapping stage.
@@ -49,17 +66,19 @@ class ApiSportsService:
             raise HTTPException(status_code=502, detail="API-Sports key not configured on server")
         sport_key_up = sport_key.upper()
         base = self._base_url_for(sport_key_up)
-        headers = self._headers()
+        headers = self._headers_for_base(base)
         defaults = settings.API_SPORTS_DEFAULTS.get(sport_key_up, {})
-        league = defaults.get("league")
-        season = defaults.get("season") or None
+        league = league_override if league_override is not None else defaults.get("league")
+        season = (season_override if season_override is not None else defaults.get("season")) or None
 
         try:
             tmo = httpx.Timeout(connect=3.0, read=5.0, write=5.0, pool=3.0)
             async with httpx.AsyncClient(timeout=tmo) as client:
-                if sport_key_up == 'EPL':
+                if sport_key_up in ('EPL', 'FOOTBALL'):
                     # Football search: /players?league=39&search=...&season=YYYY
-                    params = {"league": league, "search": q}
+                    params = {"league": league}
+                    if (q or "").strip():
+                        params["search"] = q
                     if season:
                         params["season"] = season
                     r = await client.get(f"{base}/players", headers=headers, params=params)
@@ -155,22 +174,24 @@ class ApiSportsService:
             logger.error("API-Sports player search network error", extra={"sport": sport_key_up, "error": str(e)})
             raise HTTPException(status_code=502, detail="API-Sports network error")
 
-    async def search_teams(self, q: str, sport_key: str) -> List[Dict[str, Any]]:
+    async def search_teams(self, q: str, sport_key: str, *, league_override: Optional[int] = None, season_override: Optional[str] = None) -> List[Dict[str, Any]]:
         if not self.api_key:
             raise HTTPException(status_code=502, detail="API-Sports key not configured on server")
         sport_key_up = sport_key.upper()
         base = self._base_url_for(sport_key_up)
-        headers = self._headers()
+        headers = self._headers_for_base(base)
         defaults = settings.API_SPORTS_DEFAULTS.get(sport_key_up, {})
-        league = defaults.get("league")
-        season = defaults.get("season") or None
+        league = league_override if league_override is not None else defaults.get("league")
+        season = (season_override if season_override is not None else defaults.get("season")) or None
 
         try:
             tmo = httpx.Timeout(connect=3.0, read=5.0, write=5.0, pool=3.0)
             async with httpx.AsyncClient(timeout=tmo) as client:
-                if sport_key_up == 'EPL':
+                if sport_key_up in ('EPL', 'FOOTBALL'):
                     # football: /teams?league=39&search=...
-                    params = {"league": league, "search": q}
+                    params = {"league": league}
+                    if (q or "").strip():
+                        params["search"] = q
                     try:
                         r = await client.get(f"{base}/teams", headers=headers, params=params)
                         r.raise_for_status()
@@ -196,19 +217,14 @@ class ApiSportsService:
                     return out
                 elif sport_key_up == 'NBA':
                     params = {"search": q}
-                    if league:
-                        params["league"] = league
+                    # NBA v2: avoid strict league filters in search; include season if provided
+                    if season:
+                        params["season"] = season
                     try:
                         r = await client.get(f"{base}/teams", headers=headers, params=params)
                         r.raise_for_status()
                     except httpx.HTTPStatusError as e:
-                        # Retry without league if initial attempt fails
-                        if e.response is not None and e.response.status_code in (400, 404) and "league" in params:
-                            params2 = {"search": q}
-                            r = await client.get(f"{base}/teams", headers=headers, params=params2)
-                            r.raise_for_status()
-                        else:
-                            raise
+                        raise
                     payload = r.json()
                     response_list = payload.get("response", [])
                     out = []
@@ -249,6 +265,247 @@ class ApiSportsService:
             logger.error("API-Sports team search network error", extra={"sport": sport_key_up, "error": str(e)})
             raise HTTPException(status_code=502, detail="API-Sports network error")
 
+    # --- Listing helpers for seeding ---
+    async def list_football_teams(self, league_id: int, season: Optional[str] = None) -> List[Dict[str, Any]]:
+        base = self._base_url_for('FOOTBALL')
+        headers = self._headers_for_base(base)
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                params = {"league": league_id}
+                if season:
+                    params["season"] = season
+                r = await client.get(f"{base}/teams", headers=headers, params=params)
+                r.raise_for_status()
+                payload = r.json()
+                response_list = payload.get("response", [])
+                out = []
+                for t in response_list:
+                    team = t.get('team') or {}
+                    out.append({
+                        "id": team.get('id'),
+                        "name": team.get('name'),
+                        "abbreviation": team.get('code') or team.get('name'),
+                    })
+                return out
+        except httpx.HTTPError as e:
+            logger.error("API-Sports football team list error", extra={"error": str(e), "league": league_id})
+            return []
+
+    async def list_football_players(self, league_id: int, season: str, page: int = 1) -> List[Dict[str, Any]]:
+        base = self._base_url_for('FOOTBALL')
+        headers = self._headers_for_base(base)
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                r = await client.get(f"{base}/players", headers=headers, params={"league": league_id, "season": season, "page": page})
+                r.raise_for_status()
+                payload = r.json()
+                response_list = payload.get("response", [])
+                out = []
+                for item in response_list:
+                    player = item.get('player', {})
+                    statistics = item.get('statistics', [])
+                    team_abbr = None
+                    if statistics and isinstance(statistics, list):
+                        first_stat = statistics[0]
+                        team = first_stat.get("team") or {}
+                        team_abbr = team.get("name")
+                    out.append({
+                        "id": player.get('id'),
+                        "first_name": player.get('firstname'),
+                        "last_name": player.get('lastname'),
+                        "team_abbr": team_abbr,
+                    })
+                return out
+        except httpx.HTTPError as e:
+            logger.error("API-Sports football player list error", extra={"error": str(e), "league": league_id, "season": season, "page": page})
+            return []
+
+    async def list_nfl_teams(self, league: Optional[int] = None) -> List[Dict[str, Any]]:
+        base = self._base_url_for('NFL')
+        headers = self._headers_for_base(base)
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                params = {"league": league} if league else None
+                r = await client.get(f"{base}/teams", headers=headers, params=params)
+                r.raise_for_status()
+                payload = r.json()
+                response_list = payload.get('response', [])
+                out = []
+                for t in response_list:
+                    team = t.get('team') or t
+                    out.append({
+                        "id": team.get('id'),
+                        "name": team.get('name'),
+                        "abbreviation": team.get('code') or team.get('name'),
+                    })
+                return out
+        except httpx.HTTPError as e:
+            logger.error("API-Sports NFL team list error", extra={"error": str(e)})
+            return []
+
+    async def list_nfl_players(self, season: str, page: int = 1, league: Optional[int] = None) -> List[Dict[str, Any]]:
+        base = self._base_url_for('NFL')
+        headers = self._headers_for_base(base)
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                params = {"season": season, "page": page}
+                if league:
+                    params["league"] = league
+                r = await client.get(f"{base}/players", headers=headers, params=params)
+                r.raise_for_status()
+                payload = r.json()
+                response_list = payload.get('response', [])
+                out = []
+                for p in response_list:
+                    name = (p.get('name') or '')
+                    parts = name.split(' ')
+                    first = parts[0] if parts else None
+                    last = ' '.join(parts[1:]) if len(parts) > 1 else None
+                    team = p.get('team') or {}
+                    out.append({
+                        "id": p.get('id'),
+                        "first_name": first,
+                        "last_name": last,
+                        "team_abbr": team.get('name') or team.get('code'),
+                    })
+                return out
+        except httpx.HTTPError as e:
+            logger.error("API-Sports NFL player list error", extra={"error": str(e), "season": season, "page": page})
+            return []
+
+    async def list_nba_teams(self, league: Optional[str] = 'standard') -> List[Dict[str, Any]]:
+        base = self._base_url_for('NBA')
+        headers = self._headers_for_base(base)
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                params = {"league": league} if league else None
+                r = await client.get(f"{base}/teams", headers=headers, params=params)
+                r.raise_for_status()
+                payload = r.json()
+                response_list = payload.get('response', [])
+                out = []
+                for t in response_list:
+                    raw = t.get('team') or t
+                    # Prefer true NBA franchises only
+                    nba_flag = (raw.get('nbaFranchise') if isinstance(raw, dict) else None)
+                    leagues = raw.get('leagues') if isinstance(raw, dict) else None
+                    has_standard = False
+                    if isinstance(leagues, dict):
+                        std = leagues.get('standard')
+                        if isinstance(std, dict):
+                            # Teams with a 'standard' league entry are NBA-related
+                            has_standard = True
+                    if nba_flag is False:
+                        continue
+                    if nba_flag is None and not has_standard:
+                        # If we can't confirm NBA linkage, skip to avoid foreign teams
+                        continue
+                    out.append({
+                        "id": raw.get('id'),
+                        "name": raw.get('name'),
+                        "abbreviation": raw.get('code') or raw.get('nickname') or raw.get('name'),
+                    })
+                return out
+        except httpx.HTTPError as e:
+            logger.error("API-Sports NBA team list error", extra={"error": str(e)})
+            return []
+
+    async def list_nba_players(self, season: Optional[str], page: int = 1, league: Optional[str] = 'standard') -> List[Dict[str, Any]]:
+        base = self._base_url_for('NBA')
+        headers = self._headers_for_base(base)
+        params = {"page": page}
+        if season:
+            params['season'] = season
+        if league:
+            params['league'] = league
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                r = await client.get(f"{base}/players", headers=headers, params=params or None)
+                r.raise_for_status()
+                payload = r.json()
+                response_list = payload.get('response', [])
+                out = []
+                for p in response_list:
+                    team_abbr = None
+                    teams = p.get('teams') or []
+                    if teams:
+                        last_team = teams[-1]
+                        team_abbr = (last_team.get('team') or {}).get('code') or (last_team.get('team') or {}).get('name')
+                    out.append({
+                        "id": p.get('id'),
+                        "first_name": p.get('firstname') or p.get('firstName'),
+                        "last_name": p.get('lastname') or p.get('lastName'),
+                        "team_abbr": team_abbr,
+                    })
+                return out
+        except httpx.HTTPError as e:
+            logger.error("API-Sports NBA player list error", extra={"error": str(e), "season": season})
+            return []
+
+    async def list_nba_team_players(self, team_id: int, season: Optional[str], league: Optional[str] = 'standard', page: int = 1) -> List[Dict[str, Any]]:
+        """Roster fallback: list players for a specific NBA team and season."""
+        base = self._base_url_for('NBA')
+        headers = self._headers_for_base(base)
+        params = {"team": team_id, "page": page}
+        if season:
+            params['season'] = season
+        if league:
+            params['league'] = league
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                r = await client.get(f"{base}/players", headers=headers, params=params)
+                r.raise_for_status()
+                payload = r.json()
+                response_list = payload.get('response', [])
+                out = []
+                for p in response_list:
+                    team_abbr = None
+                    teams = p.get('teams') or []
+                    if teams:
+                        last_team = teams[-1]
+                        team_abbr = (last_team.get('team') or {}).get('code') or (last_team.get('team') or {}).get('name')
+                    out.append({
+                        "id": p.get('id'),
+                        "first_name": p.get('firstname') or p.get('firstName'),
+                        "last_name": p.get('lastname') or p.get('lastName'),
+                        "team_abbr": team_abbr,
+                    })
+                return out
+        except httpx.HTTPError as e:
+            logger.error("API-Sports NBA team roster error", extra={"error": str(e), "team": team_id, "season": season})
+            return []
+
+    async def list_nba_team_statistics_players(self, team_id: int, season: Optional[str]) -> List[Dict[str, Any]]:
+        """Fallback using /players/statistics?team=ID&season=YYYY to derive player identities.
+
+        Note: This endpoint returns per-game or per-season stat rows; we only extract identity fields.
+        """
+        base = self._base_url_for('NBA')
+        headers = self._headers_for_base(base)
+        params: Dict[str, Any] = {"team": team_id}
+        if season:
+            params["season"] = season
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                r = await client.get(f"{base}/players/statistics", headers=headers, params=params)
+                r.raise_for_status()
+                payload = r.json()
+                response_list = payload.get('response', [])
+                out = []
+                for row in response_list:
+                    player = row.get('player') or {}
+                    team = row.get('team') or {}
+                    out.append({
+                        "id": player.get('id'),
+                        "first_name": player.get('firstname') or player.get('firstName'),
+                        "last_name": player.get('lastname') or player.get('lastName'),
+                        "team_abbr": team.get('code') or team.get('name'),
+                    })
+                return out
+        except httpx.HTTPError as e:
+            logger.error("API-Sports NBA team stats list error", extra={"error": str(e), "team": team_id, "season": season})
+            return []
+
     # --- Basketball (NBA) basics ---
     async def get_basketball_player_basic(self, player_id: str, season: Optional[str] = None) -> Dict[str, Any]:
         """Fetch minimal NBA player info by id via API-Sports.
@@ -256,7 +513,7 @@ class ApiSportsService:
         Returns normalized dict with id, first_name, last_name, team {...} keys.
         """
         base = self._base_url_for('NBA')
-        headers = self._headers()
+        headers = self._headers_for_base(base)
         defaults = settings.API_SPORTS_DEFAULTS.get('NBA', {})
         params = {"id": player_id}
         # season not required for identity; omit to avoid 400s
@@ -303,7 +560,7 @@ class ApiSportsService:
         Returns normalized dict with id, name, abbreviation, and common fields.
         """
         base = self._base_url_for('NBA')
-        headers = self._headers()
+        headers = self._headers_for_base(base)
         try:
             async with httpx.AsyncClient(timeout=20.0) as client:
                 r = await client.get(f"{base}/teams", headers=headers, params={"id": team_id})
@@ -340,7 +597,7 @@ class ApiSportsService:
         API endpoint: GET /players/statistics?player=ID&season=YYYY
         """
         base = self._base_url_for('NBA')
-        headers = self._headers()
+        headers = self._headers_for_base(base)
         params = {"player": player_id}
         if season:
             # API-Sports expects single year
@@ -371,7 +628,7 @@ class ApiSportsService:
         API endpoint: GET /teams/statistics?team=ID&season=YYYY
         """
         base = self._base_url_for('NBA')
-        headers = self._headers()
+        headers = self._headers_for_base(base)
         params = {"team": team_id}
         if season:
             params["season"] = int(season) if str(season).isdigit() else season
@@ -398,7 +655,7 @@ class ApiSportsService:
         API endpoint: GET /standings?season=YYYY
         """
         base = self._base_url_for('NBA')
-        headers = self._headers()
+        headers = self._headers_for_base(base)
         params = {}
         if season:
             params["season"] = int(season) if str(season).isdigit() else season
@@ -421,7 +678,7 @@ class ApiSportsService:
     # --- Football (EPL) basics ---
     async def get_football_player_basic(self, player_id: str, season: Optional[str] = None) -> Dict[str, Any]:
         base = self._base_url_for('EPL')
-        headers = self._headers()
+        headers = self._headers_for_base(base)
         defaults = settings.API_SPORTS_DEFAULTS.get('EPL', {})
         season_param = season or defaults.get('season')
         params = {"id": player_id}
@@ -463,7 +720,7 @@ class ApiSportsService:
 
     async def get_football_team_basic(self, team_id: str) -> Dict[str, Any]:
         base = self._base_url_for('EPL')
-        headers = self._headers()
+        headers = self._headers_for_base(base)
         try:
             async with httpx.AsyncClient(timeout=20.0) as client:
                 r = await client.get(f"{base}/teams", headers=headers, params={"id": team_id})

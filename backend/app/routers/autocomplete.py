@@ -5,6 +5,7 @@ import time
 import logging
 
 from app.services.apisports import apisports_service
+from app.db.local_dbs import suggestions_from_local_or_upstream
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -94,44 +95,19 @@ async def autocomplete(
         response.headers["X-Autocomplete-Cache"] = "MISS"
         response.headers["X-Autocomplete-Cache-Hits"] = str(_CACHE_HITS)
         response.headers["X-Autocomplete-Cache-Misses"] = str(_CACHE_MISSES)
-        # Primary: query live API-Sports per sport and entity type
+        # First try local DB, fallback to upstream and warm local store
         try:
-            if entity_type == 'player':
-                results = await apisports_service.search_players(q, sport)
-                data = [
-                    {
-                        'id': p.get('id'),
-                        'label': f"{(p.get('first_name') or '').strip()} {(p.get('last_name') or '').strip()}".strip(),
-                        'team_abbr': p.get('team_abbr'),
-                        'sport': sport,
-                        'entity_type': 'player'
-                    }
-                    for p in results
-                ]
-            elif entity_type == 'team':
-                results = await apisports_service.search_teams(q, sport)
-                data = [
-                    {
-                        'id': t.get('id'),
-                        'label': t.get('name') or t.get('abbreviation') or str(t.get('id')),
-                        'team_abbr': t.get('abbreviation'),
-                        'sport': sport,
-                        'entity_type': 'team'
-                    }
-                    for t in results
-                ]
-            else:
-                raise HTTPException(status_code=400, detail="entity_type must be 'player' or 'team'")
+            data = await suggestions_from_local_or_upstream(entity_type, sport, q, limit)
         except HTTPException:
             raise
         except Exception as e:
-            logger.error("Autocomplete API-Sports error: %s", e)
-            raise HTTPException(status_code=502, detail="Upstream service error")
+            logger.error("Autocomplete provider error: %s", e)
+            raise HTTPException(status_code=502, detail="Suggestion provider error")
 
         _cache_set(cache_key, data)
         response.headers["X-Autocomplete-Q-Len"] = str(len(q.strip()))
         response.headers["X-Autocomplete-Elapsed-ms"] = f"{(time.perf_counter()-_t0)*1000:.0f}"
-        response.headers["X-Upstream-Provider"] = "api-sports"
+        response.headers["X-Upstream-Provider"] = "local-sqlite+api-sports"
         return AutocompleteResponse(
             query=q,
             entity_type=entity_type,
