@@ -5,6 +5,7 @@ import threading
 import time
 import unicodedata
 from typing import List, Dict, Tuple, Optional
+from pathlib import Path
 
 # Lightweight per-sport SQLite management for autocomplete data
 
@@ -12,9 +13,33 @@ _INIT_LOCK = threading.Lock()
 _INITIALIZED: set[str] = set()
 
 
-def _db_dir() -> str:
-    # Default under project instance folder
-    return os.getenv("LOCAL_DB_DIR", os.path.join(os.getcwd(), "instance", "localdb"))
+def _candidate_db_dirs() -> list[str]:
+    """Return candidate directories that may contain local SQLite files.
+
+    Order of preference:
+    1) LOCAL_DB_DIR env var (if set)
+    2) <repo_root>/instance/localdb
+    3) <backend_root>/instance/localdb (for older layouts)
+    """
+    dirs: list[str] = []
+    override = os.getenv("LOCAL_DB_DIR")
+    if override:
+        dirs.append(override)
+    here = Path(__file__).resolve()
+    # backend root: .../backend
+    backend_root = here.parents[2]
+    # repo root assumed one level above backend
+    repo_root = backend_root.parent
+    dirs.append(str(repo_root / "instance" / "localdb"))
+    dirs.append(str(backend_root / "instance" / "localdb"))
+    # Deduplicate preserving order
+    out: list[str] = []
+    seen = set()
+    for d in dirs:
+        if d not in seen:
+            seen.add(d)
+            out.append(d)
+    return out
 
 
 def _db_path_for_sport(sport: str) -> str:
@@ -25,7 +50,14 @@ def _db_path_for_sport(sport: str) -> str:
         "FOOTBALL": "football.sqlite",
         "EPL": "football.sqlite",  # alias for backward compatibility
     }.get(s, f"{s.lower()}.sqlite")
-    return os.path.join(_db_dir(), fname)
+    candidates = _candidate_db_dirs()
+    # Prefer a directory that already has the file
+    for d in candidates:
+        path = os.path.join(d, fname)
+        if os.path.exists(path):
+            return path
+    # Otherwise, use the first candidate as the place to create it
+    return os.path.join(candidates[0], fname)
 
 
 def _connect(path: str) -> sqlite3.Connection:
@@ -215,17 +247,32 @@ def search_players(sport: str, q: str, limit: int) -> List[Dict[str, Optional[st
             from rapidfuzz import fuzz
             scored = []
             for pid, name, team, norm in candidates:
-                score = fuzz.WRatio(nq, norm or normalize_text(name))
-                scored.append((score, pid, name, team))
+                base = norm or normalize_text(name)
+                score = fuzz.WRatio(nq, base)
+                # Heuristics: prefer first-token match and prefix matches; then shorter names
+                tokens_q = [t for t in nq.split(' ') if t]
+                first_tok = tokens_q[0] if tokens_q else ''
+                name_tokens = base.split(' ')
+                first_token_match = 1 if (first_tok and name_tokens and name_tokens[0] == first_tok) else 0
+                prefix_match = 1 if (first_tok and base.startswith(first_tok)) else 0
+                length_penalty = -len(base)
+                scored.append((score, first_token_match, prefix_match, length_penalty, pid, name, team))
             # Add a fallback: if no candidates, consider broader scan (bounded)
             if not scored:
                 cur2 = conn.execute("SELECT id, name, current_team, normalized_name FROM players LIMIT ?", (int(limit) * 30,))
                 for pid, name, team, norm in cur2.fetchall():
-                    score = fuzz.WRatio(nq, norm or normalize_text(name))
-                    scored.append((score, pid, name, team))
+                    base = norm or normalize_text(name)
+                    score = fuzz.WRatio(nq, base)
+                    tokens_q = [t for t in nq.split(' ') if t]
+                    first_tok = tokens_q[0] if tokens_q else ''
+                    name_tokens = base.split(' ')
+                    first_token_match = 1 if (first_tok and name_tokens and name_tokens[0] == first_tok) else 0
+                    prefix_match = 1 if (first_tok and base.startswith(first_tok)) else 0
+                    length_penalty = -len(base)
+                    scored.append((score, first_token_match, prefix_match, length_penalty, pid, name, team))
             scored.sort(reverse=True)
             out = []
-            for score, pid, name, team in scored[:limit]:
+            for _score, _ftm, _pm, _lp, pid, name, team in scored[:limit]:
                 out.append({"id": pid, "name": name, "current_team": team})
             return out
         except Exception:
@@ -276,94 +323,41 @@ def search_teams(sport: str, q: str, limit: int) -> List[Dict[str, Optional[str]
 
 async def suggestions_from_local_or_upstream(entity_type: str, sport: str, q: str, limit: int):
     """
-    Attempt to serve suggestions from local DB, otherwise query upstream provider
-    and warm the DB with results.
-    Returns a list of dicts matching AutocompleteSuggestion shape used by routers.
+    LOCAL-ONLY autocomplete.
+
+    Returns suggestions strictly from the local SQLite DB for the given sport.
+    No external API calls are performed here. If no local matches are found,
+    an empty list is returned. This function keeps the historical name so
+    existing routers don't need to change their imports.
     """
     et = (entity_type or "").strip().lower()
     s = (sport or "").strip().upper()
     out: List[Dict] = []
-    local_only = os.getenv("LOCAL_AUTOCOMPLETE_LOCAL_ONLY", "false").lower() in ("1", "true", "yes")
     if et == "player":
         loc = search_players(s, q, limit)
-        if loc:
-            for p in loc:
-                label = p["name"] if not p.get("current_team") else f"{p['name']} — {p['current_team']}"
-                out.append({
-                    "id": p["id"],
-                    "label": label,
-                    "entity_type": "player",
-                    "sport": s,
-                    "team_abbr": p.get("current_team"),
-                })
-            return out
-        # If local-only is enabled, do not query upstream
-        if local_only:
-            return out  # empty when no local results
-        # Fallback to upstream
-        from app.services.apisports import apisports_service
-        rows = await apisports_service.search_players(q, s)
-        # Warm DB
-        to_upsert = []
-        for r in rows:
-            name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip() or str(r.get('id'))
-            team = r.get("team_abbr") or None
-            if r.get("id") is not None:
-                to_upsert.append((int(r["id"]), name, team))
-            label = name if not team else f"{name} — {team}"
+        for p in loc:
+            label = p["name"] if not p.get("current_team") else f"{p['name']} — {p['current_team']}"
             out.append({
-                "id": r.get("id"),
+                "id": p["id"],
                 "label": label,
                 "entity_type": "player",
                 "sport": s,
-                "team_abbr": team,
+                "team_abbr": p.get("current_team"),
             })
-        if to_upsert:
-            upsert_players(s, to_upsert)
         return out[:limit]
-    elif et == "team":
+    if et == "team":
         loc = search_teams(s, q, limit)
-        if loc:
-            for t in loc:
-                label = t["name"] if not t.get("current_league") else f"{t['name']} — {t['current_league']}"
-                out.append({
-                    "id": t["id"],
-                    "label": label,
-                    "entity_type": "team",
-                    "sport": s,
-                    "team_abbr": None,
-                })
-            return out
-        if local_only:
-            return out
-        # Fallback to upstream
-        from app.services.apisports import apisports_service
-        rows = await apisports_service.search_teams(q, s)
-        to_upsert = []
-        for r in rows:
-            name = r.get("name") or r.get("abbreviation") or str(r.get("id"))
-            league = None
-            if s in ("FOOTBALL", "EPL"):
-                league = "football"
-            elif s == "NBA":
-                league = "NBA"
-            elif s == "NFL":
-                league = "NFL"
-            if r.get("id") is not None:
-                to_upsert.append((int(r["id"]), name, league))
-            label = name if not league else f"{name} — {league}"
+        for t in loc:
+            label = t["name"] if not t.get("current_league") else f"{t['name']} — {t['current_league']}"
             out.append({
-                "id": r.get("id"),
+                "id": t["id"],
                 "label": label,
                 "entity_type": "team",
                 "sport": s,
-                "team_abbr": r.get("abbreviation"),
+                "team_abbr": None,
             })
-        if to_upsert:
-            upsert_teams(s, to_upsert)
         return out[:limit]
-    else:
-        return []
+    return []
 
 
 def purge_sport(sport: str):

@@ -5,6 +5,7 @@ from typing import List, Tuple, Sequence
 
 from app.db.local_dbs import upsert_players, upsert_teams, purge_sport
 from app.services.apisports import apisports_service
+from app.core.config import settings
 
 
 # League ids (API-Sports) for football umbrella (Top 5 + MLS)
@@ -187,39 +188,70 @@ async def seed_nba_api():
 
 async def seed_nfl_api():
     print("Seeding NFL teams via API...")
+    teams_upserted = False
+    team_rows: List[dict] = []
+    # 1) Try listing
     try:
-        rows = await apisports_service.list_nfl_teams(league=int(os.getenv("API_SPORTS_NFL_LEAGUE", "1")))
-        teams: List[Tuple[int, str, str]] = []
-        for r in rows:
-            name = r.get("name") or r.get("abbreviation") or str(r.get("id"))
-            if r.get("id") is not None:
-                teams.append((int(r["id"]), name, "NFL"))
-        print(f"NFL teams raw rows: {len(rows)}; filtered: {len(teams)}")
-        if teams:
-            print(f"NFL teams upserting {len(teams)}")
-            upsert_teams("NFL", teams)
-        else:
-            from string import ascii_lowercase
-            seen = set()
-            teams2: List[Tuple[int, str, str]] = []
-            for ch in ascii_lowercase:
-                try:
-                    rows2 = await apisports_service.search_teams(ch, "NFL")
-                except Exception as e:
-                    print(f"nfl teams search warn ({ch}):", e)
-                    continue
-                for r in rows2:
-                    tid = r.get("id")
-                    name = r.get("name") or r.get("abbreviation") or str(tid)
-                    if tid is not None and tid not in seen:
-                        seen.add(tid)
-                        teams2.append((int(tid), name, "NFL"))
-                await asyncio.sleep(0.05)
-            if teams2:
-                print(f"NFL teams upserting {len(teams2)} (fallback)")
-                upsert_teams("NFL", teams2)
+        rows = await apisports_service.list_nfl_teams(league=None)
     except Exception as e:
-        print("nfl teams seed warn:", e)
+        print("nfl teams list warn:", e)
+        rows = []
+    teams: List[Tuple[int, str, str]] = []
+    for r in rows:
+        name = r.get("name") or r.get("abbreviation") or str(r.get("id"))
+        if r.get("id") is not None:
+            teams.append((int(r["id"]), name, "NFL"))
+    print(f"NFL teams raw rows: {len(rows)}; filtered: {len(teams)}")
+    if teams:
+        print(f"NFL teams upserting {len(teams)}")
+        upsert_teams("NFL", teams)
+        teams_upserted = True
+        team_rows = rows
+    # 2) Fallback: search across alphabet
+    if not teams_upserted:
+        from string import ascii_lowercase
+        seen = set()
+        teams2: List[Tuple[int, str, str]] = []
+        found_dicts: List[dict] = []
+        for ch in ascii_lowercase:
+            try:
+                rows2 = await apisports_service.search_teams(ch, "NFL")
+            except Exception as e:
+                print(f"nfl teams search warn ({ch}):", e)
+                continue
+            for r in rows2:
+                tid = r.get("id")
+                name = r.get("name") or r.get("abbreviation") or str(tid)
+                if tid is not None and tid not in seen:
+                    seen.add(tid)
+                    teams2.append((int(tid), name, "NFL"))
+                    found_dicts.append({"id": tid, "name": name})
+            await asyncio.sleep(0.05)
+        if teams2:
+            print(f"NFL teams upserting {len(teams2)} (fallback)")
+            upsert_teams("NFL", teams2)
+            teams_upserted = True
+            team_rows = found_dicts
+    # 3) Fallback: brute-force team ids
+    if not teams_upserted:
+        brute: List[Tuple[int, str, str]] = []
+        found_dicts: List[dict] = []
+        for tid in range(1, 65):
+            try:
+                t = await apisports_service.get_nfl_team_by_id(tid)
+            except Exception as e:
+                print(f"nfl team id probe warn ({tid}):", e)
+                continue
+            if t and t.get("id") is not None:
+                name = t.get("name") or t.get("abbreviation") or str(t.get("id"))
+                brute.append((int(t["id"]) if isinstance(t.get("id"), int) else int(t.get("id")), name, "NFL"))
+                found_dicts.append({"id": t.get("id"), "name": name})
+            await asyncio.sleep(0.03)
+        if brute:
+            print(f"NFL teams upserting {len(brute)} via id-probe fallback")
+            upsert_teams("NFL", brute)
+            teams_upserted = True
+            team_rows = found_dicts
 
     print("Seeding NFL players via API...")
     page = 1
@@ -245,10 +277,48 @@ async def seed_nfl_api():
             break
         await asyncio.sleep(0.1)
     if not got_any:
-        from string import ascii_lowercase
-        for ch in ascii_lowercase:
+        # Team-by-team fallback: try roster, then statistics
+        if not team_rows:
             try:
-                rows = await apisports_service.search_players(ch, "NFL", season_override="2025")
+                team_rows = await apisports_service.list_nfl_teams(league=None)
+            except Exception as e:
+                print("nfl roster fallback teams warn:", e)
+                team_rows = []
+        for t in team_rows:
+            tid = t.get("id")
+            if not tid:
+                continue
+            try:
+                page = 1
+                while True:
+                    roster = await apisports_service.list_nfl_team_players(team_id=int(tid), season="2025", page=page)
+                    if not roster:
+                        if page == 1:
+                            roster = await apisports_service.list_nfl_team_statistics_players(team_id=int(tid), season="2025")
+                            if not roster:
+                                break
+                        else:
+                            break
+                    players: List[Tuple[int, str, str]] = []
+                    for r in roster:
+                        name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip() or str(r.get('id'))
+                        team = r.get("team_abbr") or None
+                        if r.get("id") is not None:
+                            players.append((int(r["id"]), name, team))
+                    if players:
+                        print(f"NFL players upserting {len(players)} via {'stats' if page==1 else 'roster'} team {tid} page {page}")
+                        upsert_players("NFL", players)
+                    page += 1
+            except Exception as e:
+                print(f"nfl roster/statistics fallback warn (team {tid}):", e)
+            await asyncio.sleep(0.05)
+    if not got_any:
+        # League-level statistics fallback (paged)
+        for page in range(1, 6):
+            try:
+                rows = await apisports_service.list_nfl_statistics_players(season="2025", league=int(os.getenv("API_SPORTS_NFL_LEAGUE", "1")), page=page)
+                if not rows:
+                    break
                 players: List[Tuple[int, str, str]] = []
                 for r in rows:
                     name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip() or str(r.get('id'))
@@ -256,11 +326,47 @@ async def seed_nfl_api():
                     if r.get("id") is not None:
                         players.append((int(r["id"]), name, team))
                 if players:
-                    print(f"NFL players upserting {len(players)} via search {ch}")
+                    print(f"NFL players upserting {len(players)} via league stats page {page}")
                     upsert_players("NFL", players)
             except Exception as e:
-                print(f"nfl players search warn ({ch}):", e)
+                print(f"nfl league statistics fallback warn (page {page}):", e)
+                break
             await asyncio.sleep(0.05)
+    # Last-resort: if nothing was upserted for teams and players, seed static NFL subset
+    if not teams_upserted and not got_any:
+        print("NFL API returned no data; seeding static NFL subset as fallback...")
+        seed_nfl_static_minimal()
+
+
+def seed_nfl_static_minimal():
+    nfl_teams = [
+        (1, "Arizona Cardinals", "NFL"),
+        (2, "Atlanta Falcons", "NFL"),
+        (3, "Baltimore Ravens", "NFL"),
+        (4, "Buffalo Bills", "NFL"),
+        (5, "Carolina Panthers", "NFL"),
+        (6, "Chicago Bears", "NFL"),
+        (7, "Cincinnati Bengals", "NFL"),
+        (8, "Cleveland Browns", "NFL"),
+        (9, "Dallas Cowboys", "NFL"),
+        (10, "Denver Broncos", "NFL"),
+        (11, "Detroit Lions", "NFL"),
+        (12, "Green Bay Packers", "NFL"),
+    ]
+    upsert_teams("NFL", nfl_teams)
+    nfl_players = [
+        (10001, "Patrick Mahomes", "KC"),
+        (10002, "Josh Allen", "BUF"),
+        (10003, "Lamar Jackson", "BAL"),
+        (10004, "Jalen Hurts", "PHI"),
+        (10005, "Joe Burrow", "CIN"),
+        (10006, "Justin Jefferson", "MIN"),
+        (10007, "Tyreek Hill", "MIA"),
+        (10008, "Christian McCaffrey", "SF"),
+        (10009, "Micah Parsons", "DAL"),
+        (10010, "Myles Garrett", "CLE"),
+    ]
+    upsert_players("NFL", nfl_players)
 
 
 def seed_static_minimal():
@@ -326,6 +432,38 @@ def seed_static_minimal():
     ]
     upsert_players("FOOTBALL", football_players)
 
+    # NFL teams (subset)
+    nfl_teams = [
+        (1, "Arizona Cardinals", "NFL"),
+        (2, "Atlanta Falcons", "NFL"),
+        (3, "Baltimore Ravens", "NFL"),
+        (4, "Buffalo Bills", "NFL"),
+        (5, "Carolina Panthers", "NFL"),
+        (6, "Chicago Bears", "NFL"),
+        (7, "Cincinnati Bengals", "NFL"),
+        (8, "Cleveland Browns", "NFL"),
+        (9, "Dallas Cowboys", "NFL"),
+        (10, "Denver Broncos", "NFL"),
+        (11, "Detroit Lions", "NFL"),
+        (12, "Green Bay Packers", "NFL"),
+    ]
+    upsert_teams("NFL", nfl_teams)
+
+    # NFL players (subset; ids are illustrative placeholders)
+    nfl_players = [
+        (10001, "Patrick Mahomes", "KC"),
+        (10002, "Josh Allen", "BUF"),
+        (10003, "Lamar Jackson", "BAL"),
+        (10004, "Jalen Hurts", "PHI"),
+        (10005, "Joe Burrow", "CIN"),
+        (10006, "Justin Jefferson", "MIN"),
+        (10007, "Tyreek Hill", "MIA"),
+        (10008, "Christian McCaffrey", "SF"),
+        (10009, "Micah Parsons", "DAL"),
+        (10010, "Myles Garrett", "CLE"),
+    ]
+    upsert_players("NFL", nfl_players)
+
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Seed local SQLite DBs from API-Sports")
@@ -358,7 +496,13 @@ async def main():
         except Exception:
             pass
 
-    if os.getenv("API_SPORTS_KEY"):
+    # Use settings (reads .env) to decide if API mode is enabled
+    if settings.API_SPORTS_KEY:
+        # Force RapidAPI mode if not explicitly set, using the same key when RAPIDAPI_KEY is absent.
+        if not os.getenv("API_SPORTS_MODE"):
+            os.environ["API_SPORTS_MODE"] = "rapidapi"
+        if not os.getenv("RAPIDAPI_KEY"):
+            os.environ["RAPIDAPI_KEY"] = settings.API_SPORTS_KEY
         # Set default seasons via env for providers that rely on defaults
         os.environ["API_SPORTS_NBA_SEASON"] = "2024"  # 2024-25
         os.environ["API_SPORTS_FOOTBALL_SEASON"] = "2025"  # 2025-26

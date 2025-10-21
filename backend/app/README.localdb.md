@@ -1,4 +1,4 @@
-Local SQLite autocomplete databases
+# Local SQLite autocomplete databases
 
 - Path: instance/localdb/{sport}.sqlite (configurable via LOCAL_DB_DIR)
 - Sports supported: NBA, NFL, FOOTBALL (EPL alias supported)
@@ -12,8 +12,10 @@ Seeding
 - Requires API_SPORTS_KEY env set.
 
 Run (example):
+
 - With uvicorn running, optional. Script runs independently.
 
 Notes
-- Autocomplete endpoints now use local SQLite first, then fall back to API-Sports and warm the DB.
+
+- Autocomplete uses ONLY the local SQLite DB. No upstream calls are made by the autocomplete path.
 - FOOTBALL umbrella covers Europe top 5 leagues + MLS when seeding.

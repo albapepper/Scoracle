@@ -117,7 +117,6 @@ function TeamPage() {
           <ApiSportsWidget
             type="team"
             data={{ teamId: teamId, teamStatistics: 'true', teamSquads: 'true' }}
-            src="https://widgets.api-sports.io/3.1.0/team"
           />
         </Card>
         

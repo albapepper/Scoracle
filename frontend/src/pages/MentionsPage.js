@@ -28,6 +28,7 @@ function MentionsPage() {
   const [entityInfo, setEntityInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [alongside, setAlongside] = useState([]);
   
   useEffect(() => {
     const fetchData = async () => {
@@ -40,6 +41,7 @@ function MentionsPage() {
         ));
         setMentions(sortedMentions);
         setEntityInfo(data.entity_info || null);
+        setAlongside(data.alongside_entities || []);
       } catch (err) {
         setError('Failed to load mentions. Please try again later.');
         console.error(err);
@@ -164,7 +166,7 @@ function MentionsPage() {
             />
         
         {/* API-Sports Widgets (optional) */}
-        <Card shadow="sm" p="lg" radius="md" withBorder>
+  <Card shadow="sm" p="lg" radius="md" withBorder>
           <Stack>
             <Title order={3}>Widget Preview</Title>
             {/* Render a widget matching the entity type, when we have a numeric ID */}
@@ -198,7 +200,7 @@ function MentionsPage() {
               <Text c="dimmed" size="sm">No API-Sports ID mapped for this {entityType}. Add apisports_id to enable widgets.</Text>
             )}
           </Stack>
-        </Card>
+  </Card>
 
         {/* Recent Mentions */}
         <div>
@@ -243,6 +245,33 @@ function MentionsPage() {
                     </Button>
                   </Group>
                   <Divider mt="md" mb="md" />
+                </List.Item>
+              ))}
+            </List>
+          )}
+        </div>
+
+        {/* Also mentioned (co-mentions) */}
+        <div>
+          <Title order={3} mb="sm" style={{ color: theme.colors.text.accent }}>
+            Also mentioned
+          </Title>
+          <Text c="dimmed" mb="lg">Other entities from {activeSport} that appeared in these articles</Text>
+          {(!alongside || alongside.length === 0) ? (
+            <Text c="dimmed">No co-mentions detected.</Text>
+          ) : (
+            <List spacing="sm" listStyleType="none">
+              {alongside.slice(0, 20).map((e, idx) => (
+                <List.Item key={`${e.entity_type}-${e.id}-${idx}`}>
+                  <Group position="apart" noWrap>
+                    <Text>
+                      <Link to={`/mentions/${e.entity_type}/${e.id}?sport=${activeSport}`} style={{ textDecoration: 'none', color: theme.colors.text.primary }}>
+                        {e.name || `${e.entity_type} ${e.id}`}
+                      </Link>
+                    </Text>
+                    <Text c="dimmed" size="sm">{e.hits} hits</Text>
+                  </Group>
+                  <Divider mt="xs"/>
                 </List.Item>
               ))}
             </List>

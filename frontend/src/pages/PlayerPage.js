@@ -147,7 +147,6 @@ function PlayerPage() {
               playerInjuries: 'true',
               season: (selectedSeason && selectedSeason.includes('-')) ? selectedSeason.split('-')[0] : (selectedSeason || new Date().getFullYear().toString()),
             }}
-            src="https://widgets.api-sports.io/3.1.0/player"
           />
         </Card>
         

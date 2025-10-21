@@ -107,7 +107,7 @@ async def autocomplete(
         _cache_set(cache_key, data)
         response.headers["X-Autocomplete-Q-Len"] = str(len(q.strip()))
         response.headers["X-Autocomplete-Elapsed-ms"] = f"{(time.perf_counter()-_t0)*1000:.0f}"
-        response.headers["X-Upstream-Provider"] = "local-sqlite+api-sports"
+        response.headers["X-Upstream-Provider"] = "local-sqlite"
         return AutocompleteResponse(
             query=q,
             entity_type=entity_type,
