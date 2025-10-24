@@ -1,10 +1,19 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import useScript from '../hooks/useScript';
 
-// Public CDN for API-Sports Widgets (3.x). Use a type-specific default as primary path.
-const DEFAULT_BY_TYPE = {
-  team: 'https://widgets.api-sports.io/3.1.0/team',
-  player: 'https://widgets.api-sports.io/3.1.0/player',
+// Public CDN for API-Sports Widgets (3.x). Use a sport-level script which supports multiple widget types.
+const DEFAULT_BY_SPORT = {
+  FOOTBALL: 'https://widgets.api-sports.io/3.1.0/football',
+  EPL: 'https://widgets.api-sports.io/3.1.0/football',
+  NBA: 'https://widgets.api-sports.io/3.1.0/basketball',
+  NFL: 'https://widgets.api-sports.io/3.1.0/american-football',
+};
+
+const HOST_BY_SPORT = {
+  FOOTBALL: 'v3.football.api-sports.io',
+  EPL: 'v3.football.api-sports.io',
+  NBA: 'v2.nba.api-sports.io',
+  NFL: 'v1.american-football.api-sports.io',
 };
 
 /**
@@ -17,10 +26,12 @@ const DEFAULT_BY_TYPE = {
  * - src: override widget script URL if needed.
  * - className, style: forwarded to host element.
  */
-export default function ApiSportsWidget({ type, data = {}, src, className, style }) {
-  const finalSrc = src || DEFAULT_BY_TYPE[type] || DEFAULT_BY_TYPE.player;
+export default function ApiSportsWidget({ type, sport = 'FOOTBALL', data = {}, src, className, style, debug = false }) {
+  const sportKey = String(sport || 'FOOTBALL').toUpperCase();
+  const finalSrc = src || DEFAULT_BY_SPORT[sportKey] || DEFAULT_BY_SPORT.FOOTBALL;
   const status = useScript(finalSrc);
   const ref = useRef(null);
+  const triedFallbackRef = useRef(false);
 
   // Build attributes for the custom element
   const attrs = useMemo(() => {
@@ -28,10 +39,32 @@ export default function ApiSportsWidget({ type, data = {}, src, className, style
     out.set('data-type', type);
     const obj = { ...data };
     // Optionally inject API key from env for widget initialization (exposes key to client!)
-    const envKey = process.env.REACT_APP_APISPORTS_WIDGET_KEY || process.env.REACT_APP_API_SPORTS_KEY || '';
+    let envKey = process.env.REACT_APP_APISPORTS_WIDGET_KEY || process.env.REACT_APP_API_SPORTS_KEY || '';
+    // Debug-friendly fallbacks: allow localStorage or URL query to provide a key without restart
+    if (!envKey && typeof window !== 'undefined') {
+      try {
+        const fromLs = window.localStorage.getItem('APISPORTS_WIDGET_KEY');
+        if (fromLs) envKey = fromLs;
+      } catch (_) {}
+      if (!envKey) {
+        try {
+          const usp = new URLSearchParams(window.location.search);
+          const fromQs = usp.get('apisportsKey');
+          if (fromQs) envKey = fromQs;
+        } catch (_) {}
+      }
+    }
     if (!obj.key && envKey) {
       out.set('data-key', envKey);
     }
+    // Required host hint for some widget builds
+    const host = HOST_BY_SPORT[sportKey];
+    if (host) {
+      out.set('data-host', host);
+    }
+    // Common sensible defaults
+    if (!obj.theme) out.set('data-theme', 'light');
+    if (!obj.timezone) out.set('data-timezone', Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
     // Provide attribute synonyms expected by some API-Sports widgets
     if (obj.playerId) {
       out.set('data-player-id', String(obj.playerId));
@@ -54,7 +87,7 @@ export default function ApiSportsWidget({ type, data = {}, src, className, style
       out.set(`data-${kebab}`, String(value));
     });
     return out;
-  }, [type, data]);
+  }, [type, data, sportKey]);
 
   useEffect(() => {
     // When script is ready, attempt to re-render/upgrade the widget if needed.
@@ -71,6 +104,32 @@ export default function ApiSportsWidget({ type, data = {}, src, className, style
     }, 1000);
     return () => clearTimeout(t);
   }, [status]);
+
+  // Fallback: if loading the primary script failed, try an older stable path once
+  useEffect(() => {
+    if (status !== 'error' || triedFallbackRef.current) return;
+    triedFallbackRef.current = true;
+    const altBySport = {
+      FOOTBALL: 'https://widgets.api-sports.io/3.0.4/football',
+      EPL: 'https://widgets.api-sports.io/3.0.4/football',
+      NBA: 'https://widgets.api-sports.io/3.0.4/basketball',
+      NFL: 'https://widgets.api-sports.io/3.0.4/american-football',
+    };
+    const alt = altBySport[sportKey];
+    if (!alt) return;
+    const script = document.createElement('script');
+    script.src = alt;
+    script.async = true;
+    script.onload = () => {
+      const el = ref.current;
+      if (!el) return;
+      try {
+        el.setAttribute('data-refresh-tick', String(Date.now()));
+        setTimeout(() => el.removeAttribute('data-refresh-tick'), 800);
+      } catch (_) {}
+    };
+    document.body.appendChild(script);
+  }, [status, sportKey]);
 
   return (
     <div

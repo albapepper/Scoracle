@@ -140,6 +140,7 @@ function PlayerPage() {
           <Title order={3}>Player Widget</Title>
           <ApiSportsWidget
             type="player"
+            sport={activeSport}
             data={{
               playerId: playerId,
               playerStatistics: 'true',

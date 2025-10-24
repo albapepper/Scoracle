@@ -8,6 +8,7 @@ import { ThemeProvider } from './ThemeProvider';
 
 // Context provider
 import { SportContextProvider } from './context/SportContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { EntityCacheProvider } from './context/EntityCacheContext';
 
 // Pages
@@ -24,6 +25,7 @@ import Footer from './components/Footer';
 function App() {
   return (
     <ThemeProvider>
+      <LanguageProvider>
       <SportContextProvider>
         <EntityCacheProvider>
         <AppShell
@@ -54,6 +56,7 @@ function App() {
       </AppShell>
         </EntityCacheProvider>
     </SportContextProvider>
+  </LanguageProvider>
   </ThemeProvider>
   );
 }

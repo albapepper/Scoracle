@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Container, Group, Box, Paper, ActionIcon, Drawer, Switch, Select, Stack } from '@mantine/core';
+import { Container, Group, Box, Paper, ActionIcon, Drawer, Switch, Select, Stack, Text, Tooltip } from '@mantine/core';
+import { IconMenu2 } from '@tabler/icons-react';
+import theme from '../theme';
+import { useLanguage } from '../context/LanguageContext';
 
 function Header() {
+  const { language, changeLanguage, languages } = useLanguage();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [language, setLanguage] = useState('en');
-  const [darkMode, setDarkMode] = useState(false); // stub, wire to ThemeProvider later
+  const [darkMode, setDarkMode] = useState(false); // TODO: wire to ThemeProvider
 
   const headerStyle = {
-    // Solid purple header background per request
-    background: '#6f42c1',
-    backgroundColor: '#6f42c1',
+    // Use theme gradient for a more branded look
+    background: `linear-gradient(90deg, ${theme.header.gradientStart}, ${theme.header.gradientEnd})`,
     border: 'none',
     padding: '0.5rem 0',
   };
@@ -18,51 +20,50 @@ function Header() {
   return (
     <Paper component="header" shadow="xs" radius={0} p={0} style={headerStyle}>
       <Container size="xl" style={{ display: 'flex', alignItems: 'center', height: '60px' }}>
+        {/* Left: Hamburger -> settings drawer */}
         <Group style={{ flex: 1 }}>
-          {/* Left: Hamburger opens settings */}
-          <ActionIcon variant="subtle" color="white" onClick={() => setSettingsOpen(true)} title="Settings">
-            {/* Simple hamburger glyph */}
-            <span style={{ display: 'inline-block', width: 20 }}>
-              <span style={{ display: 'block', height: 2, background: '#fff', margin: '4px 0' }} />
-              <span style={{ display: 'block', height: 2, background: '#fff', margin: '4px 0' }} />
-              <span style={{ display: 'block', height: 2, background: '#fff', margin: '4px 0' }} />
-            </span>
-          </ActionIcon>
+          <Tooltip label="Menu" withArrow>
+            <ActionIcon variant="subtle" color="gray.1" aria-label="Open menu" onClick={() => setSettingsOpen(true)}>
+              <IconMenu2 size={22} color="#fff" />
+            </ActionIcon>
+          </Tooltip>
         </Group>
 
-        <Box style={{ flex: 2, display: 'flex', justifyContent: 'center' }}>
-          {/* Center: Scoracle logo acts as home */}
-          <Link to="/" style={{ textDecoration: 'none' }}>
-            <img
-              src="/scoracle-logo.png"
-              alt="Scoracle"
-              style={{ height: 36, display: 'block' }}
-            />
+        {/* Center: Brand/logo -> home */}
+        <Box style={{ flex: 2, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <Link to="/" aria-label="Go to home" style={{ textDecoration: 'none' }}>
+            <img src="/scoracle-logo.png" alt="Scoracle" style={{ height: 36, display: 'block' }} />
           </Link>
         </Box>
 
+        {/* Right: Language selector */}
         <Group style={{ flex: 1, justifyContent: 'flex-end' }}>
-          {/* Right: Language selector */}
           <Select
-            data={[
-              { value: 'en', label: 'EN' },
-              { value: 'es', label: 'ES' },
-            ]}
+            aria-label="Select language"
+            data={languages.map((l) => ({ value: l.id, label: l.display }))}
             value={language}
-            onChange={setLanguage}
+            onChange={(v) => v && changeLanguage(v)}
             size="xs"
             styles={{ input: { background: 'transparent', color: '#fff', borderColor: 'rgba(255,255,255,0.4)' } }}
           />
         </Group>
 
-        <Drawer opened={settingsOpen} onClose={() => setSettingsOpen(false)} title="Settings">
+        {/* Settings Drawer - light/dark only for now */}
+        <Drawer opened={settingsOpen} onClose={() => setSettingsOpen(false)} title="Settings" position="left">
           <Stack>
+            <Text fw={600}>Appearance</Text>
             <Switch
               checked={darkMode}
               onChange={(e) => setDarkMode(e.currentTarget.checked)}
               label="Dark mode"
             />
-            {/* Additional settings can go here */}
+            <Text fw={600} mt="md">Language</Text>
+            <Select
+              aria-label="Select language"
+              data={languages.map((l) => ({ value: l.id, label: `${l.display} — ${l.label}` }))}
+              value={language}
+              onChange={(v) => v && changeLanguage(v)}
+            />
           </Stack>
         </Drawer>
       </Container>

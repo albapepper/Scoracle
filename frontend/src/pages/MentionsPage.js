@@ -174,6 +174,7 @@ function MentionsPage() {
               <>
                 <ApiSportsWidget
                   type="team"
+                  sport={activeSport}
                   data={{ teamId: entityInfo.id, targetPlayer: '#player-container' }}
                 />
                 <div id="player-container" />
@@ -183,6 +184,7 @@ function MentionsPage() {
               <>
                 <ApiSportsWidget
                   type="player"
+                  sport={activeSport}
                   data={{
                     playerId: entityInfo.id,
                     playerStatistics: 'true',

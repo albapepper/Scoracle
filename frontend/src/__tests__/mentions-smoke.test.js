@@ -7,6 +7,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MantineProvider } from '@mantine/core';
 import MentionsPage from '../pages/MentionsPage';
 
 // Stub services/api.getEntityMentions to return a predictable payload
@@ -34,11 +35,13 @@ jest.mock('../context/EntityCacheContext', () => ({
 test('mentions page echoes the selected player id and renders an item', async () => {
   const id = '152982';
   render(
-    <MemoryRouter initialEntries={[`/mentions/player/${id}`]}>
-      <Routes>
-        <Route path="/mentions/:entityType/:entityId" element={<MentionsPage />} />
-      </Routes>
-    </MemoryRouter>
+    <MantineProvider>
+      <MemoryRouter initialEntries={[`/mentions/player/${id}`]}>
+        <Routes>
+          <Route path="/mentions/:entityType/:entityId" element={<MentionsPage />} />
+        </Routes>
+      </MemoryRouter>
+    </MantineProvider>
   );
   // Entity header shows full name
   expect(await screen.findByText(/Cole Palmer/)).toBeInTheDocument();

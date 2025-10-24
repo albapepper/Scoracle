@@ -116,6 +116,7 @@ function TeamPage() {
           <Title order={3}>Team Widget</Title>
           <ApiSportsWidget
             type="team"
+            sport={activeSport}
             data={{ teamId: teamId, teamStatistics: 'true', teamSquads: 'true' }}
           />
         </Card>
