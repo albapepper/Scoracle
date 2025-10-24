@@ -6,6 +6,7 @@ import App from './App';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import './index.css';
 import '@mantine/core/styles.css';
+import './i18n';
 
 // Create a custom theme
 const theme = createTheme({

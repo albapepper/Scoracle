@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { MantineProvider, createTheme } from '@mantine/core';
 import theme from './theme';
 
 // Convert our theme to Mantine's format
-const mantineTheme = createTheme({
+const baseMantineTheme = createTheme({
   colors: {
     // Create a custom color palette based on our theme
     primary: [
@@ -57,7 +57,7 @@ const mantineTheme = createTheme({
     },
   },
   
-  // Set color scheme
+  // default; will be overridden by provider state
   colorScheme: 'light',
   
   // Override default Mantine theme values
@@ -91,15 +91,45 @@ const mantineTheme = createTheme({
   }),
 });
 
+// Color scheme context
+const ThemeModeContext = createContext();
+export const useThemeMode = () => useContext(ThemeModeContext);
+
 /**
  * ThemeProvider component that wraps the application
  * with our custom theme settings
  */
 export const ThemeProvider = ({ children }) => {
+  // initialize from localStorage or prefers-color-scheme
+  const getInitial = () => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('color-scheme') : null;
+    if (saved === 'dark' || saved === 'light') return saved;
+    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return 'dark';
+    }
+    return 'light';
+  };
+
+  const [colorScheme, setColorScheme] = useState(getInitial);
+
+  useEffect(() => {
+    try { localStorage.setItem('color-scheme', colorScheme); } catch (_) {}
+  }, [colorScheme]);
+
+  const mantineTheme = useMemo(() => ({ ...baseMantineTheme, colorScheme }), [colorScheme]);
+
+  const value = useMemo(() => ({
+    colorScheme,
+    setColorScheme,
+    toggleColorScheme: () => setColorScheme((prev) => (prev === 'dark' ? 'light' : 'dark')),
+  }), [colorScheme]);
+
   return (
-    <MantineProvider theme={mantineTheme} withGlobalStyles withNormalizeCSS>
-      {children}
-    </MantineProvider>
+    <ThemeModeContext.Provider value={value}>
+      <MantineProvider theme={mantineTheme} withGlobalStyles withNormalizeCSS>
+        {children}
+      </MantineProvider>
+    </ThemeModeContext.Provider>
   );
 };
 
