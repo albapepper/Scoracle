@@ -5,4 +5,8 @@ export const FEATURES = {
   ENABLE_WIDGETS: (process.env.REACT_APP_ENABLE_WIDGETS || 'false').toLowerCase() === 'true',
 };
 
+// Centralized API-Sports widget key (frontend-only). Do NOT commit real keys.
+// Set in a .env file as REACT_APP_APISPORTS_KEY=your_key
+export const APISPORTS_KEY = process.env.REACT_APP_APISPORTS_KEY || process.env.REACT_APP_APISPORTS_WIDGET_KEY || process.env.REACT_APP_API_SPORTS_KEY || '';
+
 export default FEATURES;

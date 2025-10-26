@@ -157,6 +157,30 @@ def _strip_specials_preserve_case(s: Optional[str]) -> str:
     return " ".join(s_clean.split())
 
 
+def _first_last_only(name: Optional[str]) -> str:
+    """Reduce a display name to only first and last tokens.
+
+    Examples:
+    - "Kevin Wayne Durant Jr." -> "Kevin Durant"
+    - "Kylian Mbappé" -> "Kylian Mbappe" (diacritics stripped upstream by _strip_specials_preserve_case)
+    - "LeBron Raymone James Sr" -> "LeBron James"
+
+    Teams and single-word names are returned as-is.
+    """
+    if not name:
+        return ""
+    parts = str(name).split()
+    if len(parts) <= 1:
+        return parts[0] if parts else ""
+    first = parts[0]
+    last = parts[-1]
+    # Handle suffixes commonly seen; if last is a suffix, take the previous token
+    suffixes = {"jr", "jr.", "sr", "sr.", "ii", "iii", "iv", "v"}
+    if last.lower().strip(". ") in suffixes and len(parts) >= 3:
+        last = parts[-2]
+    return f"{first} {last}".strip()
+
+
 def _init_if_needed(sport: str):
     s = (sport or "").upper()
     if s in _INITIALIZED:
@@ -185,8 +209,9 @@ def upsert_players(sport: str, rows: List[Tuple[int, str, Optional[str]]]):
         now = int(time.time())
         payload = []
         for (pid, name, team) in rows:
-            # Clean display name and normalized tokens
-            display = _strip_specials_preserve_case(name)
+            # Clean display name, reduce to First Last, and normalize tokens
+            display_raw = _strip_specials_preserve_case(name)
+            display = _first_last_only(display_raw)
             norm = normalize_text(display or name)
             toks = tokenize(norm)
             payload.append((pid, display or name, team, now, norm, toks))
@@ -220,6 +245,34 @@ def upsert_teams(sport: str, rows: List[Tuple[int, str, Optional[str]]]):
             "ON CONFLICT(id) DO UPDATE SET name=excluded.name, current_league=excluded.current_league, updated_at=excluded.updated_at, normalized_name=excluded.normalized_name, tokens=excluded.tokens",
             payload,
         )
+    finally:
+        conn.close()
+
+
+def list_all_players(sport: str) -> List[Tuple[int, str]]:
+    """Return all players (id, name) for a sport from the local DB.
+
+    Intended for building in-memory indexes (e.g., Aho-Corasick)."""
+    _init_if_needed(sport)
+    path = _db_path_for_sport(sport)
+    conn = _connect(path)
+    try:
+        cur = conn.execute("SELECT id, name FROM players")
+        return [(int(r[0]), str(r[1] or "")) for r in cur.fetchall()]
+    finally:
+        conn.close()
+
+
+def list_all_teams(sport: str) -> List[Tuple[int, str]]:
+    """Return all teams (id, name) for a sport from the local DB.
+
+    Intended for building in-memory indexes (e.g., Aho-Corasick)."""
+    _init_if_needed(sport)
+    path = _db_path_for_sport(sport)
+    conn = _connect(path)
+    try:
+        cur = conn.execute("SELECT id, name FROM teams")
+        return [(int(r[0]), str(r[1] or "")) for r in cur.fetchall()]
     finally:
         conn.close()
 

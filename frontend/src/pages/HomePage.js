@@ -3,9 +3,11 @@ import { Container, Title, Text, Stack, Paper, SegmentedControl, Box } from '@ma
 import SearchForm from '../components/SearchForm';
 import { useSportContext } from '../context/SportContext';
 import theme from '../theme';
+import { useTranslation } from 'react-i18next';
 
 function HomePage() {
   const { activeSport, sports, changeSport } = useSportContext();
+  const { t } = useTranslation();
   
   return (
     <Container size="lg" py="xl">
@@ -21,13 +23,12 @@ function HomePage() {
               borderColor: theme.colors.ui.border
             }}
           >
-            <Title order={2} align="center" mb="md" 
-              style={{ color: theme.colors.text.accent }}>
-              Welcome to Scoracle
+            <Title order={2} align="center" mb="md" style={{ color: theme.colors.text.accent }}>
+              {t('home.title')}
             </Title>
             
             <Text align="center" size="md" c="dimmed" mb="lg">
-              Select your sport to get started
+              {t('home.selectSport')}
             </Text>
             
             <SegmentedControl
@@ -53,7 +54,7 @@ function HomePage() {
             />
             
             <Text align="center" size="sm" mt="md" mb="xl" c="dimmed">
-              Find the latest news and statistics for your favorite {activeSport} players and teams
+              {t('home.findLatest', { sport: activeSport })}
             </Text>
           </Paper>
         </Box>

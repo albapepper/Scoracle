@@ -17,18 +17,22 @@ import { useSportContext } from '../context/SportContext';
 import ApiSportsWidget from '../components/ApiSportsWidget';
 import BasicEntityCard from '../components/BasicEntityCard';
 import { getEntityMentions } from '../services/api';
+import { fetchEntitiesDump, buildSimpleIndex, aggregateCoMentions } from '../services/comentions';
 import theme from '../theme';
 import { useEntityCache } from '../context/EntityCacheContext';
+import { useTranslation } from 'react-i18next';
 
 function MentionsPage() {
   const { entityType, entityId } = useParams();
   const { activeSport } = useSportContext();
   const { putSummary } = useEntityCache();
+  const { t } = useTranslation();
   const [mentions, setMentions] = useState([]);
   const [entityInfo, setEntityInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [alongside, setAlongside] = useState([]);
+  const [computedAlongside, setComputedAlongside] = useState([]);
   
   useEffect(() => {
     const fetchData = async () => {
@@ -43,7 +47,7 @@ function MentionsPage() {
         setEntityInfo(data.entity_info || null);
         setAlongside(data.alongside_entities || []);
       } catch (err) {
-        setError('Failed to load mentions. Please try again later.');
+        setError(t('mentions.failedLoad'));
         console.error(err);
       } finally {
         setIsLoading(false);
@@ -51,7 +55,34 @@ function MentionsPage() {
     };
     
     fetchData();
-  }, [entityType, entityId, activeSport]);
+  }, [entityType, entityId, activeSport, t]);
+
+  // Compute co-mentions on the client using the entities dump
+  useEffect(() => {
+    const runCoMentions = async () => {
+      try {
+        // Only run when mentions and entityInfo are loaded
+        if (!mentions || mentions.length === 0) {
+          setComputedAlongside([]);
+          return;
+        }
+        // Fetch minimal entities for this sport
+        const [players, teams] = await Promise.all([
+          fetchEntitiesDump(activeSport, 'player'),
+          fetchEntitiesDump(activeSport, 'team')
+        ]);
+        const index = buildSimpleIndex(players, teams);
+        const target = { entity_type: entityType, id: String(entityId) };
+        const agg = aggregateCoMentions(mentions, index, target);
+        setComputedAlongside(agg);
+      } catch (e) {
+        // Non-fatal; keep server-provided alongside if any
+        console.warn('Co-mentions computation failed; using server-provided alongside', e);
+        setComputedAlongside([]);
+      }
+    };
+    runCoMentions();
+  }, [mentions, entityType, entityId, activeSport]);
   
   // Format the entity name
   const getEntityName = () => {
@@ -68,7 +99,7 @@ function MentionsPage() {
     return (
       <Container size="md" py="xl" ta="center">
         <Loader size="xl" color={theme.colors.ui.primary} />
-        <Text mt="md">Loading mentions...</Text>
+        <Text mt="md">{t('mentions.loading')}</Text>
       </Container>
     );
   }
@@ -83,7 +114,7 @@ function MentionsPage() {
           mt="md"
           style={{ backgroundColor: theme.colors.ui.primary }}
         >
-          Return to Home
+          {t('common.returnHome')}
         </Button>
       </Container>
     );
@@ -168,7 +199,7 @@ function MentionsPage() {
         {/* API-Sports Widgets (optional) */}
   <Card shadow="sm" p="lg" radius="md" withBorder>
           <Stack>
-            <Title order={3}>Widget Preview</Title>
+            <Title order={3}>{t('mentions.widgetPreview')}</Title>
             {/* Render a widget matching the entity type, when we have a numeric ID */}
             {entityType === 'team' && entityInfo?.id && (
               <>
@@ -199,7 +230,7 @@ function MentionsPage() {
             )}
             {/* If we don't have the apisports ID yet, show a hint */}
             {(!entityInfo?.id) && (
-              <Text c="dimmed" size="sm">No API-Sports ID mapped for this {entityType}. Add apisports_id to enable widgets.</Text>
+              <Text c="dimmed" size="sm">{t('mentions.noApisportsId', { entityType })}</Text>
             )}
           </Stack>
   </Card>
@@ -207,14 +238,14 @@ function MentionsPage() {
         {/* Recent Mentions */}
         <div>
           <Title order={3} mb="sm" style={{ color: theme.colors.text.accent }}>
-            Recent Mentions
+            {t('mentions.recent')}
           </Title>
-          <Text c="dimmed" mb="lg">News articles mentioning {getEntityName()}</Text>
+          <Text c="dimmed" mb="lg">{t('mentions.newsMentioning', { name: getEntityName() })}</Text>
           
           <Divider mb="lg" />
           
           {mentions.length === 0 ? (
-            <Text>No recent mentions found.</Text>
+            <Text>{t('mentions.none')}</Text>
           ) : (
             <List spacing="md" listStyleType="none" center>
               {mentions.map((mention, index) => (
@@ -243,7 +274,7 @@ function MentionsPage() {
                         color: theme.colors.ui.primary
                       }}
                     >
-                      Link
+                      {t('common.link')}
                     </Button>
                   </Group>
                   <Divider mt="md" mb="md" />
@@ -256,14 +287,14 @@ function MentionsPage() {
         {/* Also mentioned (co-mentions) */}
         <div>
           <Title order={3} mb="sm" style={{ color: theme.colors.text.accent }}>
-            Also mentioned
+            {t('mentions.alsoMentioned')}
           </Title>
-          <Text c="dimmed" mb="lg">Other entities from {activeSport} that appeared in these articles</Text>
-          {(!alongside || alongside.length === 0) ? (
-            <Text c="dimmed">No co-mentions detected.</Text>
+          <Text c="dimmed" mb="lg">{t('mentions.otherEntities', { sport: activeSport })}</Text>
+          {(!(computedAlongside.length ? computedAlongside : alongside) || (computedAlongside.length ? computedAlongside : alongside).length === 0) ? (
+            <Text c="dimmed">{t('mentions.noComentions')}</Text>
           ) : (
             <List spacing="sm" listStyleType="none">
-              {alongside.slice(0, 20).map((e, idx) => (
+              {(computedAlongside.length ? computedAlongside : alongside).slice(0, 20).map((e, idx) => (
                 <List.Item key={`${e.entity_type}-${e.id}-${idx}`}>
                   <Group position="apart" noWrap>
                     <Text>
@@ -271,7 +302,7 @@ function MentionsPage() {
                         {e.name || `${e.entity_type} ${e.id}`}
                       </Link>
                     </Text>
-                    <Text c="dimmed" size="sm">{e.hits} hits</Text>
+                    <Text c="dimmed" size="sm">{e.hits} {t('mentions.hits')}</Text>
                   </Group>
                   <Divider mt="xs"/>
                 </List.Item>

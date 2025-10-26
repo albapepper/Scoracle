@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, Group, Stack, Title, Text, Badge, Divider } from '@mantine/core';
 import theme from '../theme';
+import { useTranslation } from 'react-i18next';
 
 /**
  * BasicEntityCard
@@ -17,6 +18,7 @@ import theme from '../theme';
  * - footer: optional React node to render at bottom (e.g., recent mentions link)
  */
 export default function BasicEntityCard({ entityType, sport, summary, actions, footer }) {
+  const { t } = useTranslation();
   if (!summary) return null;
 
   const isPlayer = entityType === 'player';
@@ -42,17 +44,17 @@ export default function BasicEntityCard({ entityType, sport, summary, actions, f
   const facts = [];
   // Common cross-sport facts for player
   if (isPlayer) {
-    if (summary.age !== undefined && summary.age !== null) facts.push({ label: 'Age', value: String(summary.age) });
-    if (summary.nationality) facts.push({ label: 'Nationality', value: summary.nationality });
-    if (summary.team_name) facts.push({ label: 'Current Team', value: summary.team_name });
-    if (summary.league) facts.push({ label: 'League', value: summary.league });
-    if (summary.years_pro !== undefined && summary.years_pro !== null) facts.push({ label: 'Years Pro', value: String(summary.years_pro) });
+    if (summary.age !== undefined && summary.age !== null) facts.push({ label: t('entity.age'), value: String(summary.age) });
+    if (summary.nationality) facts.push({ label: t('entity.nationality'), value: summary.nationality });
+    if (summary.team_name) facts.push({ label: t('entity.currentTeam'), value: summary.team_name });
+    if (summary.league) facts.push({ label: t('entity.league'), value: summary.league });
+    if (summary.years_pro !== undefined && summary.years_pro !== null) facts.push({ label: t('entity.yearsPro'), value: String(summary.years_pro) });
   } else {
     // Team facts
-    if (summary.league) facts.push({ label: 'League', value: summary.league });
-    if (summary.city) facts.push({ label: 'City', value: summary.city });
-    if (summary.conference) facts.push({ label: 'Conference', value: summary.conference });
-    if (summary.division) facts.push({ label: 'Division', value: summary.division });
+    if (summary.league) facts.push({ label: t('entity.league'), value: summary.league });
+    if (summary.city) facts.push({ label: t('entity.city'), value: summary.city });
+    if (summary.conference) facts.push({ label: t('entity.conference'), value: summary.conference });
+    if (summary.division) facts.push({ label: t('entity.division'), value: summary.division });
   }
 
   return (

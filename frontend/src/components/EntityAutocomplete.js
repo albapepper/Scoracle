@@ -4,6 +4,7 @@ import { IconSearch } from '@tabler/icons-react';
 import { useSportContext } from '../context/SportContext';
 import axios from 'axios';
 import theme from '../theme';
+import { useTranslation } from 'react-i18next';
 
 // Simple debounce hook
 function useDebounce(value, delay) {
@@ -17,6 +18,7 @@ function useDebounce(value, delay) {
 
 export default function EntityAutocomplete({ entityType, onSelect, placeholder }) {
   const { activeSport } = useSportContext();
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState([]);
@@ -41,14 +43,14 @@ export default function EntityAutocomplete({ entityType, onSelect, placeholder }
         setResults(resp.data.results || []);
       } catch (err) {
         if (!axios.isCancel(err)) {
-          setError('Autocomplete failed');
+          setError(t('search.autocompleteFailed'));
         }
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, [debounced, entityType, activeSport]);
+  }, [debounced, entityType, activeSport, t]);
 
   const handleSelect = (item) => {
     onSelect(item);
@@ -61,7 +63,7 @@ export default function EntityAutocomplete({ entityType, onSelect, placeholder }
       <TextInput
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder={placeholder || `Search ${entityType}...`}
+        placeholder={placeholder || t('search.searchEntity', { entity: t(`common.entity.${entityType}`) })}
         icon={loading ? <Loader size="xs" /> : <IconSearch size={16} />}
         styles={{ input: { backgroundColor: theme.colors.background.secondary } }}
         autoComplete="off"
@@ -88,7 +90,7 @@ export default function EntityAutocomplete({ entityType, onSelect, placeholder }
         </Paper>
       )}
       {!loading && debounced.length >= 2 && results.length === 0 && !error && (
-        <Text size="xs" mt={4} c="dimmed">No matches</Text>
+        <Text size="xs" mt={4} c="dimmed">{t('search.noMatches')}</Text>
       )}
     </div>
   );

@@ -39,13 +39,6 @@ export const getPlayerSeasons = async (playerId, sport) => {
   return response.data;
 };
 
-// Player full aggregate
-export const getPlayerFull = async (playerId, season, sport, options = {}) => {
-  const params = { ...(season && { season }), ...(options.includeMentions === false ? { include_mentions: false } : {}) };
-  const response = await apiClient.get(`/${sport}/players/${playerId}/full`, { params });
-  return response.data;
-};
-
 // Team services
 export const getTeamDetails = async (teamId, season, sport) => {
   const params = { ...(season && { season }) };
@@ -60,9 +53,4 @@ export const getTeamRoster = async (teamId, season, sport) => {
   return response.data;
 };
 
-// Team full aggregate
-export const getTeamFull = async (teamId, season, sport, options = {}) => {
-  const params = { ...(season && { season }), ...(options.includeMentions === false ? { include_mentions: false } : {}) };
-  const response = await apiClient.get(`/${sport}/teams/${teamId}/full`, { params });
-  return response.data;
-};
+// Removed legacy /full aggregate helpers (use lean summary endpoints and widgets instead)

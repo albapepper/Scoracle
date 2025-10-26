@@ -5,7 +5,7 @@ import logging
 from contextlib import asynccontextmanager
 import httpx
 
-from app.api import home, autocomplete, mentions, links, player, team, sport
+from app.api import sport
 from app.core.config import settings
 from app.models.schemas import ErrorEnvelope
 
@@ -47,13 +47,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers (sport-first API plus thin legacy routes)
-app.include_router(home.router, prefix="/api/v1", tags=["home"])
-app.include_router(autocomplete.router, prefix="/api/v1", tags=["autocomplete"])
-app.include_router(mentions.router, prefix="/api/v1", tags=["mentions"])
-app.include_router(links.router, prefix="/api/v1", tags=["links"])
-app.include_router(player.router, prefix="/api/v1/player", tags=["player"])
-app.include_router(team.router, prefix="/api/v1/team", tags=["team"])
+# Include routers (sport-first API only)
 app.include_router(sport.router, prefix="/api/v1", tags=["sport"])
 
 # Registry-related maintenance endpoints removed to keep server lean

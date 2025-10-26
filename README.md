@@ -7,18 +7,18 @@ Scoracle is a modern web application that aggregates near‑real‑time sports n
 | Area | Highlights |
 |------|-----------|
 | Multi‑Sport | Pluggable sport context (currently NBA focus; NFL/EPL scaffolding) |
-| Unified Aggregation | Single `/full` endpoints combine summary + stats + mentions |
+| Lean Endpoints | Sport-first endpoints return summaries; rich stats via client widgets |
 | Smart Caching | Tiered in‑memory TTL caches for summaries and stats (invalidate naturally via TTL) |
 | Mentions & Links | Google RSS query refinement w/ entity name resolution |
 | React Query | Automatic request dedupe + caching on frontend |
 | Entity Preload Cache | Client context seeds detail pages to eliminate blank loading states |
 | Error Envelope | Consistent JSON error contract for all unhandled exceptions |
-| Sport‑First Paths | Optional `/api/v1/{sport}/...` variants for future multi‑sport expansion |
+| Sport‑First Paths | Canonical `/api/v1/{sport}/...` routes for multi‑sport expansion |
 | Architecture Migration | Transitional layering toward `api/`, `domain/`, `adapters/`, `repositories/` |
 
 ## 🧱 Evolving Backend Architecture (Phase 1 ➜ Phase 2)
 
-Current state uses legacy `routers/` & `services/` plus new facade modules under `app/api/` & `app/adapters/` for a non‑breaking migration. Next phase: move logic into `domain/` (pure business rules), `adapters/` (upstream I/O), and `repositories/` (persistence), trimming old folders when parity is reached.
+Current state is a lean backend exposing sport‑first endpoints with minimal aggregation. Most rich visualizations are handled on the frontend via provider widgets. Backend modules under `services/` will continue to be slimmed.
 
 ## 🗂 Project Structure (Transitional)
 ```
@@ -28,8 +28,7 @@ scoracle/
 │   │   ├── main.py                # FastAPI app factory & router mounting
 │   │   ├── core/                  # Settings, config
 │   │   ├── models/                # Pydantic schemas (PlayerFullResponse, ErrorEnvelope, etc.)
-│   │   ├── routers/               # (Legacy) routed endpoints (player, team, mentions, links, autocomplete, home)
-│   │   ├── api/                   # (New) sport-first + re-export bridging layer
+│   │   ├── api/                   # Sport-first routes
 │   │   ├── adapters/              # (New) Re-export wrappers for external services (RSS)
 │   │   ├── services/              # (Legacy) External integration logic (to be relocated)
 │   │   ├── repositories/          # Entity registry abstraction (SQLite)
@@ -49,11 +48,13 @@ scoracle/
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 * Python 3.11+ (tested)
 * Node.js 18+  
 * Docker (optional but recommended for parity)
 
 ### Run Entire Stack (Docker)
+
 ```powershell
 git clone https://github.com/albapepper/Scoracle.git
 cd Scoracle
@@ -73,11 +74,28 @@ Copy-Item .env.example .env -Force
 
 API docs: [http://localhost:8000/api/docs](http://localhost:8000/api/docs)
 
+### Lean mode (frontend-heavy)
+
+Set an environment flag to minimize backend responsibilities (no upstream API calls, local DB + RSS only):
+
+
+```powershell
+$env:LEAN_BACKEND = "true"; ./local.ps1 backend
+```
+
+
+In lean mode:
+
+* Search, summaries, and mentions use only local SQLite and Google RSS.
+* Seeding uses a static minimal dataset even if `API_SPORTS_KEY` is set.
+* Frontend should use API-Sports widgets (or direct provider calls) for rich stats.
+
 ### Frontend Local Dev
 
 ```powershell
 ./local.ps1 frontend
 ```
+ 
 React dev server proxies to `http://localhost:8000` (see `package.json` `proxy`).
 
 ## 📦 Caching Strategy
@@ -104,33 +122,14 @@ All unexpected exceptions are wrapped into a consistent envelope:
 }
 
 ```
+
 HTTPExceptions preserve their code & message. Schema: `ErrorEnvelope`.
 
 ## 📘 API Overview
 
 Base prefix: `/api/v1`
 
-### Aggregated "Full" Endpoints (Recommended)
-
-Return summary + stats (+ optional mentions):
-
-* `GET /api/v1/player/{player_id}/full?season=2023-2024&include_mentions=true&sport=NBA`
-* `GET /api/v1/team/{team_id}/full?season=2023-2024&include_mentions=false&sport=NBA`
-
-Example response (player):
-
-```json
-{
-   "summary": {"id": "237", "sport": "NBA", "full_name": "LeBron James", ...},
-   "season": "2023-2024",
-   "stats": {"points_per_game": 25.1, ...},
-   "mentions": [ {"title": "...", "link": "..."} ]
-}
-```
-
-### Sport‑First Variants
-
-Allow future multi-sport frontends to pick a canonical style:
+### Sport‑First API
 
 ```text
 GET /api/v1/{sport}/players/{player_id}
@@ -139,6 +138,7 @@ GET /api/v1/{sport}/players/{player_id}/mentions
 GET /api/v1/{sport}/teams/{team_id}
 GET /api/v1/{sport}/teams/{team_id}/stats
 GET /api/v1/{sport}/teams/{team_id}/mentions
+GET /api/v1/{sport}/entities?entity_type=player|team   # lean dump for client-side indexing
 ```
 
 ### Health & Maintenance
@@ -146,8 +146,6 @@ GET /api/v1/{sport}/teams/{team_id}/mentions
 | Endpoint | Purpose |
 |----------|---------|
 | `GET /api/health` | Liveness probe |
-| `POST /api/v1/registry/refresh/{sport}` | Force registry (re)ingest |
-| `GET /api/v1/registry/counts` | Registry status counts |
 
 ## 🧮 Percentile Calculation
 
@@ -155,8 +153,8 @@ Percentiles are computed lazily per unique (entity, sport, season) from fetched 
 
 ## 🗂 Frontend Data Layer
 
-* React Query caches `playerFull` / `teamFull` keyed by `[typeFull, id, season, sport]`.
-* `EntityCacheContext` stores lightweight summaries (player/team) seeded from Mentions → Stats navigation to eliminate initial spinner (optimistic hydration).
+* React Query caches lean summaries keyed by `[entity, id, sport]`.
+* `EntityCacheContext` stores lightweight summaries (player/team) seeded from Mentions → Stats navigation to eliminate initial spinner.
 
 ## 🔄 Navigation Flow
 
@@ -168,6 +166,15 @@ Percentiles are computed lazily per unique (entity, sport, season) from fetched 
 ## 🔑 API Keys
 
 Provider: API‑Sports. Set your key via environment variable `API_SPORTS_KEY`.
+
+Frontend widgets (optional): to enable API‑Sports client-side widgets, add a React environment variable in `frontend/.env`:
+
+```bash
+# frontend/.env
+REACT_APP_APISPORTS_KEY=your_api_sports_key_here
+```
+
+Alternatively, you can set `REACT_APP_APISPORTS_WIDGET_KEY` for compatibility. At runtime, a temporary key can be provided via localStorage (`APISPORTS_WIDGET_KEY`) or URL query `?apisportsKey=...` for quick testing.
 
 ## 📤 Deployment
 

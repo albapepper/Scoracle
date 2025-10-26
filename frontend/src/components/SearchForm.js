@@ -5,10 +5,12 @@ import { useSportContext } from '../context/SportContext';
 import { searchEntities } from '../services/api'; // fallback search
 import EntityAutocomplete from './EntityAutocomplete';
 import theme from '../theme';
+import { useTranslation } from 'react-i18next';
 
 function SearchForm() {
   const navigate = useNavigate();
   const { activeSport } = useSportContext();
+  const { t } = useTranslation();
   const [query, setQuery] = useState(''); // still track for fallback submit
   const [selected, setSelected] = useState(null);
   const [entityType, setEntityType] = useState('player');
@@ -22,7 +24,7 @@ function SearchForm() {
     
     try {
       if (!query.trim()) {
-        throw new Error('Please enter a search term');
+        throw new Error(t('search.enterTerm'));
       }
       // If user selected from autocomplete, trust that ID
       if (selected) {
@@ -38,10 +40,10 @@ function SearchForm() {
         const firstResult = results.results[0];
         navigate(`/mentions/${entityType}/${firstResult.id}?sport=${activeSport}`);
       } else {
-        setError(`No ${entityType}s found matching "${query}"`);
+        setError(t('search.noneFound', { entity: t(`common.entity.${entityType}`), query }));
       }
     } catch (err) {
-      setError(err.message || 'An error occurred during search');
+      setError(err.message || t('search.errorGeneric'));
     } finally {
       setIsLoading(false);
     }
@@ -55,15 +57,15 @@ function SearchForm() {
       <form onSubmit={handleSubmit}>
         <Stack>
           <Title order={3} ta="center" style={{ color: theme.colors.text.accent }}>
-            Find a {activeSport} {entityType}
+            {t('search.title', { sport: activeSport, entity: t(`common.entity.${entityType}`) })}
           </Title>
           
           <SegmentedControl
             value={entityType}
             onChange={setEntityType}
             data={[
-              { label: 'Player', value: 'player' },
-              { label: 'Team', value: 'team' },
+              { label: t('common.entity.player'), value: 'player' },
+              { label: t('common.entity.team'), value: 'team' },
             ]}
             styles={{
               root: {
@@ -77,7 +79,7 @@ function SearchForm() {
           
           <EntityAutocomplete
             entityType={entityType}
-            placeholder={`Start typing a ${entityType} name...`}
+            placeholder={t('search.placeholder', { entity: t(`common.entity.${entityType}`) })}
             onSelect={(item) => { setSelected(item); setQuery(item.label); }}
           />
           
@@ -93,7 +95,7 @@ function SearchForm() {
               color: 'white'
             }}
           >
-            {selected ? 'Go' : 'Search'}
+            {selected ? t('common.go') : t('common.search')}
           </Button>
         </Stack>
       </form>

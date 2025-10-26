@@ -43,6 +43,8 @@ class Settings(BaseSettings):
         # American Football – NFL
     "NFL": {"sport": "american-football", "league": int(os.getenv("API_SPORTS_NFL_LEAGUE", "1")), "season": os.getenv("API_SPORTS_NFL_SEASON", "2025")},
     }
+    # Lean mode: avoid upstream provider calls; serve only local DB + RSS
+    LEAN_BACKEND: bool = os.getenv("LEAN_BACKEND", "false").lower() in ("1", "true", "yes")
     
     # Note: Pydantic v2 forbids using both model_config and Config; we only keep model_config above.
 

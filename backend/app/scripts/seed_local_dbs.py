@@ -496,8 +496,8 @@ async def main():
         except Exception:
             pass
 
-    # Use settings (reads .env) to decide if API mode is enabled
-    if settings.API_SPORTS_KEY:
+    # Use settings (reads .env) to decide if API mode is enabled; skip API in lean mode
+    if settings.API_SPORTS_KEY and not getattr(settings, "LEAN_BACKEND", False):
         # Force RapidAPI mode if not explicitly set, using the same key when RAPIDAPI_KEY is absent.
         if not os.getenv("API_SPORTS_MODE"):
             os.environ["API_SPORTS_MODE"] = "rapidapi"

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import useScript from '../hooks/useScript';
+import { APISPORTS_KEY } from '../config';
 
 // Public CDN for API-Sports Widgets (3.x). Use a sport-level script which supports multiple widget types.
 const DEFAULT_BY_SPORT = {
@@ -38,8 +39,8 @@ export default function ApiSportsWidget({ type, sport = 'FOOTBALL', data = {}, s
     const out = new Map();
     out.set('data-type', type);
     const obj = { ...data };
-    // Optionally inject API key from env for widget initialization (exposes key to client!)
-    let envKey = process.env.REACT_APP_APISPORTS_WIDGET_KEY || process.env.REACT_APP_API_SPORTS_KEY || '';
+  // Optionally inject API key from centralized config/env (exposes key to client!)
+  let envKey = APISPORTS_KEY || '';
     // Debug-friendly fallbacks: allow localStorage or URL query to provide a key without restart
     if (!envKey && typeof window !== 'undefined') {
       try {

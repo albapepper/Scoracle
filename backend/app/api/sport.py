@@ -1,20 +1,31 @@
 from fastapi import APIRouter, Path, Query, HTTPException
 import time
-from app.models.schemas import PlayerFullResponse, TeamFullResponse
-from app.routers import player as player_router_mod
-from app.routers import team as team_router_mod
-from app.routers import autocomplete as autocomplete_router_mod
 from app.adapters.google_rss import get_entity_mentions, get_entity_mentions_with_debug
 from app.db.local_dbs import get_player_by_id as local_get_player_by_id, get_team_by_id as local_get_team_by_id, search_players as local_search_players, search_teams as local_search_teams
 from app.services.apisports import apisports_service
 from app.db.local_dbs import suggestions_from_local_or_upstream, get_player_by_id, get_team_by_id
+from app.core.config import settings
 
 router = APIRouter()
 
 @router.get("/{sport}/players/{player_id}")
 async def sport_player_summary(sport: str, player_id: str):
     s = sport.upper()
-    if s == 'NBA':
+    # In lean mode, avoid upstream and use local DB only
+    if settings.LEAN_BACKEND:
+        row = get_player_by_id(s, int(player_id))
+        if not row:
+            raise HTTPException(status_code=404, detail="Player not found")
+        name = row.get("name") or ""
+        parts = name.split(" ")
+        info = {
+            "id": row["id"],
+            "first_name": parts[0] if parts else None,
+            "last_name": " ".join(parts[1:]) if len(parts) > 1 else None,
+            "position": None,
+            "team": {"id": None, "name": row.get("current_team"), "abbreviation": row.get("current_team")},
+        }
+    elif s == 'NBA':
         info = await apisports_service.get_basketball_player_basic(player_id)
     elif s in ('EPL', 'FOOTBALL'):
         # Try provider first; if API key is missing or call fails, fall back to local DB
@@ -65,24 +76,44 @@ async def sport_search(sport: str, query: str = Query(...), entity_type: str = Q
         raise HTTPException(status_code=400, detail="entity_type must be 'player' or 'team'")
     if len((query or "").strip()) < 2:
         return {"query": query, "entity_type": et, "sport": s, "results": []}
-    if et == "player":
-        rows = await apisports_service.search_players(query, s)
-        results = [{
-            "entity_type": "player",
-            "id": str(r.get("id")),
-            "name": f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip() or "Unknown",
-            "sport": s,
-            "additional_info": {"source": "api-sports", "team_abbr": r.get("team_abbr")}
-        } for r in rows]
+    if settings.LEAN_BACKEND:
+        if et == "player":
+            rows = local_search_players(s, query, limit=15)
+            results = [{
+                "entity_type": "player",
+                "id": str(r.get("id")),
+                "name": r.get("name") or "Unknown",
+                "sport": s,
+                "additional_info": {"source": "local"}
+            } for r in rows]
+        else:
+            rows = local_search_teams(s, query, limit=15)
+            results = [{
+                "entity_type": "team",
+                "id": str(r.get("id")),
+                "name": r.get("name") or r.get("abbreviation") or "Unknown",
+                "sport": s,
+                "additional_info": {"source": "local"}
+            } for r in rows]
     else:
-        rows = await apisports_service.search_teams(query, s)
-        results = [{
-            "entity_type": "team",
-            "id": str(r.get("id")),
-            "name": r.get("name") or r.get("abbreviation") or "Unknown",
-            "sport": s,
-            "additional_info": {"source": "api-sports", "abbr": r.get("abbreviation")}
-        } for r in rows]
+        if et == "player":
+            rows = await apisports_service.search_players(query, s)
+            results = [{
+                "entity_type": "player",
+                "id": str(r.get("id")),
+                "name": f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip() or "Unknown",
+                "sport": s,
+                "additional_info": {"source": "api-sports", "team_abbr": r.get("team_abbr")}
+            } for r in rows]
+        else:
+            rows = await apisports_service.search_teams(query, s)
+            results = [{
+                "entity_type": "team",
+                "id": str(r.get("id")),
+                "name": r.get("name") or r.get("abbreviation") or "Unknown",
+                "sport": s,
+                "additional_info": {"source": "api-sports", "abbr": r.get("abbreviation")}
+            } for r in rows]
     return {"query": query, "entity_type": et, "sport": s, "results": results}
 
 @router.get("/{sport}/players/{player_id}/stats")
@@ -94,10 +125,7 @@ async def sport_player_stats(sport: str, player_id: str, season: str | None = Qu
         raise HTTPException(status_code=501, detail=f"Player stats not implemented for sport {s}")
     return {"player_id": player_id, "sport": s, "season": season or "current", "stats": stats}
 
-@router.get("/{sport}/players/{player_id}/full", response_model=PlayerFullResponse)
-async def sport_player_full(sport: str, player_id: str, season: str | None = Query(None), include_mentions: bool = Query(True)):
-    # Proxy to existing player endpoint with sport injected
-    return await player_router_mod.get_player_full(player_id=player_id, season=season, include_mentions=include_mentions, sport=sport)
+# Removed legacy /full aggregate endpoint in favor of lean summary + widgets
 
 @router.get("/{sport}/players/{player_id}/mentions")
 async def sport_player_mentions(sport: str, player_id: str):
@@ -106,15 +134,16 @@ async def sport_player_mentions(sport: str, player_id: str):
     mentions = md.get("mentions", [])
     # Enrich with entity_info for widgets
     entity_info = None
-    try:
-        if s == 'NBA':
-            entity_info = await apisports_service.get_basketball_player_basic(player_id)
-        elif s in ('EPL', 'FOOTBALL'):
-            entity_info = await apisports_service.get_football_player_basic(player_id)
-        elif s == 'NFL':
-            entity_info = await apisports_service.get_nfl_player_basic(player_id)
-    except Exception:
-        entity_info = None
+    if not settings.LEAN_BACKEND:
+        try:
+            if s == 'NBA':
+                entity_info = await apisports_service.get_basketball_player_basic(player_id)
+            elif s in ('EPL', 'FOOTBALL'):
+                entity_info = await apisports_service.get_football_player_basic(player_id)
+            elif s == 'NFL':
+                entity_info = await apisports_service.get_nfl_player_basic(player_id)
+        except Exception:
+            entity_info = None
     if not isinstance(entity_info, dict):
         # Fallback to local DB for name
         row = local_get_player_by_id(s, int(player_id))
@@ -138,7 +167,19 @@ async def sport_player_mentions(sport: str, player_id: str):
 @router.get("/{sport}/teams/{team_id}")
 async def sport_team_summary(sport: str, team_id: str):
     s = sport.upper()
-    if s == 'NBA':
+    if settings.LEAN_BACKEND:
+        row = get_team_by_id(s, int(team_id))
+        if not row:
+            raise HTTPException(status_code=404, detail="Team not found")
+        info = {
+            "id": row["id"],
+            "name": row["name"],
+            "abbreviation": row["name"],
+            "city": None,
+            "conference": None,
+            "division": None,
+        }
+    elif s == 'NBA':
         info = await apisports_service.get_basketball_team_basic(team_id)
     elif s in ('EPL', 'FOOTBALL'):
         try:
@@ -183,9 +224,7 @@ async def sport_team_stats(sport: str, team_id: str, season: str | None = Query(
         raise HTTPException(status_code=501, detail=f"Team stats not implemented for sport {s}")
     return {"team_id": team_id, "sport": s, "season": season or "current", "stats": stats}
 
-@router.get("/{sport}/teams/{team_id}/full", response_model=TeamFullResponse)
-async def sport_team_full(sport: str, team_id: str, season: str | None = Query(None), include_mentions: bool = Query(True)):
-    return await team_router_mod.get_team_full(team_id=team_id, season=season, include_mentions=include_mentions, sport=sport)
+# Removed legacy /full aggregate endpoint in favor of lean summary + widgets
 
 @router.get("/{sport}/autocomplete/{entity_type}")
 async def sport_autocomplete_proxy(sport: str, entity_type: str, q: str = Query(...), limit: int = Query(8, ge=1, le=15)):
@@ -204,15 +243,16 @@ async def sport_team_mentions(sport: str, team_id: str):
     md = await get_entity_mentions_with_debug("team", team_id, s)
     mentions = md.get("mentions", [])
     entity_info = None
-    try:
-        if s == 'NBA':
-            entity_info = await apisports_service.get_basketball_team_basic(team_id)
-        elif s in ('EPL', 'FOOTBALL'):
-            entity_info = await apisports_service.get_football_team_basic(team_id)
-        elif s == 'NFL':
-            entity_info = await apisports_service.get_nfl_team_basic(team_id)
-    except Exception:
-        entity_info = None
+    if not settings.LEAN_BACKEND:
+        try:
+            if s == 'NBA':
+                entity_info = await apisports_service.get_basketball_team_basic(team_id)
+            elif s in ('EPL', 'FOOTBALL'):
+                entity_info = await apisports_service.get_football_team_basic(team_id)
+            elif s == 'NFL':
+                entity_info = await apisports_service.get_nfl_team_basic(team_id)
+        except Exception:
+            entity_info = None
     if not isinstance(entity_info, dict):
         row = local_get_team_by_id(s, int(team_id))
         if row:
@@ -232,13 +272,48 @@ async def sport_team_mentions(sport: str, team_id: str):
     return {"team_id": team_id, "sport": s, "entity_info": entity_info, "mentions": mentions_sorted, "alongside_entities": alongside, "_debug": md.get("debug", {}), "_echo": {"team_id": team_id}}
 
 
+@router.get("/{sport}/entities")
+async def sport_entities_dump(sport: str, entity_type: str = Query("player")):
+    """Return a lean dump of entities for the sport so the frontend can build client-side indexes.
+
+    Response: { items: [{id, name, team_abbreviation?}], count }
+    """
+    s = sport.upper()
+    et = (entity_type or "player").lower()
+    if et == "player":
+        rows = local_search_players(s, " ", limit=1_000_000)  # not efficient for full dump; use list_all if needed
+        # Switch to direct list_all for completeness
+        try:
+            from app.db.local_dbs import list_all_players
+            items = [
+                {"id": str(pid), "name": name}
+                for (pid, name) in list_all_players(s)
+            ]
+        except Exception:
+            items = rows
+    elif et == "team":
+        try:
+            from app.db.local_dbs import list_all_teams
+            items = [
+                {"id": str(tid), "name": name}
+                for (tid, name) in list_all_teams(s)
+            ]
+        except Exception:
+            items = local_search_teams(s, " ", limit=1_000_000)
+    else:
+        raise HTTPException(status_code=400, detail="entity_type must be 'player' or 'team'")
+    return {"sport": s, "entity_type": et, "count": len(items), "items": items}
+
+
 def _summarize_comentions_for_mentions(sport: str, mentions: list[dict], target_entity: tuple[str, str]) -> list[dict]:
     """Extract other local entities mentioned across the RSS items and return counts.
 
-    Searches both players and teams for the sport using simple phrase extraction from titles and descriptions.
+    Fast path: Use Aho-Corasick automaton over local entity names.
+    Fallback path: previous phrase-extraction + LIKE search if automaton not available.
     """
     te_type, te_id = target_entity
     counts: dict[tuple[str, str], dict] = {}
+
     # Helper to accumulate
     def add_hit(e_type: str, e_id: str, name: str):
         key = (e_type, e_id)
@@ -250,23 +325,20 @@ def _summarize_comentions_for_mentions(sport: str, mentions: list[dict], target_
             counts[key] = entry
         entry["hits"] += 1
 
-    # Extract candidate phrases (bigrams/trigrams) and query local db
+    # Fallback-only path: Extract candidate phrases and query local db
     def extract_phrases(text: str) -> list[str]:
         import re
-        # Keep words; allow hyphens and apostrophes within words
         words = re.findall(r"[A-Za-z][A-Za-z\-'\.]+", text or "")
         phrases = []
         n = len(words)
-        for size in (3, 2):  # trigrams then bigrams
+        for size in (3, 2):
             for i in range(n - size + 1):
                 phrase = " ".join(words[i:i+size]).strip()
                 if len(phrase) >= 4:
                     phrases.append(phrase)
-        # Also include single long tokens (>=5 chars)
         for w in words:
             if len(w) >= 5:
                 phrases.append(w)
-        # Deduplicate while preserving order
         seen = set()
         uniq = []
         for p in phrases:
@@ -275,12 +347,11 @@ def _summarize_comentions_for_mentions(sport: str, mentions: list[dict], target_
                 continue
             seen.add(pl)
             uniq.append(p)
-        return uniq[:10]  # budget
+        return uniq[:10]
 
     for item in mentions:
         text = f"{item.get('title') or ''}. {item.get('description') or ''}"
         for phrase in extract_phrases(text):
-            # Try players then teams; small limits
             try:
                 for r in local_search_players(sport, phrase, limit=2):
                     add_hit("player", str(r.get("id")), r.get("name") or "")
@@ -288,6 +359,7 @@ def _summarize_comentions_for_mentions(sport: str, mentions: list[dict], target_
                     add_hit("team", str(r.get("id")), r.get("name") or "")
             except Exception:
                 continue
+
     out = list(counts.values())
     out.sort(key=lambda x: x["hits"], reverse=True)
     return out[:20]
