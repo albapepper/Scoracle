@@ -5,6 +5,7 @@ import httpx
 from fastapi import HTTPException
 
 from app.core.config import settings
+from app.services.cache import basic_cache, stats_cache
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,11 @@ class ApiSportsService:
 
         Returns a list of normalized dicts with minimal fields needed by autocomplete mapping stage.
         """
+        # Cache frequent searches briefly to reduce upstream load
+        cache_key = f"apisports:search_players:{sport_key}:{(season_override or '')}:{(league_override or '')}:{q.strip().lower()}"
+        cached = basic_cache.get(cache_key)
+        if cached is not None:
+            return cached
         if not self.api_key:
             # Provide a clearer failure when key is missing
             raise HTTPException(status_code=502, detail="API-Sports key not configured on server")
@@ -100,6 +106,7 @@ class ApiSportsService:
                             "last_name": player.get("lastname"),
                             "team_abbr": team_abbr,
                         })
+                    basic_cache.set(cache_key, out, ttl=90)
                     return out
                 elif sport_key_up == 'NBA':
                     # Basketball: /players?search=...
@@ -134,6 +141,7 @@ class ApiSportsService:
                             "last_name": p.get("lastname") or p.get("lastName"),
                             "team_abbr": team_abbr,
                         })
+                    basic_cache.set(cache_key, out, ttl=90)
                     return out
                 elif sport_key_up == 'NFL':
                     # American football: limited coverage; attempt /players?search=...
@@ -160,8 +168,10 @@ class ApiSportsService:
                             "last_name": last,
                             "team_abbr": team_abbr,
                         })
+                    basic_cache.set(cache_key, out, ttl=90)
                     return out
                 else:
+                    basic_cache.set(cache_key, [], ttl=60)
                     return []
         except httpx.HTTPStatusError as e:
             status = e.response.status_code if e.response is not None else None
@@ -175,6 +185,10 @@ class ApiSportsService:
             raise HTTPException(status_code=502, detail="API-Sports network error")
 
     async def search_teams(self, q: str, sport_key: str, *, league_override: Optional[int] = None, season_override: Optional[str] = None) -> List[Dict[str, Any]]:
+        cache_key = f"apisports:search_teams:{sport_key}:{(season_override or '')}:{(league_override or '')}:{q.strip().lower()}"
+        cached = basic_cache.get(cache_key)
+        if cached is not None:
+            return cached
         if not self.api_key:
             raise HTTPException(status_code=502, detail="API-Sports key not configured on server")
         sport_key_up = sport_key.upper()
@@ -214,6 +228,7 @@ class ApiSportsService:
                             "name": team.get("name"),
                             "abbreviation": team.get("code") or team.get("name"),
                         })
+                    basic_cache.set(cache_key, out, ttl=120)
                     return out
                 elif sport_key_up == 'NBA':
                     params = {"search": q}
@@ -235,6 +250,7 @@ class ApiSportsService:
                             "name": team.get("name"),
                             "abbreviation": team.get("code") or team.get("nickname") or team.get("name"),
                         })
+                    basic_cache.set(cache_key, out, ttl=120)
                     return out
                 elif sport_key_up == 'NFL':
                     params = {"search": q}
@@ -252,8 +268,10 @@ class ApiSportsService:
                             "name": team.get("name"),
                             "abbreviation": team.get("code") or team.get("name"),
                         })
+                    basic_cache.set(cache_key, out, ttl=120)
                     return out
                 else:
+                    basic_cache.set(cache_key, [], ttl=60)
                     return []
         except httpx.HTTPStatusError as e:
             status = e.response.status_code if e.response is not None else None
@@ -641,6 +659,10 @@ class ApiSportsService:
 
         Returns normalized dict with id, first_name, last_name, team {...} keys.
         """
+        cache_key = f"apisports:nba:player_basic:{player_id}:{season or ''}"
+        cached = basic_cache.get(cache_key)
+        if cached is not None:
+            return cached
         base = self._base_url_for('NBA')
         headers = self._headers_for_base(base)
         defaults = settings.API_SPORTS_DEFAULTS.get('NBA', {})
@@ -666,13 +688,15 @@ class ApiSportsService:
                     team_id = t.get('id')
                     team_name = t.get('name')
                     team_abbr = t.get('code') or t.get('name')
-                return {
+                result = {
                     "id": p.get('id'),
                     "first_name": p.get('firstname') or p.get('firstName'),
                     "last_name": p.get('lastname') or p.get('lastName'),
                     "position": p.get('position'),
                     "team": {"id": team_id, "name": team_name, "abbreviation": team_abbr},
                 }
+                basic_cache.set(cache_key, result, ttl=300)
+                return result
         except httpx.HTTPStatusError as e:
             status = e.response.status_code if e.response is not None else None
             logger.error("API-Sports NBA player fetch failed", extra={"status": status, "player_id": player_id})
@@ -688,6 +712,10 @@ class ApiSportsService:
 
         Returns normalized dict with id, name, abbreviation, and common fields.
         """
+        cache_key = f"apisports:nba:team_basic:{team_id}"
+        cached = basic_cache.get(cache_key)
+        if cached is not None:
+            return cached
         base = self._base_url_for('NBA')
         headers = self._headers_for_base(base)
         try:
@@ -702,7 +730,7 @@ class ApiSportsService:
                 team = t.get('team') or t
                 name = team.get('name')
                 code = team.get('code') or team.get('nickname') or name
-                return {
+                result = {
                     "id": team.get('id'),
                     "name": name,
                     "abbreviation": code,
@@ -710,6 +738,8 @@ class ApiSportsService:
                     "conference": team.get('conference'),
                     "division": team.get('division'),
                 }
+                basic_cache.set(cache_key, result, ttl=600)
+                return result
         except httpx.HTTPStatusError as e:
             status = e.response.status_code if e.response is not None else None
             logger.error("API-Sports NBA team fetch failed", extra={"status": status, "team_id": team_id})
@@ -725,6 +755,10 @@ class ApiSportsService:
 
         API endpoint: GET /players/statistics?player=ID&season=YYYY
         """
+        cache_key = f"apisports:nba:player_stats:{player_id}:{season or ''}"
+        cached = stats_cache.get(cache_key)
+        if cached is not None:
+            return cached
         base = self._base_url_for('NBA')
         headers = self._headers_for_base(base)
         params = {"player": player_id}
@@ -738,9 +772,12 @@ class ApiSportsService:
                 payload = r.json()
                 rows = payload.get('response') if isinstance(payload, dict) else None
                 if not rows:
+                    stats_cache.set(cache_key, {}, ttl=120)
                     return {}
                 # Return the first row; client may request specific team/league if needed later
-                return rows[0]
+                result = rows[0]
+                stats_cache.set(cache_key, result, ttl=300)
+                return result
         except httpx.HTTPStatusError as e:
             status = e.response.status_code if e.response is not None else None
             logger.error("API-Sports NBA player statistics failed", extra={"status": status, "player_id": player_id})
@@ -756,6 +793,10 @@ class ApiSportsService:
 
         API endpoint: GET /teams/statistics?team=ID&season=YYYY
         """
+        cache_key = f"apisports:nba:team_stats:{team_id}:{season or ''}"
+        cached = stats_cache.get(cache_key)
+        if cached is not None:
+            return cached
         base = self._base_url_for('NBA')
         headers = self._headers_for_base(base)
         params = {"team": team_id}
@@ -767,7 +808,9 @@ class ApiSportsService:
                 r.raise_for_status()
                 payload = r.json()
                 resp = payload.get('response') if isinstance(payload, dict) else None
-                return resp or {}
+                result = resp or {}
+                stats_cache.set(cache_key, result, ttl=300)
+                return result
         except httpx.HTTPStatusError as e:
             status = e.response.status_code if e.response is not None else None
             logger.error("API-Sports NBA team statistics failed", extra={"status": status, "team_id": team_id})
@@ -806,6 +849,10 @@ class ApiSportsService:
 
     # --- Football (EPL) basics ---
     async def get_football_player_basic(self, player_id: str, season: Optional[str] = None) -> Dict[str, Any]:
+        cache_key = f"apisports:epl:player_basic:{player_id}:{season or ''}"
+        cached = basic_cache.get(cache_key)
+        if cached is not None:
+            return cached
         base = self._base_url_for('EPL')
         headers = self._headers_for_base(base)
         defaults = settings.API_SPORTS_DEFAULTS.get('EPL', {})
@@ -833,13 +880,15 @@ class ApiSportsService:
                 # Normalize first/last split
                 first = player.get('firstname') or player.get('firstName')
                 last = player.get('lastname') or player.get('lastName')
-                return {
+                result = {
                     "id": player.get('id'),
                     "first_name": first,
                     "last_name": last,
                     "position": None,
                     "team": {"id": team_id, "name": team_name, "abbreviation": team_name},
                 }
+                basic_cache.set(cache_key, result, ttl=300)
+                return result
         except httpx.HTTPStatusError as e:
             logger.error("API-Sports EPL player fetch failed", extra={"status": e.response.status_code, "player_id": player_id})
             raise HTTPException(status_code=502, detail="API-Sports EPL player error")
@@ -848,6 +897,10 @@ class ApiSportsService:
             raise HTTPException(status_code=502, detail="API-Sports network error")
 
     async def get_football_team_basic(self, team_id: str) -> Dict[str, Any]:
+        cache_key = f"apisports:epl:team_basic:{team_id}"
+        cached = basic_cache.get(cache_key)
+        if cached is not None:
+            return cached
         base = self._base_url_for('EPL')
         headers = self._headers_for_base(base)
         try:
@@ -861,7 +914,7 @@ class ApiSportsService:
                 team = (resp[0].get('team') or {})
                 name = team.get('name')
                 code = team.get('code') or name
-                return {
+                result = {
                     "id": team.get('id'),
                     "name": name,
                     "abbreviation": code,
@@ -869,6 +922,8 @@ class ApiSportsService:
                     "conference": None,
                     "division": None,
                 }
+                basic_cache.set(cache_key, result, ttl=600)
+                return result
         except httpx.HTTPStatusError as e:
             logger.error("API-Sports EPL team fetch failed", extra={"status": e.response.status_code, "team_id": team_id})
             raise HTTPException(status_code=502, detail="API-Sports EPL team error")
@@ -883,6 +938,10 @@ class ApiSportsService:
         API endpoint: GET /players?id=ID [,&season=YYYY]
         Returns normalized dict with id, first_name, last_name, team {...}.
         """
+        cache_key = f"apisports:nfl:player_basic:{player_id}:{season or ''}"
+        cached = basic_cache.get(cache_key)
+        if cached is not None:
+            return cached
         base = self._base_url_for('NFL')
         headers = self._headers_for_base(base)
         params: Dict[str, Any] = {"id": player_id}
@@ -903,7 +962,7 @@ class ApiSportsService:
                 first = parts[0] if parts else None
                 last = " ".join(parts[1:]) if len(parts) > 1 else None
                 team = p.get("team") or {}
-                return {
+                result = {
                     "id": p.get("id"),
                     "first_name": first,
                     "last_name": last,
@@ -914,6 +973,8 @@ class ApiSportsService:
                         "abbreviation": team.get("code") or team.get("name"),
                     },
                 }
+                basic_cache.set(cache_key, result, ttl=300)
+                return result
         except httpx.HTTPStatusError as e:
             status = e.response.status_code if e.response is not None else None
             logger.error("API-Sports NFL player fetch failed", extra={"status": status, "player_id": player_id})
@@ -930,6 +991,10 @@ class ApiSportsService:
         API endpoint: GET /teams?id=ID
         Returns normalized dict with id, name, abbreviation.
         """
+        cache_key = f"apisports:nfl:team_basic:{team_id}"
+        cached = basic_cache.get(cache_key)
+        if cached is not None:
+            return cached
         base = self._base_url_for('NFL')
         headers = self._headers_for_base(base)
         try:
@@ -944,7 +1009,7 @@ class ApiSportsService:
                 team = t.get("team") or t
                 name = team.get("name")
                 code = team.get("code") or name
-                return {
+                result = {
                     "id": team.get("id"),
                     "name": name,
                     "abbreviation": code,
@@ -952,6 +1017,8 @@ class ApiSportsService:
                     "conference": None,
                     "division": None,
                 }
+                basic_cache.set(cache_key, result, ttl=600)
+                return result
         except httpx.HTTPStatusError as e:
             status = e.response.status_code if e.response is not None else None
             logger.error("API-Sports NFL team fetch failed", extra={"status": status, "team_id": team_id})

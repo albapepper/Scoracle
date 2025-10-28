@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import urllib.parse
 from app.services.apisports import apisports_service
 from app.db.local_dbs import get_player_by_id as local_get_player_by_id, get_team_by_id as local_get_team_by_id
+from app.services.cache import widget_cache
 
 async def _resolve_entity_name(entity_type: str, entity_id: str, sport: Optional[str]) -> str:
     """Resolve a human-friendly entity name for RSS queries.
@@ -70,6 +71,10 @@ async def get_entity_mentions(entity_type: str, entity_id: str, sport: Optional[
     2) Quoted name without time filter
     3) Unquoted name with 7d window
     """
+    cache_key = f"rss:mentions:{(sport or 'NBA').upper()}:{entity_type}:{entity_id}"
+    cached = widget_cache.get(cache_key)
+    if cached is not None:
+        return cached
     resolved_name = await _resolve_entity_name(entity_type, entity_id, sport)
     now = datetime.now()
     windows = [timedelta(hours=48), None, timedelta(days=7)]
@@ -93,10 +98,12 @@ async def get_entity_mentions(entity_type: str, entity_id: str, sport: Optional[
                 resp.raise_for_status()
                 items = parse_rss_feed(resp.text)
                 if items:
+                    widget_cache.set(cache_key, items, ttl=600)
                     return items
             except httpx.HTTPError:
                 # try the next strategy
                 continue
+    widget_cache.set(cache_key, [], ttl=300)
     return []
 
 async def get_entity_mentions_with_debug(entity_type: str, entity_id: str, sport: Optional[str] = None) -> Dict[str, Any]:
@@ -109,6 +116,10 @@ async def get_entity_mentions_with_debug(entity_type: str, entity_id: str, sport
       selected_index: int | None
     }
     """
+    cache_key = f"rss:mentions-debug:{(sport or 'NBA').upper()}:{entity_type}:{entity_id}"
+    cached = widget_cache.get(cache_key)
+    if cached is not None:
+        return cached
     resolved_name = await _resolve_entity_name(entity_type, entity_id, sport)
     now = datetime.now()
     windows = [timedelta(hours=48), None, timedelta(days=7)]
@@ -144,7 +155,9 @@ async def get_entity_mentions_with_debug(entity_type: str, entity_id: str, sport
                 attempts.append({"query": q, "window": window_str, "url": url, "count": 0})
                 continue
     debug = {"resolved_name": resolved_name, "attempts": attempts, "selected_index": selected_index}
-    return {"mentions": items, "debug": debug}
+    result = {"mentions": items, "debug": debug}
+    widget_cache.set(cache_key, result, ttl=600)
+    return result
 
 async def get_related_links(entity_type: str, entity_id: str, category: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
     """

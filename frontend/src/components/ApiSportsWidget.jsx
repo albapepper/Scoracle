@@ -17,6 +17,13 @@ const HOST_BY_SPORT = {
   NFL: 'v1.american-football.api-sports.io',
 };
 
+const SPORT_ATTR = {
+  FOOTBALL: 'football',
+  EPL: 'football',
+  NBA: 'nba',
+  NFL: 'nfl',
+};
+
 /**
  * ApiSportsWidget
  * Props:
@@ -39,8 +46,8 @@ export default function ApiSportsWidget({ type, sport = 'FOOTBALL', data = {}, s
     const out = new Map();
     out.set('data-type', type);
     const obj = { ...data };
-  // Optionally inject API key from centralized config/env (exposes key to client!)
-  let envKey = APISPORTS_KEY || '';
+    // Optionally inject API key from centralized config/env (exposes key to client!)
+    let envKey = APISPORTS_KEY || '';
     // Debug-friendly fallbacks: allow localStorage or URL query to provide a key without restart
     if (!envKey && typeof window !== 'undefined') {
       try {
@@ -55,24 +62,36 @@ export default function ApiSportsWidget({ type, sport = 'FOOTBALL', data = {}, s
         } catch (_) {}
       }
     }
-    if (!obj.key && envKey) {
-      out.set('data-key', envKey);
+    // For config type, don't add defaults/host; pass through exactly what caller provided
+    const isConfig = String(type).toLowerCase() === 'config';
+    if (!isConfig) {
+      if (!obj.key && envKey) {
+        out.set('data-key', envKey);
+      }
+      // Required host hint for some widget builds
+      const host = HOST_BY_SPORT[sportKey];
+      if (host) {
+        out.set('data-host', host);
+      }
+      // Ensure sport attribute reflects current context unless explicitly provided
+      const sportAttr = SPORT_ATTR[sportKey] || 'football';
+      if (!obj.sport && sportAttr) {
+        out.set('data-sport', sportAttr);
+      }
+      // Let global config control theme/timezone unless explicitly provided
+    } else {
+      // Ensure config can receive explicit env key if not provided
+      if (!obj.key && envKey) {
+        out.set('data-key', envKey);
+      }
     }
-    // Required host hint for some widget builds
-    const host = HOST_BY_SPORT[sportKey];
-    if (host) {
-      out.set('data-host', host);
-    }
-    // Common sensible defaults
-    if (!obj.theme) out.set('data-theme', 'light');
-    if (!obj.timezone) out.set('data-timezone', Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
     // Provide attribute synonyms expected by some API-Sports widgets
-    if (obj.playerId) {
+    if (!isConfig && obj.playerId) {
       out.set('data-player-id', String(obj.playerId));
       out.set('data-id', String(obj.playerId));
       out.set('data-id-player', String(obj.playerId));
     }
-    if (obj.teamId) {
+    if (!isConfig && obj.teamId) {
       out.set('data-team-id', String(obj.teamId));
       out.set('data-id', String(obj.teamId));
       out.set('data-id-team', String(obj.teamId));
@@ -132,13 +151,14 @@ export default function ApiSportsWidget({ type, sport = 'FOOTBALL', data = {}, s
     document.body.appendChild(script);
   }, [status, sportKey]);
 
-  return (
-    <div
-      ref={ref}
-      className={`wg-api-football ${className || ''}`.trim()}
-      style={style}
-      id={`wg-api-football-${type}`}
-      {...Object.fromEntries(attrs)}
-    />
+  // Render the official custom element tag used by API-Sports widgets (v3)
+  return React.createElement(
+    'api-sports-widget',
+    {
+      ref,
+      className,
+      style,
+      ...Object.fromEntries(attrs),
+    }
   );
 }

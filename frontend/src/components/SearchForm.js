@@ -28,17 +28,20 @@ function SearchForm() {
       }
       // If user selected from autocomplete, trust that ID
       if (selected) {
-        navigate(`/mentions/${entityType}/${selected.id}?sport=${activeSport}`);
+        const label = selected.label || selected.name || '';
+        navigate(`/mentions/${entityType}/${selected.id}?sport=${activeSport}&name=${encodeURIComponent(label)}`);
         return;
       }
       // Fallback: perform legacy search
       const results = await searchEntities(query, entityType, activeSport);
       if (results.results && results.results.length === 1) {
         const only = results.results[0];
-        navigate(`/mentions/${entityType}/${only.id}?sport=${activeSport}`);
+        const label = only.label || only.name || query;
+        navigate(`/mentions/${entityType}/${only.id}?sport=${activeSport}&name=${encodeURIComponent(label)}`);
       } else if (results.results && results.results.length > 1) {
         const firstResult = results.results[0];
-        navigate(`/mentions/${entityType}/${firstResult.id}?sport=${activeSport}`);
+        const label = firstResult.label || firstResult.name || query;
+        navigate(`/mentions/${entityType}/${firstResult.id}?sport=${activeSport}&name=${encodeURIComponent(label)}`);
       } else {
         setError(t('search.noneFound', { entity: t(`common.entity.${entityType}`), query }));
       }

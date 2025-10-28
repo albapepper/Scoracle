@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell } from '@mantine/core';
 import theme from './theme';
 
@@ -9,25 +9,23 @@ import { ThemeProvider } from './ThemeProvider';
 // Context provider
 import { SportContextProvider } from './context/SportContext';
 import { LanguageProvider } from './context/LanguageContext';
-import { EntityCacheProvider } from './context/EntityCacheContext';
 
 // Pages
 import HomePage from './pages/HomePage';
 import MentionsPage from './pages/MentionsPage';
-import PlayerPage from './pages/PlayerPage';
-import TeamPage from './pages/TeamPage';
+import EntityPage from './pages/EntityPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 // Components
 import Header from './components/Header';
 import Footer from './components/Footer';
+import ApiSportsConfig from './components/ApiSportsConfig';
 
 function App() {
   return (
     <ThemeProvider>
       <LanguageProvider>
       <SportContextProvider>
-        <EntityCacheProvider>
         <AppShell
           header={{ height: 60 }}
           footer={{ height: 60 }}
@@ -40,21 +38,24 @@ function App() {
         
         <AppShell.Main>
           <div className="container">
+            {/* Global API-Sports Widgets Config (dev hardcoded key) */}
+            <ApiSportsConfig apiKey="4a5a713b507782a9b85c8c4d1d8427a4" />
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/mentions/:entityType/:entityId" element={<MentionsPage />} />
-              <Route path="/player/:playerId" element={<PlayerPage />} />
-              <Route path="/team/:teamId" element={<TeamPage />} />
+              {/* Back-compat redirects from legacy routes */}
+              <Route path="/player/:playerId" element={<Navigate to={location => `/entity/player/${location.pathname.split('/').pop()}`} replace />} />
+              <Route path="/team/:teamId" element={<Navigate to={location => `/entity/team/${location.pathname.split('/').pop()}`} replace />} />
+              <Route path="/entity/:entityType/:entityId" element={<EntityPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </div>
         </AppShell.Main>
-        
+
         <AppShell.Footer>
           <Footer />
         </AppShell.Footer>
       </AppShell>
-        </EntityCacheProvider>
     </SportContextProvider>
   </LanguageProvider>
   </ThemeProvider>

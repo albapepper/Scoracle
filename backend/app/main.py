@@ -1,5 +1,6 @@
 from fastapi import FastAPI, APIRouter, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 import logging
 from contextlib import asynccontextmanager
@@ -46,6 +47,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Compress larger JSON responses to reduce bandwidth and speed up clients
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Include routers (sport-first API only)
 app.include_router(sport.router, prefix="/api/v1", tags=["sport"])
