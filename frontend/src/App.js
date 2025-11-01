@@ -19,7 +19,7 @@ import NotFoundPage from './pages/NotFoundPage';
 // Components
 import Header from './components/Header';
 import Footer from './components/Footer';
-import ApiSportsConfig from './components/ApiSportsConfig';
+// No global widget config needed for the minimal template
 
 function App() {
   return (
@@ -38,8 +38,6 @@ function App() {
         
         <AppShell.Main>
           <div className="container">
-            {/* Global API-Sports Widgets Config (dev hardcoded key) */}
-            <ApiSportsConfig apiKey="4a5a713b507782a9b85c8c4d1d8427a4" />
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/mentions/:entityType/:entityId" element={<MentionsPage />} />

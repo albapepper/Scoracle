@@ -14,14 +14,16 @@ import {
   List,
 } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { useSportContext } from '../context/SportContext';
+// No SportContext dependency — keep page driven purely by URL params
 import ApiSportsWidget from '../components/ApiSportsWidget';
+import ApiSportsConfig from '../components/ApiSportsConfig';
 import { getEntityMentions } from '../services/api';
 import theme from '../theme';
 
 function MentionsPage() {
   const { entityType, entityId } = useParams();
-  const { activeSport } = useSportContext();
+  // Read sport from query string only
+  const [activeSport, setActiveSport] = useState('FOOTBALL');
   const { t } = useTranslation();
 
   const [mentions, setMentions] = useState([]);
@@ -31,11 +33,13 @@ function MentionsPage() {
   const [entityName, setEntityName] = useState('');
 
   useEffect(() => {
-    // read optional name from query params
+    // read optional name and sport from query params
     try {
       const usp = new URLSearchParams(window.location.search);
       const n = usp.get('name');
       if (n) setEntityName(n);
+      const s = usp.get('sport');
+      if (s) setActiveSport(s.toUpperCase());
     } catch (_) {}
   }, []);
 
@@ -104,11 +108,11 @@ function MentionsPage() {
             </div>
             <Button
               component={Link}
-              to={`/entity/${entityType}/${entityId}`}
+              to={`/entity/${entityType}/${entityId}?sport=${encodeURIComponent(activeSport)}`}
               style={{ backgroundColor: theme.colors.ui.primary, color: 'white' }}
               size="md"
             >
-              Statistical Profile
+              {t('mentions.statisticalProfile')}
             </Button>
           </Group>
         </Card>
@@ -117,12 +121,14 @@ function MentionsPage() {
         <Card shadow="sm" p="lg" radius="md" withBorder>
           <Stack>
             <Title order={3}>{t('mentions.widgetPreview')}</Title>
+            {/* Minimal, per-page config to provide key/host to the widget library */}
+            <ApiSportsConfig apiKey="4a5a713b507782a9b85c8c4d1d8427a4" sport={activeSport} />
             {entityType === 'team' && entityId && (
               <>
                 <ApiSportsWidget
                   type="team"
                   sport={activeSport}
-                  data={{ teamId: entityId, teamTab: 'statistics' }}
+                  data={{ teamId: entityId, teamSquad: 'true', teamStatistics: 'true' }}
                 />
                 <div id="player-container" />
               </>
@@ -132,7 +138,7 @@ function MentionsPage() {
                 <ApiSportsWidget
                   type="player"
                   sport={activeSport}
-                  data={{ playerId: entityId }}
+                  data={{ playerId: entityId, season: '2025', playerStatistics: 'true', playerTrophies: 'true', playerInjuries: 'true' }}
                 />
                 <div id="player-container" />
               </>
@@ -157,7 +163,7 @@ function MentionsPage() {
             <List spacing="md" listStyleType="none" center>
               {mentions.map((mention, index) => (
                 <List.Item key={index}>
-                  <Group position="apart" noWrap align="flex-start">
+                  <Group position="apart" wrap="nowrap" align="flex-start">
                     <Box style={{ flex: 1 }}>
                       <Text weight={600} size="lg" lineClamp={2}>
                         {mention.title}
@@ -174,7 +180,7 @@ function MentionsPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       variant="outline"
-                      compact
+                      size="compact-sm"
                       style={{
                         borderColor: theme.colors.ui.primary,
                         color: theme.colors.ui.primary,

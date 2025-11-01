@@ -3,8 +3,8 @@
   "name": "Scoracle Sports Intelligence",
   "icons": [
     {
-      "src": "logo192.png",
-      "sizes": "192x192",
+      "src": "scoracle-logo.png",
+      "sizes": "512x512",
       "type": "image/png"
     }
   ],

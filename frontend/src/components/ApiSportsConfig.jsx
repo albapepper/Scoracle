@@ -18,21 +18,38 @@ export default function ApiSportsConfig({
   const { language } = useLanguage();
   const { activeSport } = useSportContext();
   const { colorScheme } = useThemeMode();
+  // Resolve sport preference: explicit prop wins over context
+  const resolvedSportRaw = (sport || activeSport || 'FOOTBALL').toString();
 
-  const final = useMemo(() => ({
-    key: apiKey || APISPORTS_KEY,
-    sport: (sport || activeSport || 'FOOTBALL').toString().toLowerCase(),
-    lang: (lang || language || 'en').toLowerCase(),
-    // Map app color scheme to widget theme: light -> white, dark -> grey
-    theme: theme === 'auto' ? (colorScheme === 'dark' ? 'grey' : 'white') : theme,
-    'show-errors': String(showErrors),
-    'show-logos': String(showLogos),
-  }), [apiKey, sport, lang, theme, showErrors, showLogos, language, activeSport, colorScheme]);
+  const final = useMemo(() => {
+    const sportLower = resolvedSportRaw.toLowerCase();
+    // Required host per sport for API-Sports widgets v3
+    // Ref: vendor examples (v3.*) expect a data-host like v3.football.api-sports.io
+    const hostBySport = {
+      football: 'v3.football.api-sports.io',
+      epl: 'v3.football.api-sports.io',
+      basketball: 'v3.basketball.api-sports.io',
+      nba: 'v3.basketball.api-sports.io',
+      'american-football': 'v3.american-football.api-sports.io',
+      nfl: 'v3.american-football.api-sports.io',
+    };
+    const host = hostBySport[sportLower] || 'v3.football.api-sports.io';
+
+    return {
+      key: apiKey || APISPORTS_KEY,
+      host,
+      sport: sportLower,
+      lang: (lang || language || 'en').toLowerCase(),
+      // Map app color scheme to widget theme: light -> white, dark -> grey
+      theme: theme === 'auto' ? (colorScheme === 'dark' ? 'grey' : 'white') : theme,
+      'show-errors': String(showErrors),
+    };
+  }, [apiKey, lang, theme, showErrors, language, colorScheme, resolvedSportRaw]);
 
   return (
     <ApiSportsWidget
       type="config"
-      sport={activeSport}
+      sport={resolvedSportRaw}
       data={final}
       style={style}
     />

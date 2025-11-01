@@ -1,28 +1,33 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import useScript from '../hooks/useScript';
-import { APISPORTS_KEY } from '../config';
+// no direct import needed for key here; config element supplies it
 
-// Public CDN for API-Sports Widgets (3.x). Use a sport-level script which supports multiple widget types.
-const DEFAULT_BY_SPORT = {
-  FOOTBALL: 'https://widgets.api-sports.io/3.1.0/football',
-  EPL: 'https://widgets.api-sports.io/3.1.0/football',
-  NBA: 'https://widgets.api-sports.io/3.1.0/basketball',
-  NFL: 'https://widgets.api-sports.io/3.1.0/american-football',
+// Public CDN candidates by type and sport. Keep it simple and browser-friendly.
+const CDN_BY_TYPE_31 = {
+  player: 'https://widgets.api-sports.io/3.1.0/player.js',
+  team: 'https://widgets.api-sports.io/3.1.0/team.js',
+};
+const CDN_BY_TYPE_30 = {
+  player: 'https://widgets.api-sports.io/3.0.4/player.js',
+  team: 'https://widgets.api-sports.io/3.0.4/team.js',
+};
+const CDN_BY_SPORT_31 = {
+  FOOTBALL: 'https://widgets.api-sports.io/3.1.0/football.js',
+  EPL: 'https://widgets.api-sports.io/3.1.0/football.js',
+  NBA: 'https://widgets.api-sports.io/3.1.0/basketball.js',
+  NFL: 'https://widgets.api-sports.io/3.1.0/american-football.js',
+};
+const CDN_BY_SPORT_30 = {
+  FOOTBALL: 'https://widgets.api-sports.io/3.0.4/football.js',
+  EPL: 'https://widgets.api-sports.io/3.0.4/football.js',
+  NBA: 'https://widgets.api-sports.io/3.0.4/basketball.js',
+  NFL: 'https://widgets.api-sports.io/3.0.4/american-football.js',
 };
 
-const HOST_BY_SPORT = {
-  FOOTBALL: 'v3.football.api-sports.io',
-  EPL: 'v3.football.api-sports.io',
-  NBA: 'v2.nba.api-sports.io',
-  NFL: 'v1.american-football.api-sports.io',
-};
+// sport is still accepted to help pages pick the right config values, but
+// the widget element itself relies on the separate config element.
 
-const SPORT_ATTR = {
-  FOOTBALL: 'football',
-  EPL: 'football',
-  NBA: 'nba',
-  NFL: 'nfl',
-};
+// We always render the generic 'api-sports-widget' tag to keep usage simple.
 
 /**
  * ApiSportsWidget
@@ -36,55 +41,77 @@ const SPORT_ATTR = {
  */
 export default function ApiSportsWidget({ type, sport = 'FOOTBALL', data = {}, src, className, style, debug = false }) {
   const sportKey = String(sport || 'FOOTBALL').toUpperCase();
-  const finalSrc = src || DEFAULT_BY_SPORT[sportKey] || DEFAULT_BY_SPORT.FOOTBALL;
+  const widgetType = String(type || '').toLowerCase();
+  // Single simple strategy: try type 3.1.0 JS, then sport 3.1.0 JS, then 3.0.4 equivalents.
+  const cdnSport31 = CDN_BY_SPORT_31[sportKey] || CDN_BY_SPORT_31.FOOTBALL;
+  const cdnType31 = CDN_BY_TYPE_31[widgetType] || CDN_BY_TYPE_31.player;
+  const cdnSport30 = CDN_BY_SPORT_30[sportKey] || CDN_BY_SPORT_30.FOOTBALL;
+  const cdnType30 = CDN_BY_TYPE_30[widgetType] || CDN_BY_TYPE_30.player;
+
+  // Allow runtime override via URL ?widgetSrc=...
+  let overrideSrc;
+  try {
+    const usp = new URLSearchParams(window.location.search);
+    overrideSrc = usp.get('widgetSrc') || undefined;
+  } catch (_) {}
+
+  const candidates = useMemo(() => {
+    const sportNoExt31 = (cdnSport31 || '').replace(/\.js$/, '');
+    const typeNoExt31 = (cdnType31 || '').replace(/\.js$/, '');
+    const sportNoExt30 = (cdnSport30 || '').replace(/\.js$/, '');
+    const typeNoExt30 = (cdnType30 || '').replace(/\.js$/, '');
+    const widgetV3 = 'https://widgets.api-sports.io/v3/widget.js';
+    const widget3 = 'https://widgets.api-sports.io/3/widget.js';
+    const widgetRoot = 'https://widgets.api-sports.io/widget.js';
+    const widget31 = 'https://widgets.api-sports.io/3.1.0/widget.js';
+    const widget31No = 'https://widgets.api-sports.io/3.1.0/widget';
+    const widget30 = 'https://widgets.api-sports.io/3.0.4/widget.js';
+    const widget30No = 'https://widgets.api-sports.io/3.0.4/widget';
+
+    const arr = [
+      overrideSrc,
+      // Preferred: unified widget loaders first (stable across versions)
+      widgetV3,
+      widget3,
+      widgetRoot,
+      widget31,
+      widget31No,
+      // Then type/sport-specific files for older setups
+      cdnType31,
+      cdnSport31,
+      // Without .js variants (in case CDN serves those)
+      typeNoExt31,
+      sportNoExt31,
+      // Legacy
+      cdnType30,
+      cdnSport30,
+      typeNoExt30,
+      sportNoExt30,
+      widget30,
+      widget30No,
+    ];
+    // Deduplicate and remove falsy
+    return Array.from(new Set(arr.filter(Boolean)));
+  }, [cdnSport31, cdnType31, cdnSport30, cdnType30, overrideSrc]);
+
+  const initialSrc = src || (candidates[0] || 'https://widgets.api-sports.io/v3/widget.js');
+  const finalSrc = initialSrc;
   const status = useScript(finalSrc);
   const ref = useRef(null);
   const triedFallbackRef = useRef(false);
+  // Force generic tag for simplicity and determinism
+  const [tagName] = useState('api-sports-widget');
+
+  // No tag switching logic; we always use the generic element
 
   // Build attributes for the custom element
   const attrs = useMemo(() => {
     const out = new Map();
     out.set('data-type', type);
     const obj = { ...data };
-    // Optionally inject API key from centralized config/env (exposes key to client!)
-    let envKey = APISPORTS_KEY || '';
-    // Debug-friendly fallbacks: allow localStorage or URL query to provide a key without restart
-    if (!envKey && typeof window !== 'undefined') {
-      try {
-        const fromLs = window.localStorage.getItem('APISPORTS_WIDGET_KEY');
-        if (fromLs) envKey = fromLs;
-      } catch (_) {}
-      if (!envKey) {
-        try {
-          const usp = new URLSearchParams(window.location.search);
-          const fromQs = usp.get('apisportsKey');
-          if (fromQs) envKey = fromQs;
-        } catch (_) {}
-      }
-    }
-    // For config type, don't add defaults/host; pass through exactly what caller provided
+    // For config type, pass through exactly what caller provided (data-key, data-sport, etc.)
     const isConfig = String(type).toLowerCase() === 'config';
-    if (!isConfig) {
-      if (!obj.key && envKey) {
-        out.set('data-key', envKey);
-      }
-      // Required host hint for some widget builds
-      const host = HOST_BY_SPORT[sportKey];
-      if (host) {
-        out.set('data-host', host);
-      }
-      // Ensure sport attribute reflects current context unless explicitly provided
-      const sportAttr = SPORT_ATTR[sportKey] || 'football';
-      if (!obj.sport && sportAttr) {
-        out.set('data-sport', sportAttr);
-      }
-      // Let global config control theme/timezone unless explicitly provided
-    } else {
-      // Ensure config can receive explicit env key if not provided
-      if (!obj.key && envKey) {
-        out.set('data-key', envKey);
-      }
-    }
+    // No automatic key/host/sport on non-config widgets; rely on the config element as per API-Sports docs
     // Provide attribute synonyms expected by some API-Sports widgets
     if (!isConfig && obj.playerId) {
       out.set('data-player-id', String(obj.playerId));
@@ -107,12 +134,11 @@ export default function ApiSportsWidget({ type, sport = 'FOOTBALL', data = {}, s
       out.set(`data-${kebab}`, String(value));
     });
     return out;
-  }, [type, data, sportKey]);
+  }, [type, data]);
 
   useEffect(() => {
-    // When script is ready, attempt to re-render/upgrade the widget if needed.
+    // When script is ready, nudge by toggling a data attribute to trigger MutationObserver scans
     if (status !== 'ready') return;
-    // Nudge some scripts by toggling a data attribute to trigger MutationObserver scans
     const el = ref.current;
     if (!el) return;
     const attr = 'data-refresh-tick';
@@ -123,37 +149,40 @@ export default function ApiSportsWidget({ type, sport = 'FOOTBALL', data = {}, s
       try { el.removeAttribute(attr); } catch (_) {}
     }, 1000);
     return () => clearTimeout(t);
-  }, [status]);
+  }, [status, sportKey, finalSrc]);
 
-  // Fallback: if loading the primary script failed, try an older stable path once
+  // Fallbacks: if loading the primary script failed, walk remaining candidates sequentially once
   useEffect(() => {
     if (status !== 'error' || triedFallbackRef.current) return;
     triedFallbackRef.current = true;
-    const altBySport = {
-      FOOTBALL: 'https://widgets.api-sports.io/3.0.4/football',
-      EPL: 'https://widgets.api-sports.io/3.0.4/football',
-      NBA: 'https://widgets.api-sports.io/3.0.4/basketball',
-      NFL: 'https://widgets.api-sports.io/3.0.4/american-football',
-    };
-    const alt = altBySport[sportKey];
-    if (!alt) return;
-    const script = document.createElement('script');
-    script.src = alt;
-    script.async = true;
-    script.onload = () => {
-      const el = ref.current;
-      if (!el) return;
-      try {
-        el.setAttribute('data-refresh-tick', String(Date.now()));
-        setTimeout(() => el.removeAttribute('data-refresh-tick'), 800);
-      } catch (_) {}
-    };
-    document.body.appendChild(script);
-  }, [status, sportKey]);
+    const tried = new Set([finalSrc]);
+    const rest = candidates.filter((c) => !tried.has(c));
 
-  // Render the official custom element tag used by API-Sports widgets (v3)
+    const injectAt = (idx) => {
+      if (idx >= rest.length) return;
+      const url = rest[idx];
+      const script = document.createElement('script');
+      script.src = url;
+      script.async = true;
+      script.onload = () => {
+        const el = ref.current;
+        if (!el) return;
+        try {
+          el.setAttribute('data-refresh-tick', String(Date.now()));
+          setTimeout(() => el.removeAttribute('data-refresh-tick'), 800);
+        } catch (_) {}
+      };
+      script.onerror = () => injectAt(idx + 1);
+      document.body.appendChild(script);
+    };
+
+    injectAt(0);
+  }, [status, sportKey, widgetType, finalSrc, candidates]);
+
+  // Render the custom element tag used by API-Sports widgets (v3).
+  // Prefer sport-specific tag if available; fall back to generic.
   return React.createElement(
-    'api-sports-widget',
+    tagName,
     {
       ref,
       className,

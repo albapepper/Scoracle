@@ -11,11 +11,19 @@ const SPORTS = [
 ];
 
 export const SportContextProvider = ({ children }) => {
-  // Default to NBA
-  const [activeSport, setActiveSport] = useState('NBA');
+  // Default to FOOTBALL to avoid accidental basketball default
+  const [activeSport, setActiveSport] = useState('FOOTBALL');
   
-  // Load from localStorage on initial render
+  // Load from URL (?sport=FOOTBALL) or localStorage on initial render
   useEffect(() => {
+    try {
+      const usp = new URLSearchParams(window.location.search);
+      const fromUrl = usp.get('sport');
+      if (fromUrl && SPORTS.some(s => s.id === fromUrl.toUpperCase())) {
+        setActiveSport(fromUrl.toUpperCase());
+        return; // URL wins
+      }
+    } catch (_) {}
     const savedSport = localStorage.getItem('activeSport');
     if (savedSport && SPORTS.some(sport => sport.id === savedSport)) {
       setActiveSport(savedSport);

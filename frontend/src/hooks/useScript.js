@@ -15,9 +15,13 @@ export function useScript(src) {
       return;
     }
 
-    const script = document.createElement('script');
-    script.src = src;
-    script.async = true;
+  const script = document.createElement('script');
+  script.src = src;
+  script.async = true;
+  script.type = 'text/javascript';
+  // Helps error reporting and can avoid some proxy quirks; harmless otherwise
+  script.crossOrigin = 'anonymous';
+  script.referrerPolicy = 'no-referrer-when-downgrade';
     const record = { status: 'loading', script };
     loadedScripts.set(src, record);
     setStatus('loading');
