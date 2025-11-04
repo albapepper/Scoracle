@@ -2,12 +2,16 @@ import React from 'react';
 import { Container, Title, Text, Stack, Paper, SegmentedControl, Box } from '@mantine/core';
 import SearchForm from '../components/SearchForm';
 import { useSportContext } from '../context/SportContext';
-import theme from '../theme';
+import { useThemeMode } from '../ThemeProvider';
+import { getThemeColors } from '../theme';
 import { useTranslation } from 'react-i18next';
 
 function HomePage() {
   const { activeSport, sports, changeSport } = useSportContext();
+  const { colorScheme } = useThemeMode();
+  const colors = getThemeColors(colorScheme);
   const { t } = useTranslation();
+  const activeSportDisplay = sports.find((sport) => sport.id === activeSport)?.display || activeSport;
   
   return (
     <Container size="lg" py="xl">
@@ -19,11 +23,11 @@ function HomePage() {
             radius="md"
             withBorder
             style={{ 
-              backgroundColor: theme.colors.background.secondary,
-              borderColor: theme.colors.ui.border
+              backgroundColor: colors.background.secondary,
+              borderColor: colors.ui.border
             }}
           >
-            <Title order={2} align="center" mb="md" style={{ color: theme.colors.text.accent }}>
+            <Title order={2} align="center" mb="md" style={{ color: colors.text.accent }}>
               {t('home.title')}
             </Title>
             
@@ -40,11 +44,11 @@ function HomePage() {
               }))}
               fullWidth
               mb="md"
-              color={theme.colors.ui.primary}
+              color={colors.ui.primary}
               styles={{
                 root: {
-                  backgroundColor: theme.colors.background.tertiary,
-                  border: `1px solid ${theme.colors.ui.border}`
+                  backgroundColor: colors.background.tertiary,
+                  border: `1px solid ${colors.ui.border}`
                 },
                 label: {
                   fontSize: '1rem',
@@ -54,7 +58,7 @@ function HomePage() {
             />
             
             <Text align="center" size="sm" mt="md" mb="xl" c="dimmed">
-              {t('home.findLatest', { sport: activeSport })}
+              {t('home.findLatest', { sport: activeSportDisplay })}
             </Text>
           </Paper>
         </Box>

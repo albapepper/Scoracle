@@ -14,9 +14,11 @@ function Header() {
   const { t } = useTranslation();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // Get appropriate header colors based on color scheme
+  const headerConfig = theme.header[colorScheme];
+  
   const headerStyle = {
-    // Use theme gradient for a more branded look
-    background: `linear-gradient(90deg, ${theme.header.gradientStart}, ${theme.header.gradientEnd})`,
+    background: `linear-gradient(90deg, ${headerConfig.gradientStart}, ${headerConfig.gradientEnd})`,
     border: 'none',
     padding: '0.5rem 0',
   };
@@ -28,7 +30,7 @@ function Header() {
         <Group style={{ flex: 1 }}>
           <Tooltip label={t('header.menu')} withArrow>
             <ActionIcon variant="subtle" color="gray.1" aria-label="Open menu" onClick={() => setSettingsOpen(true)}>
-              <IconMenu2 size={22} color="#fff" />
+              <IconMenu2 size={22} color={headerConfig.title.color} />
             </ActionIcon>
           </Tooltip>
         </Group>
@@ -48,7 +50,7 @@ function Header() {
             value={language}
             onChange={(v) => v && changeLanguage(v)}
             size="xs"
-            styles={{ input: { background: 'transparent', color: '#fff', borderColor: 'rgba(255,255,255,0.4)' } }}
+            styles={{ input: { background: 'transparent', color: headerConfig.title.color, borderColor: 'rgba(255,255,255,0.4)' } }}
           />
         </Group>
 

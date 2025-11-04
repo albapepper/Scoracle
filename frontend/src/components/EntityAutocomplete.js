@@ -23,11 +23,22 @@ export default function EntityAutocomplete({ entityType, onSelect, placeholder }
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState([]);
   const [error, setError] = useState('');
+  const [skipNextFetch, setSkipNextFetch] = useState(false);
   const debounced = useDebounce(query, 300);
   const abortRef = useRef();
 
   useEffect(() => {
-    if (debounced.trim().length < 2) { setResults([]); setError(''); return; }
+    const trimmed = debounced.trim();
+
+    if (skipNextFetch) {
+      return;
+    }
+
+    if (trimmed.length < 2) {
+      setResults([]);
+      setError('');
+      return;
+    }
 
     const fetchData = async () => {
       if (abortRef.current) abortRef.current.abort();
@@ -50,19 +61,29 @@ export default function EntityAutocomplete({ entityType, onSelect, placeholder }
       }
     };
     fetchData();
-  }, [debounced, entityType, activeSport, t]);
+  }, [debounced, entityType, activeSport, t, skipNextFetch]);
 
   const handleSelect = (item) => {
     onSelect(item);
-    setQuery(item.label);
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+    const label = item.label || '';
+    setQuery(label);
     setResults([]);
+    setSkipNextFetch(true);
+  };
+
+  const handleChange = (e) => {
+    setSkipNextFetch(false);
+    setQuery(e.target.value);
   };
 
   return (
     <div style={{ position: 'relative' }}>
       <TextInput
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={handleChange}
         placeholder={placeholder || t('search.searchEntity', { entity: t(`common.entity.${entityType}`) })}
         icon={loading ? <Loader size="xs" /> : <IconSearch size={16} />}
         styles={{ input: { backgroundColor: theme.colors.background.secondary } }}

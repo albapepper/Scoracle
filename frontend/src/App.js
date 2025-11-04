@@ -1,7 +1,8 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell } from '@mantine/core';
-import theme from './theme';
+import { useThemeMode } from './ThemeProvider';
+import { getThemeColors } from './theme';
 
 // Theme provider
 import { ThemeProvider } from './ThemeProvider';
@@ -19,44 +20,52 @@ import NotFoundPage from './pages/NotFoundPage';
 // Components
 import Header from './components/Header';
 import Footer from './components/Footer';
-// No global widget config needed for the minimal template
+
+function AppContent() {
+  const { colorScheme } = useThemeMode();
+  const colors = getThemeColors(colorScheme);
+  
+  return (
+    <AppShell
+      header={{ height: 60 }}
+      footer={{ height: 60 }}
+      padding="md"
+      styles={{ main: { backgroundColor: colors.background.primary } }}
+    >
+      <AppShell.Header>
+        <Header />
+      </AppShell.Header>
+      
+      <AppShell.Main>
+        <div className="container">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/mentions/:entityType/:entityId" element={<MentionsPage />} />
+            {/* Back-compat redirects from legacy routes */}
+            <Route path="/player/:playerId" element={<Navigate to={location => `/entity/player/${location.pathname.split('/').pop()}`} replace />} />
+            <Route path="/team/:teamId" element={<Navigate to={location => `/entity/team/${location.pathname.split('/').pop()}`} replace />} />
+            <Route path="/entity/:entityType/:entityId" element={<EntityPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </div>
+      </AppShell.Main>
+
+      <AppShell.Footer>
+        <Footer />
+      </AppShell.Footer>
+    </AppShell>
+  );
+}
 
 function App() {
   return (
     <ThemeProvider>
       <LanguageProvider>
-      <SportContextProvider>
-        <AppShell
-          header={{ height: 60 }}
-          footer={{ height: 60 }}
-          padding="md"
-          styles={{ main: { backgroundColor: theme.colors.background.primary } }}
-        >
-        <AppShell.Header>
-          <Header />
-        </AppShell.Header>
-        
-        <AppShell.Main>
-          <div className="container">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/mentions/:entityType/:entityId" element={<MentionsPage />} />
-              {/* Back-compat redirects from legacy routes */}
-              <Route path="/player/:playerId" element={<Navigate to={location => `/entity/player/${location.pathname.split('/').pop()}`} replace />} />
-              <Route path="/team/:teamId" element={<Navigate to={location => `/entity/team/${location.pathname.split('/').pop()}`} replace />} />
-              <Route path="/entity/:entityType/:entityId" element={<EntityPage />} />
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </div>
-        </AppShell.Main>
-
-        <AppShell.Footer>
-          <Footer />
-        </AppShell.Footer>
-      </AppShell>
-    </SportContextProvider>
-  </LanguageProvider>
-  </ThemeProvider>
+        <SportContextProvider>
+          <AppContent />
+        </SportContextProvider>
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }
 

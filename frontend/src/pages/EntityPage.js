@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Container, Title, Card, Group, Button, Stack } from '@mantine/core';
 // Keep page independent of SportContext; use sport from URL only
@@ -11,6 +11,7 @@ export default function EntityPage() {
   const type = (entityType || '').toLowerCase() === 'team' ? 'team' : 'player';
   const { t } = useTranslation();
   const [activeSport, setActiveSport] = React.useState('FOOTBALL');
+  const season = useMemo(() => String(new Date().getFullYear() - 1), []);
 
   // Read sport from URL
   React.useEffect(() => {
@@ -37,29 +38,25 @@ export default function EntityPage() {
         <ApiSportsConfig apiKey="4a5a713b507782a9b85c8c4d1d8427a4" sport={activeSport} />
 
         <Card withBorder p="lg">
-          {type === 'player' ? (
-            <ApiSportsWidget
-              type="player"
-              sport={activeSport}
-              data={{
-                playerId: entityId,
-                season: '2025',
-                playerStatistics: 'true',
-                playerTrophies: 'true',
-                playerInjuries: 'true',
-              }}
-            />
-          ) : (
-            <ApiSportsWidget
-              type="team"
-              sport={activeSport}
-              data={{
-                teamId: entityId,
-                teamSquad: 'true',
-                teamStatistics: 'true',
-              }}
-            />
-          )}
+          <ApiSportsWidget
+            type={type}
+            data={
+              type === 'player'
+                ? {
+                    playerId: entityId,
+                    season,
+                    playerStatistics: 'true',
+                    playerTrophies: 'true',
+                    playerInjuries: 'true',
+                  }
+                : {
+                    teamId: entityId,
+                    season,
+                    teamSquad: 'true',
+                    teamStatistics: 'true',
+                  }
+            }
+          />
         </Card>
       </Stack>
     </Container>

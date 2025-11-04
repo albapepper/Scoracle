@@ -389,24 +389,31 @@ async def suggestions_from_local_or_upstream(entity_type: str, sport: str, q: st
     if et == "player":
         loc = search_players(s, q, limit)
         for p in loc:
-            label = p["name"] if not p.get("current_team") else f"{p['name']} — {p['current_team']}"
+            raw_name = (p.get("name") or "").strip()
+            team_name = (p.get("current_team") or "").strip()
+            label = f"{raw_name} ({team_name})" if team_name else raw_name
             out.append({
                 "id": p["id"],
                 "label": label,
+                "name": raw_name,
                 "entity_type": "player",
                 "sport": s,
-                "team_abbr": p.get("current_team"),
+                "team": team_name or None,
+                "team_abbr": p.get("team_abbr"),
             })
         return out[:limit]
     if et == "team":
         loc = search_teams(s, q, limit)
         for t in loc:
-            label = t["name"] if not t.get("current_league") else f"{t['name']} — {t['current_league']}"
+            raw_name = (t.get("name") or "").strip()
+            label = raw_name or t.get("current_league") or ""
             out.append({
                 "id": t["id"],
                 "label": label,
+                "name": raw_name,
                 "entity_type": "team",
                 "sport": s,
+                "league": (t.get("current_league") or "").strip() or None,
                 "team_abbr": None,
             })
         return out[:limit]

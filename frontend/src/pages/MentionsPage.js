@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   Container,
@@ -9,22 +9,26 @@ import {
   Button,
   Loader,
   Stack,
-  Divider,
+  Image,
+  Tabs,
   Box,
-  List,
 } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 // No SportContext dependency — keep page driven purely by URL params
 import ApiSportsWidget from '../components/ApiSportsWidget';
 import ApiSportsConfig from '../components/ApiSportsConfig';
-import { getEntityMentions } from '../services/api';
-import theme from '../theme';
+import { useThemeMode } from '../ThemeProvider';
+import { getThemeColors } from '../theme';
+import { getEntityMentions as fetchEntityMentions } from '../services/api';
 
 function MentionsPage() {
   const { entityType, entityId } = useParams();
   // Read sport from query string only
   const [activeSport, setActiveSport] = useState('FOOTBALL');
   const { t } = useTranslation();
+  const { colorScheme } = useThemeMode();
+  const colors = getThemeColors(colorScheme);
+  const season = useMemo(() => String(new Date().getFullYear() - 1), []);
 
   const [mentions, setMentions] = useState([]);
   const [entityInfo, setEntityInfo] = useState(null);
@@ -48,7 +52,7 @@ function MentionsPage() {
       setIsLoading(true);
       setError('');
       try {
-        const data = await getEntityMentions(entityType, entityId, activeSport);
+        const data = await fetchEntityMentions(entityType, entityId, activeSport);
         const sortedMentions = (data.mentions || []).sort(
           (a, b) => new Date(b.pub_date) - new Date(a.pub_date)
         );
@@ -71,7 +75,7 @@ function MentionsPage() {
   if (isLoading) {
     return (
       <Container size="md" py="xl" ta="center">
-        <Loader size="xl" color={theme.colors.ui.primary} />
+        <Loader size="xl" color={colors.ui.primary} />
         <Text mt="md">{t('mentions.loading')}</Text>
       </Container>
     );
@@ -80,14 +84,14 @@ function MentionsPage() {
   if (error) {
     return (
       <Container size="md" py="xl" ta="center">
-        <Title order={3} c={theme.colors.status.error}>
+        <Title order={3} c={colors.status.error}>
           {error}
         </Title>
         <Button
           component={Link}
           to="/"
           mt="md"
-          style={{ backgroundColor: theme.colors.ui.primary }}
+          style={{ backgroundColor: colors.ui.primary }}
         >
           {t('common.returnHome')}
         </Button>
@@ -98,103 +102,148 @@ function MentionsPage() {
   return (
     <Container size="md" py="xl">
       <Stack spacing="xl">
-        {/* Header */}
-        <Card withBorder p="lg">
-          <Group position="apart" align="center">
-            <div>
-              <Title order={2} style={{ color: theme.colors.text.primary }}>
-                {displayName}
-              </Title>
-            </div>
+        {/* Widget + profile card */}
+        <Card shadow="sm" p="lg" radius="md" withBorder>
+          <Stack spacing="lg" align="center">
+            <Title order={2} style={{ color: colors.text.primary, textAlign: 'center' }}>
+              {displayName}
+            </Title>
+            <Stack w="100%" align="center">
+              {/* Minimal, per-page config to provide key/host to the widget library */}
+              <ApiSportsConfig apiKey="4a5a713b507782a9b85c8c4d1d8427a4" sport={activeSport} />
+              {entityId && (
+                <Box w="100%" style={{ display: 'flex', justifyContent: 'center' }}>
+                  <ApiSportsWidget
+                    type={entityType}
+                    data={
+                      entityType === 'team'
+                      ? {
+                          teamId: entityId,
+                            season,
+                          teamSquad: 'true',
+                          teamStatistics: 'true',
+                        }
+                        : {
+                            playerId: entityId,
+                            season,
+                            playerStatistics: 'true',
+                            playerTrophies: 'true',
+                            playerInjuries: 'true',
+                          }
+                    }
+                  />
+                </Box>
+              )}
+            </Stack>
             <Button
               component={Link}
               to={`/entity/${entityType}/${entityId}?sport=${encodeURIComponent(activeSport)}`}
-              style={{ backgroundColor: theme.colors.ui.primary, color: 'white' }}
+              style={{ backgroundColor: colors.ui.primary, color: 'white' }}
               size="md"
+              fullWidth
             >
               {t('mentions.statisticalProfile')}
             </Button>
-          </Group>
-        </Card>
-
-        {/* API-Sports Widget (minimal preview) */}
-        <Card shadow="sm" p="lg" radius="md" withBorder>
-          <Stack>
-            <Title order={3}>{t('mentions.widgetPreview')}</Title>
-            {/* Minimal, per-page config to provide key/host to the widget library */}
-            <ApiSportsConfig apiKey="4a5a713b507782a9b85c8c4d1d8427a4" sport={activeSport} />
-            {entityType === 'team' && entityId && (
-              <>
-                <ApiSportsWidget
-                  type="team"
-                  sport={activeSport}
-                  data={{ teamId: entityId, teamSquad: 'true', teamStatistics: 'true' }}
-                />
-                <div id="player-container" />
-              </>
-            )}
-            {entityType === 'player' && entityId && (
-              <>
-                <ApiSportsWidget
-                  type="player"
-                  sport={activeSport}
-                  data={{ playerId: entityId, season: '2025', playerStatistics: 'true', playerTrophies: 'true', playerInjuries: 'true' }}
-                />
-                <div id="player-container" />
-              </>
-            )}
           </Stack>
         </Card>
 
-        {/* Recent Mentions */}
-        <div>
-          <Title order={3} mb="sm" style={{ color: theme.colors.text.accent }}>
-            {t('mentions.recent')}
-          </Title>
-          <Text c="dimmed" mb="lg">
-            {t('mentions.newsMentioning', { name: displayName })}
-          </Text>
+        {/* Content tabs */}
+        <Card shadow="sm" p="lg" radius="md" withBorder>
+          <Tabs defaultValue="articles">
+            <Tabs.List justify="center">
+              <Tabs.Tab value="articles">{t('mentions.articlesTab', 'Articles')}</Tabs.Tab>
+              <Tabs.Tab value="tweets">{t('mentions.tweetsTab', 'Tweets')}</Tabs.Tab>
+              <Tabs.Tab value="reddit">{t('mentions.redditTab', 'Reddit')}</Tabs.Tab>
+            </Tabs.List>
 
-          <Divider mb="lg" />
+            <Tabs.Panel value="articles" pt="md">
+              {mentions.length === 0 ? (
+                <Text>{t('mentions.none')}</Text>
+              ) : (
+                <Stack spacing="lg">
+                  {mentions.map((mention, index) => {
+                    const description = mention.description
+                      ? mention.description.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+                      : '';
+                    const formattedDate = mention.pub_date
+                      ? new Date(mention.pub_date).toLocaleDateString()
+                      : '';
+                    const meta = [mention.source, formattedDate].filter(Boolean).join(' • ');
 
-          {mentions.length === 0 ? (
-            <Text>{t('mentions.none')}</Text>
-          ) : (
-            <List spacing="md" listStyleType="none" center>
-              {mentions.map((mention, index) => (
-                <List.Item key={index}>
-                  <Group position="apart" wrap="nowrap" align="flex-start">
-                    <Box style={{ flex: 1 }}>
-                      <Text weight={600} size="lg" lineClamp={2}>
-                        {mention.title}
-                      </Text>
-                      <Group spacing="xs" mt={5}>
-                        <Text size="sm" c="dimmed">
-                          {mention.source} • {new Date(mention.pub_date).toLocaleDateString()}
-                        </Text>
-                      </Group>
-                    </Box>
-                    <Button
-                      component="a"
-                      href={mention.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      variant="outline"
-                      size="compact-sm"
-                      style={{
-                        borderColor: theme.colors.ui.primary,
-                        color: theme.colors.ui.primary,
-                      }}
-                    >
-                      {t('common.link')}
-                    </Button>
-                  </Group>
-                  <Divider mt="md" mb="md" />
-                </List.Item>
-              ))}
-            </List>
-          )}
-        </div>
+                    return (
+                      <Card
+                        key={`${mention.link || index}`}
+                        shadow="sm"
+                        p="lg"
+                        radius="md"
+                        withBorder
+                      >
+                        <Stack spacing="sm">
+                          <Group align="flex-start" spacing="lg">
+                            {mention.image_url && (
+                              <Image
+                                src={mention.image_url}
+                                alt={mention.title}
+                                radius="md"
+                                width={120}
+                                height={80}
+                                fit="cover"
+                                withPlaceholder
+                              />
+                            )}
+                            <Stack spacing="xs" style={{ flex: 1 }}>
+                              <Text weight={600} size="lg" lineClamp={2}>
+                                {mention.title}
+                              </Text>
+                              {description && (
+                                <Text size="sm" c="dimmed" lineClamp={3}>
+                                  {description}
+                                </Text>
+                              )}
+                            </Stack>
+                          </Group>
+                          <Group position="apart" align="center" mt="xs" spacing="md">
+                            {meta && (
+                              <Text size="sm" c="dimmed">
+                                {meta}
+                              </Text>
+                            )}
+                            <Button
+                              component="a"
+                              href={mention.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              variant="outline"
+                              size="compact-sm"
+                              style={{
+                                borderColor: colors.ui.primary,
+                                color: colors.ui.primary,
+                              }}
+                            >
+                              {t('common.link')}
+                            </Button>
+                          </Group>
+                        </Stack>
+                      </Card>
+                    );
+                  })}
+                </Stack>
+              )}
+            </Tabs.Panel>
+
+            <Tabs.Panel value="tweets" pt="md">
+              <Text c="dimmed">
+                {t('mentions.tweetsComingSoon', 'Twitter feed coming soon.')}
+              </Text>
+            </Tabs.Panel>
+
+            <Tabs.Panel value="reddit" pt="md">
+              <Text c="dimmed">
+                {t('mentions.redditComingSoon', 'Reddit feed coming soon.')}
+              </Text>
+            </Tabs.Panel>
+          </Tabs>
+        </Card>
       </Stack>
     </Container>
   );

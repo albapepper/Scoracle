@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     
     # API-Sports.com key (required provider)
     API_SPORTS_KEY: str = os.getenv("API_SPORTS_KEY", "")
+    # News API (optional; falls back to Google RSS when absent)
+    NEWS_API_KEY: str = os.getenv("NEWS_API_KEY", "YOUR_NEWS_API_KEY")
+    NEWS_API_ENDPOINT: str = os.getenv(
+        "NEWS_API_ENDPOINT",
+        "https://newsapi.org/v2/everything",
+    )
     # Registry removed: local autocomplete uses per-sport localdb files.
     REGISTRY_DB_PATH: str = os.getenv("REGISTRY_DB_PATH", "instance/registry.db")  # deprecated
     # Default seasons/leagues for API-Sports where applicable

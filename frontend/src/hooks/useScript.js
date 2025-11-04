@@ -18,7 +18,7 @@ export function useScript(src) {
   const script = document.createElement('script');
   script.src = src;
   script.async = true;
-  script.type = 'text/javascript';
+  script.type = 'module';
   // Helps error reporting and can avoid some proxy quirks; harmless otherwise
   script.crossOrigin = 'anonymous';
   script.referrerPolicy = 'no-referrer-when-downgrade';

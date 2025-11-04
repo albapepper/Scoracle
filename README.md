@@ -9,7 +9,7 @@ Scoracle is a modern web application that aggregates near‑real‑time sports n
 | Multi‑Sport | Pluggable sport context (currently NBA focus; NFL/EPL scaffolding) |
 | Lean Endpoints | Sport-first endpoints return summaries; rich stats via client widgets |
 | Smart Caching | Tiered in‑memory TTL caches for summaries and stats (invalidate naturally via TTL) |
-| Mentions & Links | Google RSS query refinement w/ entity name resolution |
+| Mentions & Links | Configurable News API (fallback to refined Google RSS) |
 | React Query | Automatic request dedupe + caching on frontend |
 | Entity Preload Cache | Client context seeds detail pages to eliminate blank loading states |
 | Error Envelope | Consistent JSON error contract for all unhandled exceptions |
@@ -73,22 +73,6 @@ Copy-Item .env.example .env -Force
 ```
 
 API docs: [http://localhost:8000/api/docs](http://localhost:8000/api/docs)
-
-### Lean mode (frontend-heavy)
-
-Set an environment flag to minimize backend responsibilities (no upstream API calls, local DB + RSS only):
-
-
-```powershell
-$env:LEAN_BACKEND = "true"; ./local.ps1 backend
-```
-
-
-In lean mode:
-
-* Search, summaries, and mentions use only local SQLite and Google RSS.
-* Seeding uses a static minimal dataset even if `API_SPORTS_KEY` is set.
-* Frontend should use API-Sports widgets (or direct provider calls) for rich stats.
 
 ### Frontend Local Dev
 
@@ -159,13 +143,15 @@ Percentiles are computed lazily per unique (entity, sport, season) from fetched 
 ## 🔄 Navigation Flow
 
 1. User selects sport and entity type (player or team) and searches.
-2. Mentions page loads basic summary entity info (API provided) + news (Google RSS provided).
+2. Mentions page loads basic summary entity info (API provided) + news (configured News API when available, otherwise Google RSS fallback).
 3. Clicking "View Stats" preloads summary into `EntityCacheContext`.
 4. Player/Team page mounts: seeds state from cache immediately, then React Query fetch resolves full payload.
 
 ## 🔑 API Keys
 
 Provider: API‑Sports. Set your key via environment variable `API_SPORTS_KEY`.
+
+Optional provider: News API. Supply `NEWS_API_KEY` (default placeholder `YOUR_NEWS_API_KEY`). When configured, the backend queries the News API first for entity mentions and transparently falls back to Google RSS when no results are returned or if the key is missing. You can also override `NEWS_API_ENDPOINT` if you are proxying another compatible service.
 
 Frontend widgets (optional): to enable API‑Sports client-side widgets, add a React environment variable in `frontend/.env`:
 

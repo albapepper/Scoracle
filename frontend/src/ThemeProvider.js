@@ -2,94 +2,185 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { MantineProvider, createTheme } from '@mantine/core';
 import theme from './theme';
 
-// Convert our theme to Mantine's format
-const baseMantineTheme = createTheme({
-  colors: {
-    // Create a custom color palette based on our theme
-    primary: [
-      '#f0f4f8', // 0 - lightest
-      '#e2e8f0',
-      '#cbd5e0',
-      '#a0b0c0',
-      '#8096af',
-      '#66809f',
-      '#546a7b', // 6 - our primary color
-      '#455b70',
-      '#364c63',
-      '#273b52', // 9 - darkest
-    ],
-    accent: [
-      '#edf2eb',
-      '#dae5d6',
-      '#c7d8c1',
-      '#b4cbad',
-      '#a1be99',
-      '#8eb185',
-      '#879e7e', // Our accent color
-      '#748a6c',
-      '#607658',
-      '#4d6247',
-    ]
-  },
-  
-  primaryColor: 'primary', // Set the primary color
-  
-  // Set global styles
-  components: {
-    Button: {
-      defaultProps: {
-        color: 'primary',
-      },
+// Create light mode Mantine theme
+const createLightMantineTheme = () => {
+  const lightColors = theme.light.colors;
+  return createTheme({
+    colors: {
+      primary: [
+        '#f0f4f8',
+        '#e2e8f0',
+        '#cbd5e0',
+        '#a0b0c0',
+        '#8096af',
+        '#66809f',
+        '#546a7b',
+        '#455b70',
+        '#364c63',
+        '#273b52',
+      ],
+      accent: [
+        '#edf2eb',
+        '#dae5d6',
+        '#c7d8c1',
+        '#b4cbad',
+        '#a1be99',
+        '#8eb185',
+        '#879e7e',
+        '#748a6c',
+        '#607658',
+        '#4d6247',
+      ]
     },
-    Card: {
-      styles: {
-        root: {
-          backgroundColor: theme.colors.background.secondary,
+    
+    primaryColor: 'primary',
+    
+    components: {
+      Button: {
+        defaultProps: {
+          color: 'primary',
+        },
+      },
+      Card: {
+        styles: {
+          root: {
+            backgroundColor: lightColors.background.secondary,
+            borderColor: lightColors.ui.border,
+          },
+        },
+      },
+      Paper: {
+        styles: {
+          root: {
+            backgroundColor: lightColors.background.secondary,
+            borderColor: lightColors.ui.border,
+          },
         },
       },
     },
-    Paper: {
-      styles: {
-        root: {
-          backgroundColor: theme.colors.background.secondary,
+    
+    colorScheme: 'light',
+    
+    other: {
+      colors: lightColors,
+      typography: theme.typography,
+      spacing: theme.spacing,
+      borderRadius: theme.borderRadius,
+      boxShadow: theme.boxShadow.light,
+    },
+    
+    globalStyles: (mantineTheme) => ({
+      body: {
+        backgroundColor: lightColors.background.primary,
+        color: lightColors.text.primary,
+        fontFamily: "'Source Sans Pro', 'Segoe UI', sans-serif",
+      },
+      a: {
+        color: lightColors.ui.primary,
+        '&:hover': {
+          color: lightColors.ui.secondary,
+        },
+      },
+      h1: { fontFamily: "'Source Serif Pro', Georgia, serif" },
+      h2: { fontFamily: "'Source Serif Pro', Georgia, serif" },
+      h3: { fontFamily: "'Source Serif Pro', Georgia, serif" },
+      h4: { fontFamily: "'Source Serif Pro', Georgia, serif" },
+      h5: { fontFamily: "'Source Serif Pro', Georgia, serif" },
+      h6: { fontFamily: "'Source Serif Pro', Georgia, serif" },
+    }),
+  });
+};
+
+// Create dark mode Mantine theme
+const createDarkMantineTheme = () => {
+  const darkColors = theme.dark.colors;
+  return createTheme({
+    colors: {
+      primary: [
+        '#e2ecf5',
+        '#c5d8eb',
+        '#a8c4e1',
+        '#8ab0d8',
+        '#6d9cce',
+        '#5888c5',
+        '#3d70b6',
+        '#2e56a3',
+        '#1f3c90',
+        '#10227d',
+      ],
+      accent: [
+        '#e8f1e0',
+        '#d1e3c1',
+        '#bad5a2',
+        '#a3c783',
+        '#8cb964',
+        '#75ab45',
+        '#5e9d26',
+        '#478f07',
+        '#308100',
+        '#197300',
+      ]
+    },
+    
+    primaryColor: 'primary',
+    
+    components: {
+      Button: {
+        defaultProps: {
+          color: 'primary',
+        },
+      },
+      Card: {
+        styles: {
+          root: {
+            backgroundColor: darkColors.background.secondary,
+            borderColor: darkColors.ui.border,
+            color: darkColors.text.primary,
+          },
+        },
+      },
+      Paper: {
+        styles: {
+          root: {
+            backgroundColor: darkColors.background.secondary,
+            borderColor: darkColors.ui.border,
+            color: darkColors.text.primary,
+          },
         },
       },
     },
-  },
-  
-  // default; will be overridden by provider state
-  colorScheme: 'light',
-  
-  // Override default Mantine theme values
-  other: {
-    colors: theme.colors,
-    typography: theme.typography,
-    spacing: theme.spacing,
-    borderRadius: theme.borderRadius,
-    boxShadow: theme.boxShadow,
-  },
-  
-  // Custom global styles
-  globalStyles: (mantineTheme) => ({
-    body: {
-      backgroundColor: theme.colors.background.primary, // Eggshell background from our tokens
-      color: theme.colors.text.primary, // Dark text from tokens
-      fontFamily: "'Source Sans Pro', 'Segoe UI', sans-serif",
+    
+    colorScheme: 'dark',
+    
+    other: {
+      colors: darkColors,
+      typography: theme.typography,
+      spacing: theme.spacing,
+      borderRadius: theme.borderRadius,
+      boxShadow: theme.boxShadow.dark,
     },
-    a: {
-      color: '#546a7b', // Muted blue-slate
-      '&:hover': {
-        color: '#455b70',
+    
+    globalStyles: (mantineTheme) => ({
+      body: {
+        backgroundColor: darkColors.background.primary,
+        color: darkColors.text.primary,
+        fontFamily: "'Source Sans Pro', 'Segoe UI', sans-serif",
       },
-    },
-    h1: { fontFamily: "'Source Serif Pro', Georgia, serif" },
-    h2: { fontFamily: "'Source Serif Pro', Georgia, serif" },
-    h3: { fontFamily: "'Source Serif Pro', Georgia, serif" },
-    h4: { fontFamily: "'Source Serif Pro', Georgia, serif" },
-    h5: { fontFamily: "'Source Serif Pro', Georgia, serif" },
-    h6: { fontFamily: "'Source Serif Pro', Georgia, serif" },
-  }),
-});
+      a: {
+        color: darkColors.ui.primary,
+        '&:hover': {
+          color: darkColors.ui.secondary,
+        },
+      },
+      h1: { fontFamily: "'Source Serif Pro', Georgia, serif" },
+      h2: { fontFamily: "'Source Serif Pro', Georgia, serif" },
+      h3: { fontFamily: "'Source Serif Pro', Georgia, serif" },
+      h4: { fontFamily: "'Source Serif Pro', Georgia, serif" },
+      h5: { fontFamily: "'Source Serif Pro', Georgia, serif" },
+      h6: { fontFamily: "'Source Serif Pro', Georgia, serif" },
+    }),
+  });
+};
 
 // Color scheme context
 const ThemeModeContext = createContext();
@@ -116,7 +207,9 @@ export const ThemeProvider = ({ children }) => {
     try { localStorage.setItem('color-scheme', colorScheme); } catch (_) {}
   }, [colorScheme]);
 
-  const mantineTheme = useMemo(() => ({ ...baseMantineTheme, colorScheme }), [colorScheme]);
+  const mantineTheme = useMemo(() => {
+    return colorScheme === 'dark' ? createDarkMantineTheme() : createLightMantineTheme();
+  }, [colorScheme]);
 
   const value = useMemo(() => ({
     colorScheme,
