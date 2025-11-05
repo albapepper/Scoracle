@@ -121,10 +121,15 @@ function MentionsPage() {
                       entityType === 'team'
                         ? {
                             teamId: entityId,
+                                teamSquad: 'true',
+                                teamStatistics: 'true',
                           }
                         : {
                             playerId: entityId,
                             season,
+                                playerStatistics: 'true',
+                                playerTrophies: 'true',
+                                playerInjuries: 'true',
                           }
                     }
                   />
