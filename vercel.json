@@ -1,4 +1,11 @@
 {
+	"builds": [
+		{
+			"src": "frontend/package.json",
+			"use": "@vercel/static-build",
+			"config": { "distDir": "build" }
+		}
+	],
 	"functions": {
 		"api/**/*.py": {
 			"runtime": "python3.11",
@@ -12,6 +19,7 @@
 		}
 	},
 	"routes": [
-		{ "src": "/api/(.*)", "dest": "/api/index.py" }
+		{ "src": "^/api(/.*)?$", "dest": "/api/index.py" },
+		{ "src": "^(?!/api)(.*)$", "dest": "/index.html" }
 	]
 }

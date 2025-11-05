@@ -81,12 +81,6 @@ function MentionsPage() {
   return (
     <Container size="md" py="xl">
       <Stack spacing="xl">
-        <ApiSportsConfig
-          apiKey="4a5a713b507782a9b85c8c4d1d8427a4"
-          sport={activeSport}
-          theme={colorScheme === 'dark' ? 'grey' : 'white'}
-        />
-
         {isLoading && (
           <Stack spacing="lg" align="center">
             <Loader size="xl" color={colors.ui.primary} />

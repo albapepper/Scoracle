@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Container, Title, Card, Group, Button, Stack } from '@mantine/core';
 import ApiSportsWidget from '../components/ApiSportsWidget';
+import ApiSportsConfig from '../components/ApiSportsConfig';
 import { useTranslation } from 'react-i18next';
 import { useSportContext } from '../context/SportContext';
 

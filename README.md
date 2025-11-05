@@ -34,14 +34,17 @@ scoracle/
 │   │   ├── repositories/          # Entity registry abstraction (SQLite)
 │   │   └── domain/                # (Future) Core domain logic (stats transforms)
 │   ├── requirements.txt
-│   └── Dockerfile
 ├── frontend/
 │   ├── src/
 │   │   ├── pages/                 # PlayerPage, TeamPage consume `/full` endpoints
 │   │   ├── context/               # SportContext, EntityCacheContext
 │   │   ├── services/              # `api.js` (axios + typed helper methods)
 │   │   └── visualizations/        # D3 components (radar, bar charts)
-├── docker-compose.yml
+├── api/
+│   └── index.py                   # Vercel serverless entrypoint mounting FastAPI app
+├── instance/
+│   └── localdb/                   # Read-only SQLite seeds bundled for serverless
+├── vercel.json                    # Vercel config (builds, routes, functions)
 └── README.md
 ```
 
@@ -50,20 +53,7 @@ scoracle/
 ### Prerequisites
 
 * Python 3.11+ (tested)
-* Node.js 18+  
-* Docker (optional but recommended for parity)
-
-### Run Entire Stack (Docker)
-
-```powershell
-git clone https://github.com/albapepper/Scoracle.git
-cd Scoracle
-docker compose up --build
-```
-
-Frontend: [http://localhost:3000](http://localhost:3000)  
-API Docs: [http://localhost:8000/api/docs](http://localhost:8000/api/docs)  
-Health: [http://localhost:8000/api/health](http://localhost:8000/api/health)
+* Node.js 18+
 
 ### Backend Local Dev (Windows PowerShell)
 
@@ -162,9 +152,30 @@ REACT_APP_APISPORTS_KEY=your_api_sports_key_here
 
 Alternatively, you can set `REACT_APP_APISPORTS_WIDGET_KEY` for compatibility. At runtime, a temporary key can be provided via localStorage (`APISPORTS_WIDGET_KEY`) or URL query `?apisportsKey=...` for quick testing.
 
-## 📤 Deployment
+## 📤 Deployment (Vercel)
 
-See `docs/deployment/cloud-run.md` for Google Cloud Run steps (build images, push to Artifact Registry, deploy services, set concurrency/timeouts).
+This repo is configured for Vercel:
+
+- Frontend: React app under `frontend/` is built with `@vercel/static-build` and served as a static site.
+- Backend: FastAPI app is exposed as a Python Serverless Function at `/api` via `api/index.py`.
+- Local SQLite seeds under `instance/localdb/` are bundled read‑only and used by sync endpoints to seed the client’s IndexedDB.
+
+Steps:
+
+1. Connect the repository to Vercel.
+2. No framework selection needed; `vercel.json` handles builds and routes.
+3. Environment variables (Project → Settings → Environment Variables):
+   - `API_SPORTS_KEY`
+   - Optional: `NEWS_API_KEY`, `NEWS_API_ENDPOINT`
+4. Deploy. After deploy:
+   - App UI: `https://<your-domain>/`
+   - API docs: `https://<your-domain>/api/docs`
+   - Health: `https://<your-domain>/api/health`
+
+Notes:
+
+- The serverless filesystem is read‑only; the app opens SQLite in read‑only mode automatically on Vercel.
+- If bundle size grows, consider splitting sport DBs or moving them to an external object store/CDN.
 
 ## 📄 License
 
