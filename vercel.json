@@ -8,7 +8,7 @@
 	],
 	"functions": {
 		"api/**/*.py": {
-			"runtime": "python3.11",
+			"runtime": "vercel-python@3.11",
 			"includeFiles": "{backend/**,instance/localdb/**}",
 			"excludeFiles": "backend/venv/**"
 		}
