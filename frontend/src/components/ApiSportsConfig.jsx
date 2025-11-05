@@ -4,6 +4,7 @@ import { APISPORTS_KEY } from '../config';
 import { useLanguage } from '../context/LanguageContext';
 import { useSportContext } from '../context/SportContext';
 import { useThemeMode } from '../ThemeProvider';
+import useScript from '../hooks/useScript';
 
 const SPORT_HOSTS = {
   football: 'https://v3.football.api-sports.io/',
@@ -33,6 +34,7 @@ export default function ApiSportsConfig({
   targets,
   style,
 }) {
+  useScript('https://widgets.api-sports.io/3.1.0/widgets.js');
   const { language } = useLanguage();
   const { activeSport } = useSportContext();
   const { colorScheme } = useThemeMode();

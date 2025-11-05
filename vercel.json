@@ -13,9 +13,7 @@
 				"backend/**",
 				"instance/localdb/**"
 			],
-			"excludeFiles": [
-				"backend/venv/**"
-			]
+			"excludeFiles": "backend/venv/**"
 		}
 	},
 	"routes": [
