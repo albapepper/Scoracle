@@ -1,0 +1,17 @@
+{
+	"functions": {
+		"api/**/*.py": {
+			"runtime": "python3.11",
+			"includeFiles": [
+				"backend/**",
+				"instance/localdb/**"
+			],
+			"excludeFiles": [
+				"backend/venv/**"
+			]
+		}
+	},
+	"routes": [
+		{ "src": "/api/(.*)", "dest": "/api/index.py" }
+	]
+}

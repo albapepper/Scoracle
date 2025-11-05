@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { useIndexedDBSync } from '../hooks/useIndexedDBSync';
 
 // Create context
 const SportContext = createContext();
@@ -13,6 +14,9 @@ const SPORTS = [
 export const SportContextProvider = ({ children }) => {
   // Default to FOOTBALL to avoid accidental basketball default
   const [activeSport, setActiveSport] = useState('FOOTBALL');
+  
+  // Trigger IndexedDB sync when sport changes
+  const { syncing, syncError, syncStats } = useIndexedDBSync(activeSport);
   
   // Load from URL (?sport=FOOTBALL) or localStorage on initial render
   useEffect(() => {
@@ -47,7 +51,8 @@ export const SportContextProvider = ({ children }) => {
       value={{ 
         activeSport, 
         changeSport, 
-        sports: SPORTS 
+        sports: SPORTS,
+        indexedDBSync: { syncing, syncError, syncStats }
       }}
     >
       {children}

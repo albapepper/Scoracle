@@ -14,17 +14,18 @@ import {
   Box,
 } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-// No SportContext dependency — keep page driven purely by URL params
 import ApiSportsWidget from '../components/ApiSportsWidget';
-import ApiSportsConfig from '../components/ApiSportsConfig';
 import { useThemeMode } from '../ThemeProvider';
 import { getThemeColors } from '../theme';
 import { getEntityMentions as fetchEntityMentions } from '../services/api';
+import ApiSportsConfig from '../components/ApiSportsConfig';
+import { useSportContext } from '../context/SportContext';
 
 function MentionsPage() {
   const { entityType, entityId } = useParams();
   // Read sport from query string only
-  const [activeSport, setActiveSport] = useState('FOOTBALL');
+  const { activeSport: contextSport, changeSport } = useSportContext();
+  const [activeSport, setActiveSport] = useState(contextSport || 'FOOTBALL');
   const { t } = useTranslation();
   const { colorScheme } = useThemeMode();
   const colors = getThemeColors(colorScheme);
@@ -37,15 +38,20 @@ function MentionsPage() {
   const [entityName, setEntityName] = useState('');
 
   useEffect(() => {
-    // read optional name and sport from query params
     try {
       const usp = new URLSearchParams(window.location.search);
       const n = usp.get('name');
       if (n) setEntityName(n);
       const s = usp.get('sport');
-      if (s) setActiveSport(s.toUpperCase());
+    if (s) {
+      const upper = s.toUpperCase();
+      setActiveSport(upper);
+      changeSport(upper);
+      return;
+    }
     } catch (_) {}
-  }, []);
+  setActiveSport(contextSport || 'FOOTBALL');
+}, [changeSport, contextSport]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -72,63 +78,59 @@ function MentionsPage() {
     ? [entityInfo?.first_name, entityInfo?.last_name].filter(Boolean).join(' ').trim()
     : entityInfo?.name) || `${entityType} ${entityId}`;
 
-  if (isLoading) {
-    return (
-      <Container size="md" py="xl" ta="center">
-        <Loader size="xl" color={colors.ui.primary} />
-        <Text mt="md">{t('mentions.loading')}</Text>
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container size="md" py="xl" ta="center">
-        <Title order={3} c={colors.status.error}>
-          {error}
-        </Title>
-        <Button
-          component={Link}
-          to="/"
-          mt="md"
-          style={{ backgroundColor: colors.ui.primary }}
-        >
-          {t('common.returnHome')}
-        </Button>
-      </Container>
-    );
-  }
-
   return (
     <Container size="md" py="xl">
       <Stack spacing="xl">
+        <ApiSportsConfig
+          apiKey="4a5a713b507782a9b85c8c4d1d8427a4"
+          sport={activeSport}
+          theme={colorScheme === 'dark' ? 'grey' : 'white'}
+        />
+
+        {isLoading && (
+          <Stack spacing="lg" align="center">
+            <Loader size="xl" color={colors.ui.primary} />
+            <Text mt="md">{t('mentions.loading')}</Text>
+          </Stack>
+        )}
+
+        {error && !isLoading && (
+          <Stack spacing="lg" align="center">
+            <Title order={3} c={colors.status.error}>
+              {error}
+            </Title>
+            <Button
+              component={Link}
+              to="/"
+              mt="md"
+              style={{ backgroundColor: colors.ui.primary }}
+            >
+              {t('common.returnHome')}
+            </Button>
+          </Stack>
+        )}
+
+        {!isLoading && !error && (
+          <>
         {/* Widget + profile card */}
         <Card shadow="sm" p="lg" radius="md" withBorder>
           <Stack spacing="lg" align="center">
             <Title order={2} style={{ color: colors.text.primary, textAlign: 'center' }}>
-              {displayName}
-            </Title>
+                {displayName}
+              </Title>
             <Stack w="100%" align="center">
-              {/* Minimal, per-page config to provide key/host to the widget library */}
-              <ApiSportsConfig apiKey="4a5a713b507782a9b85c8c4d1d8427a4" sport={activeSport} />
               {entityId && (
                 <Box w="100%" style={{ display: 'flex', justifyContent: 'center' }}>
                   <ApiSportsWidget
                     type={entityType}
                     data={
                       entityType === 'team'
-                      ? {
-                          teamId: entityId,
-                            season,
-                          teamSquad: 'true',
-                          teamStatistics: 'true',
-                        }
+                        ? {
+                            teamId: entityId,
+                          }
                         : {
                             playerId: entityId,
                             season,
-                            playerStatistics: 'true',
-                            playerTrophies: 'true',
-                            playerInjuries: 'true',
                           }
                     }
                   />
@@ -157,9 +159,9 @@ function MentionsPage() {
             </Tabs.List>
 
             <Tabs.Panel value="articles" pt="md">
-              {mentions.length === 0 ? (
-                <Text>{t('mentions.none')}</Text>
-              ) : (
+          {mentions.length === 0 ? (
+            <Text>{t('mentions.none')}</Text>
+          ) : (
                 <Stack spacing="lg">
                   {mentions.map((mention, index) => {
                     const description = mention.description
@@ -192,9 +194,9 @@ function MentionsPage() {
                               />
                             )}
                             <Stack spacing="xs" style={{ flex: 1 }}>
-                              <Text weight={600} size="lg" lineClamp={2}>
-                                {mention.title}
-                              </Text>
+                      <Text weight={600} size="lg" lineClamp={2}>
+                        {mention.title}
+                      </Text>
                               {description && (
                                 <Text size="sm" c="dimmed" lineClamp={3}>
                                   {description}
@@ -204,25 +206,25 @@ function MentionsPage() {
                           </Group>
                           <Group position="apart" align="center" mt="xs" spacing="md">
                             {meta && (
-                              <Text size="sm" c="dimmed">
+                        <Text size="sm" c="dimmed">
                                 {meta}
-                              </Text>
+                        </Text>
                             )}
-                            <Button
-                              component="a"
-                              href={mention.link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              variant="outline"
-                              size="compact-sm"
-                              style={{
+                    <Button
+                      component="a"
+                      href={mention.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="outline"
+                      size="compact-sm"
+                      style={{
                                 borderColor: colors.ui.primary,
                                 color: colors.ui.primary,
-                              }}
-                            >
-                              {t('common.link')}
-                            </Button>
-                          </Group>
+                      }}
+                    >
+                      {t('common.link')}
+                    </Button>
+                  </Group>
                         </Stack>
                       </Card>
                     );
@@ -244,6 +246,8 @@ function MentionsPage() {
             </Tabs.Panel>
           </Tabs>
         </Card>
+        </>
+        )}
       </Stack>
     </Container>
   );

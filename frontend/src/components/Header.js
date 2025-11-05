@@ -25,7 +25,7 @@ function Header() {
 
   return (
     <Paper component="header" shadow="xs" radius={0} p={0} style={headerStyle}>
-      <Container size="xl" style={{ display: 'flex', alignItems: 'center', height: '60px' }}>
+      <Container size="xl" style={{ display: 'flex', alignItems: 'center', height: '60px', display: 'flex', alignItems: 'center' }}>
         {/* Left: Hamburger -> settings drawer */}
         <Group style={{ flex: 1 }}>
           <Tooltip label={t('header.menu')} withArrow>
@@ -38,7 +38,7 @@ function Header() {
         {/* Center: Brand/logo -> home */}
         <Box style={{ flex: 2, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <Link to="/" aria-label="Go to home" style={{ textDecoration: 'none' }}>
-            <img src="/scoracle-logo.png" alt="Scoracle" style={{ height: 36, display: 'block' }} />
+            <img src="/scoracle-logo.png" alt="Scoracle" style={{ height: 54, display: 'block' }} />
           </Link>
         </Box>
 

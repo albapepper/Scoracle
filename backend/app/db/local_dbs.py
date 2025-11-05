@@ -61,6 +61,16 @@ def _db_path_for_sport(sport: str) -> str:
 
 
 def _connect(path: str) -> sqlite3.Connection:
+    # In read-only environments (e.g., Vercel serverless) avoid filesystem writes
+    if os.getenv("VERCEL") == "1" or os.getenv("READ_ONLY_SQLITE") == "1":
+        uri = f"file:{path}?mode=ro"
+        conn = sqlite3.connect(uri, uri=True, check_same_thread=False)
+        try:
+            conn.execute("PRAGMA query_only=ON;")
+        except Exception:
+            # Best-effort; some sqlite builds may not support this pragma
+            pass
+        return conn
     os.makedirs(os.path.dirname(path), exist_ok=True)
     conn = sqlite3.connect(path, isolation_level=None, check_same_thread=False)
     conn.execute("PRAGMA journal_mode=WAL;")
@@ -189,6 +199,10 @@ def _init_if_needed(sport: str):
         if s in _INITIALIZED:
             return
         path = _db_path_for_sport(s)
+        # In read-only environments, skip schema initialization/migrations
+        if os.getenv("VERCEL") == "1" or os.getenv("READ_ONLY_SQLITE") == "1":
+            _INITIALIZED.add(s)
+            return
         conn = _connect(path)
         try:
             _ensure_schema(conn)

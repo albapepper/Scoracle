@@ -305,6 +305,86 @@ async def sport_entities_dump(sport: str, entity_type: str = Query("player")):
     return {"sport": s, "entity_type": et, "count": len(items), "items": items}
 
 
+@router.get("/{sport}/sync/players")
+async def sport_sync_players(sport: str):
+    """Export full player dataset for frontend IndexedDB sync.
+    
+    Returns: {
+      sport: string,
+      items: [{id, firstName, lastName, currentTeam}, ...],
+      count: number,
+      timestamp: ISO8601
+    }
+    """
+    from datetime import datetime, timezone
+    s = sport.upper()
+    try:
+        from app.db.local_dbs import list_all_players
+        players_raw = list_all_players(s)
+        
+        items = []
+        for pid, name in players_raw:
+            # Split name into first and last
+            parts = (name or "").split()
+            first_name = parts[0] if parts else ""
+            last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
+            
+            # Try to get team info
+            player_record = local_get_player_by_id(s, int(pid))
+            current_team = player_record.get("current_team") if player_record else None
+            
+            items.append({
+                "id": int(pid),
+                "firstName": first_name,
+                "lastName": last_name,
+                "currentTeam": current_team,
+            })
+        
+        return {
+            "sport": s,
+            "items": items,
+            "count": len(items),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to sync players: {str(e)}")
+
+
+@router.get("/{sport}/sync/teams")
+async def sport_sync_teams(sport: str):
+    """Export full team dataset for frontend IndexedDB sync.
+    
+    Returns: {
+      sport: string,
+      items: [{id, name}, ...],
+      count: number,
+      timestamp: ISO8601
+    }
+    """
+    from datetime import datetime, timezone
+    s = sport.upper()
+    try:
+        from app.db.local_dbs import list_all_teams
+        teams_raw = list_all_teams(s)
+        
+        items = [
+            {
+                "id": int(tid),
+                "name": name,
+            }
+            for (tid, name) in teams_raw
+        ]
+        
+        return {
+            "sport": s,
+            "items": items,
+            "count": len(items),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to sync teams: {str(e)}")
+
+
 def _summarize_comentions_for_mentions(sport: str, mentions: list[dict], target_entity: tuple[str, str]) -> list[dict]:
     """Extract other local entities mentioned across the RSS items and return counts.
 

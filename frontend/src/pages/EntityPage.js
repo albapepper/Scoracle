@@ -1,16 +1,15 @@
 import React, { useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Container, Title, Card, Group, Button, Stack } from '@mantine/core';
-// Keep page independent of SportContext; use sport from URL only
 import ApiSportsWidget from '../components/ApiSportsWidget';
-import ApiSportsConfig from '../components/ApiSportsConfig';
 import { useTranslation } from 'react-i18next';
+import { useSportContext } from '../context/SportContext';
 
 export default function EntityPage() {
   const { entityType, entityId } = useParams();
   const type = (entityType || '').toLowerCase() === 'team' ? 'team' : 'player';
   const { t } = useTranslation();
-  const [activeSport, setActiveSport] = React.useState('FOOTBALL');
+  const { changeSport } = useSportContext();
   const season = useMemo(() => String(new Date().getFullYear() - 1), []);
 
   // Read sport from URL
@@ -18,9 +17,12 @@ export default function EntityPage() {
     try {
       const usp = new URLSearchParams(window.location.search);
       const s = usp.get('sport');
-      if (s) setActiveSport(s.toUpperCase());
+      if (s) {
+        changeSport(s.toUpperCase());
+        return;
+      }
     } catch (_) {}
-  }, []);
+  }, [changeSport]);
 
   return (
     <Container size="lg" py="xl">
@@ -33,9 +35,6 @@ export default function EntityPage() {
             </Button>
           </Group>
         </Card>
-
-        {/* Per-page global config to provide key/host for current sport */}
-        <ApiSportsConfig apiKey="4a5a713b507782a9b85c8c4d1d8427a4" sport={activeSport} />
 
         <Card withBorder p="lg">
           <ApiSportsWidget
