@@ -9,10 +9,7 @@
 	"functions": {
 		"api/**/*.py": {
 			"runtime": "python3.11",
-			"includeFiles": [
-				"backend/**",
-				"instance/localdb/**"
-			],
+			"includeFiles": "{backend/**,instance/localdb/**}",
 			"excludeFiles": "backend/venv/**"
 		}
 	},
