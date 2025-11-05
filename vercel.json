@@ -1,6 +1,11 @@
 {
-	"buildCommand": "npm ci --prefix frontend && npm run --prefix frontend build",
-	"outputDirectory": "frontend/build",
+	"builds": [
+		{
+			"src": "frontend/package.json",
+			"use": "@vercel/static-build@latest",
+			"config": { "distDir": "build" }
+		}
+	],
 	"functions": {
 		"api/**/*.py": {
 			"runtime": "python3.11",
