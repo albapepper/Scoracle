@@ -7,13 +7,6 @@
 			"config": { "distDir": "build" }
 		}
 	],
-	"functions": {
-		"api/**/*.py": {
-			"runtime": "vercel-python@3.11",
-			"includeFiles": "{backend/**,instance/localdb/**}",
-			"excludeFiles": "backend/venv/**"
-		}
-	},
 	"rewrites": [
 		{ "source": "/api/:match*", "destination": "/api/index.py" },
 		{ "source": "/:path*", "destination": "/index.html" }
