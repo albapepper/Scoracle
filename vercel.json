@@ -1,11 +1,6 @@
 {
-	"builds": [
-		{
-			"src": "frontend/package.json",
-			"use": "@vercel/static-build",
-			"config": { "distDir": "build" }
-		}
-	],
+	"buildCommand": "npm ci --prefix frontend && npm run --prefix frontend build",
+	"outputDirectory": "frontend/build",
 	"functions": {
 		"api/**/*.py": {
 			"runtime": "python3.11",
@@ -13,8 +8,8 @@
 			"excludeFiles": "backend/venv/**"
 		}
 	},
-	"routes": [
-		{ "src": "^/api(/.*)?$", "dest": "/api/index.py" },
-		{ "src": "^(?!/api)(.*)$", "dest": "/index.html" }
+	"rewrites": [
+		{ "source": "/api/:match*", "destination": "/api/index.py" },
+		{ "source": "/:path*", "destination": "/index.html" }
 	]
 }
