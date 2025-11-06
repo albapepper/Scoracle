@@ -1,10 +1,8 @@
 import React, { useMemo } from 'react';
-import ApiSportsWidget from './ApiSportsWidget';
 import { APISPORTS_KEY } from '../config';
 import { useLanguage } from '../context/LanguageContext';
 import { useSportContext } from '../context/SportContext';
 import { useThemeMode } from '../ThemeProvider';
-import useScript from '../hooks/useScript';
 
 const SPORT_HOSTS = {
   football: 'https://v3.football.api-sports.io/',
@@ -34,7 +32,6 @@ export default function ApiSportsConfig({
   targets,
   style,
 }) {
-  useScript('https://widgets.api-sports.io/3.1.0/widgets.js');
   const { language } = useLanguage();
   const { activeSport } = useSportContext();
   const { colorScheme } = useThemeMode();
@@ -90,11 +87,9 @@ export default function ApiSportsConfig({
   ]);
 
   return (
-    <ApiSportsWidget
-      type="config"
-      sport={resolvedSportRaw}
-      data={final}
-      style={style}
+    <api-sports-widget
+      data-type="config"
+      {...Object.fromEntries(Object.entries(final).map(([key, value]) => [`data-${key}`, String(value)]))}
     />
   );
 }

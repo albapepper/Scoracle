@@ -25,7 +25,7 @@ function Header() {
 
   return (
     <Paper component="header" shadow="xs" radius={0} p={0} style={headerStyle}>
-      <Container size="xl" style={{ display: 'flex', alignItems: 'center', height: '60px', display: 'flex', alignItems: 'center' }}>
+      <Container size="xl" style={{ display: 'flex', alignItems: 'center', height: '60px' }}>
         {/* Left: Hamburger -> settings drawer */}
         <Group style={{ flex: 1 }}>
           <Tooltip label={t('header.menu')} withArrow>

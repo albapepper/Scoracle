@@ -15,8 +15,6 @@ import { LanguageProvider } from './context/LanguageContext';
 import HomePage from './pages/HomePage';
 import MentionsPage from './pages/MentionsPage';
 import EntityPage from './pages/EntityPage';
-import ApiSportsConfig from './components/ApiSportsConfig';
-import { APISPORTS_KEY } from './config';
 import NotFoundPage from './pages/NotFoundPage';
 
 // Components
@@ -40,10 +38,6 @@ function AppContent() {
       
       <AppShell.Main>
         <div className="container">
-          <ApiSportsConfig
-            apiKey={APISPORTS_KEY}
-            theme={colorScheme === 'dark' ? 'grey' : 'white'}
-          />
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/mentions/:entityType/:entityId" element={<MentionsPage />} />

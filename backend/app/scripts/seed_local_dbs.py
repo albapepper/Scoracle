@@ -474,6 +474,11 @@ def _parse_args() -> argparse.Namespace:
         nargs="*",
         default=None,
     )
+    parser.add_argument(
+        "--purge",
+        action="store_true",
+        help="Purge existing local rows before seeding (defaults to off)",
+    )
     return parser.parse_args()
 
 
@@ -489,12 +494,13 @@ async def main():
         selected = tuple(s.upper() for s in parts)
     else:
         selected = ("NBA", "FOOTBALL", "NFL")
-    # Always purge first to honor request
-    for sport in selected:
-        try:
-            purge_sport(sport)
-        except Exception:
-            pass
+    # Optionally purge existing rows when explicitly requested
+    if getattr(args, "purge", False):
+        for sport in selected:
+            try:
+                purge_sport(sport)
+            except Exception:
+                pass
 
     # Use settings (reads .env) to decide if API mode is enabled; skip API in lean mode
     if settings.API_SPORTS_KEY and not getattr(settings, "LEAN_BACKEND", False):
@@ -515,6 +521,7 @@ async def main():
             await seed_nfl_api()
         print("Seeding complete (API).")
     else:
+        # Static minimal seed performs upserts; no purge by default
         seed_static_minimal()
         print("Seeding complete (static).")
 
