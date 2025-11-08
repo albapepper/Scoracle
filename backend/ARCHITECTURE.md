@@ -23,7 +23,7 @@ backend/app/
     local_dbs.py       # Per-sport player/team storage & search
     seed_local_dbs.py  # Seeding script (API or static fallback)
     inspect_local_db.py# Inspection utilities
-    registry.py        # (Legacy) entity registry retained for future migration
+    provider_ingestion.py # Unified provider ingestion (replaces legacy registry)
   models/              # Pydantic schemas & envelopes
   utils/               # Cross-cutting utilities (constants, http_client)
   adapters/            # Currently empty (previous transitional re-exports removed)
@@ -63,11 +63,11 @@ from app.services import widget_service
 
 Use `/api/health` for a basic liveness probe. Future work: add a `tests/` directory with async tests exercising critical routers and cache behavior.
 
-## Pending Improvements
+## Recent Improvements
 
-- Replace legacy `registry.py` with unified provider ingestion.
-- Introduce structured error codes (enum) and correlation IDs across all routers.
-- Add rate limiting middleware once public traffic increases.
+- Legacy `registry.py` removed; unified ingestion via `services/provider_ingestion.py`.
+- Structured error codes & correlation IDs implemented (`utils/errors.py`, middleware).
+- Rate limiting middleware added (configurable via `RATE_LIMIT_*` settings).
 
 ---
 Last updated: 2025-11-07

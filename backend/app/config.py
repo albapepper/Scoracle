@@ -70,5 +70,10 @@ class Settings(BaseSettings):
 	# Lean mode: avoid upstream provider calls; serve only local DB + RSS
 	LEAN_BACKEND: bool = os.getenv("LEAN_BACKEND", "false").lower() in ("1", "true", "yes")
 
+	# Rate limiting (simple in-memory token bucket)
+	RATE_LIMIT_ENABLED: bool = os.getenv("RATE_LIMIT_ENABLED", "false").lower() in ("1", "true", "yes")
+	RATE_LIMIT_RPS: float = float(os.getenv("RATE_LIMIT_RPS", "5"))  # tokens per second
+	RATE_LIMIT_BURST: int = int(os.getenv("RATE_LIMIT_BURST", "10"))
+
 
 settings = Settings()
