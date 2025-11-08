@@ -1,6 +1,6 @@
 import os
 import sqlite3
-from app.db.local_dbs import _db_path_for_sport
+from app.database.local_dbs import _db_path_for_sport
 
 SPORTS = ("NBA", "NFL", "FOOTBALL")
 

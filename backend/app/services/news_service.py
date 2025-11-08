@@ -1,12 +1,11 @@
 from typing import List, Optional, Dict, Any
-import httpx
-import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta
 import urllib.parse
+from datetime import datetime, timedelta
+import httpx
+
 from app.services.apisports import apisports_service
 from app.database.local_dbs import get_player_by_id as local_get_player_by_id, get_team_by_id as local_get_team_by_id
 from app.services.cache import widget_cache
-from app.services import news_api
 
 IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif')
 
@@ -22,7 +21,8 @@ def _is_probably_image(url: Optional[str], mime: Optional[str]) -> bool:
     return any(url_lower.endswith(ext) for ext in IMAGE_EXTENSIONS)
 
 
-def _extract_image_url(item: ET.Element) -> Optional[str]:
+def _extract_image_url(item):
+    import xml.etree.ElementTree as ET
     for elem in item.iter():
         tag = elem.tag.lower() if isinstance(elem.tag, str) else ''
         url = elem.attrib.get('url') if hasattr(elem, 'attrib') else None
@@ -37,12 +37,9 @@ def _extract_image_url(item: ET.Element) -> Optional[str]:
             return url
     return None
 
+
 async def _resolve_entity_name(entity_type: str, entity_id: str, sport: Optional[str]) -> str:
-    """Resolve a human-friendly entity name for RSS queries.
-    Order: registry -> upstream basic info -> raw id fallback.
-    """
     sport_upper = (sport or "NBA").upper()
-    # Prefer upstream basic info; fallback to local DB if needed
     try:
         if sport_upper == 'NBA':
             if entity_type == "player":
@@ -72,12 +69,10 @@ async def _resolve_entity_name(entity_type: str, entity_id: str, sport: Optional
                     return name
     except Exception:
         pass
-    # Local DB fallback
     try:
         if entity_type == "player":
             row = local_get_player_by_id(sport_upper, int(entity_id))
             if row and row.get("name"):
-                # Reduce to first + last token only
                 parts = str(row["name"]).split()
                 if parts:
                     first = parts[0]
@@ -90,18 +85,43 @@ async def _resolve_entity_name(entity_type: str, entity_id: str, sport: Optional
                 return row["name"]
     except Exception:
         pass
-    return entity_id  # final fallback
+    return entity_id
+
+
+def parse_rss_feed(xml_content: str) -> List[Dict[str, Any]]:
+    import xml.etree.ElementTree as ET
+    root = ET.fromstring(xml_content)
+    items: List[Dict[str, Any]] = []
+    for item in root.findall(".//item"):
+        title = item.find("title").text if item.find("title") is not None else ""
+        link = item.find("link").text if item.find("link") is not None else ""
+        description = item.find("description").text if item.find("description") is not None else ""
+        pub_date_raw = item.find("pubDate").text if item.find("pubDate") is not None else ""
+        pub_date = pub_date_raw
+        pub_ts = None
+        try:
+            from email.utils import parsedate_to_datetime
+            dt = parsedate_to_datetime(pub_date_raw) if pub_date_raw else None
+            if dt is not None:
+                pub_ts = int(dt.timestamp())
+                pub_date = dt.isoformat()
+        except Exception:
+            pass
+        source = item.find("source").text if item.find("source") is not None else ""
+        image_url = _extract_image_url(item)
+        items.append({
+            "title": title,
+            "link": link,
+            "description": description,
+            "pub_date": pub_date,
+            "source": source,
+            "pub_ts": pub_ts,
+            "image_url": image_url,
+        })
+    return items
+
 
 async def get_entity_mentions(entity_type: str, entity_id: str, sport: Optional[str] = None) -> List[Dict[str, Any]]:
-    """
-    Get mentions of a player or team, preferring the configured News API and
-    falling back to Google News RSS when unavailable.
-
-    RSS fallback strategy: try a few increasingly broad searches to avoid empty feeds:
-    1) Quoted name with 48h window
-    2) Quoted name without time filter
-    3) Unquoted name with 7d window
-    """
     cache_key = f"rss:mentions:{(sport or 'NBA').upper()}:{entity_type}:{entity_id}"
     cached = widget_cache.get(cache_key)
     if cached is not None:
@@ -109,6 +129,7 @@ async def get_entity_mentions(entity_type: str, entity_id: str, sport: Optional[
     resolved_name = await _resolve_entity_name(entity_type, entity_id, sport)
 
     # Try News API first when configured
+    from app.services import news_api
     if news_api.is_configured():
         try:
             items, _meta = await news_api.search_news(resolved_name)
@@ -121,12 +142,10 @@ async def get_entity_mentions(entity_type: str, entity_id: str, sport: Optional[
     now = datetime.now()
     windows = [timedelta(hours=48), None, timedelta(days=7)]
     queries = [f'"{resolved_name}"', f'"{resolved_name}"', resolved_name]
-
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
         "Accept": "application/rss+xml,application/xml,text/xml;q=0.9,*/*;q=0.8",
     }
-
     async with httpx.AsyncClient(headers=headers, timeout=15.0) as client:
         for q, window in zip(queries, windows):
             encoded_term = urllib.parse.quote(q)
@@ -143,22 +162,12 @@ async def get_entity_mentions(entity_type: str, entity_id: str, sport: Optional[
                     widget_cache.set(cache_key, items, ttl=600)
                     return items
             except httpx.HTTPError:
-                # try the next strategy
                 continue
     widget_cache.set(cache_key, [], ttl=300)
     return []
 
-async def get_entity_mentions_with_debug(entity_type: str, entity_id: str, sport: Optional[str] = None) -> Dict[str, Any]:
-    """Return mentions along with lightweight debug details.
 
-    debug format:
-    {
-      resolved_name: str,
-      attempts: [ { provider: str, query: str, context: str|None, url: str, count: int }... ],
-      selected_index: int | None,
-      selected_provider: str | None
-    }
-    """
+async def get_entity_mentions_with_debug(entity_type: str, entity_id: str, sport: Optional[str] = None) -> Dict[str, Any]:
     cache_key = f"rss:mentions-debug:{(sport or 'NBA').upper()}:{entity_type}:{entity_id}"
     cached = widget_cache.get(cache_key)
     if cached is not None:
@@ -176,6 +185,7 @@ async def get_entity_mentions_with_debug(entity_type: str, entity_id: str, sport
     selected_provider: Optional[str] = None
     items: List[Dict[str, Any]] = []
 
+    from app.services import news_api
     if news_api.is_configured():
         try:
             cand, meta = await news_api.search_news(resolved_name)
@@ -246,70 +256,3 @@ async def get_entity_mentions_with_debug(entity_type: str, entity_id: str, sport
     result = {"mentions": items, "debug": debug}
     widget_cache.set(cache_key, result, ttl=600)
     return result
-
-async def get_related_links(entity_type: str, entity_id: str, category: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
-    """
-    Get related links for an entity, optionally filtered by category.
-    """
-    # Format the search query based on entity type, ID, category, and sport
-    resolved_name = await _resolve_entity_name(entity_type, entity_id, None)
-    search_term = resolved_name
-    if category:
-        search_term += f" {category}"
-    
-    # Construct the Google RSS search URL
-    encoded_term = urllib.parse.quote(search_term)
-    url = f"https://news.google.com/rss/search?q={encoded_term}&hl=en-US&gl=US&ceid=US:en"
-    
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url)
-        response.raise_for_status()
-        
-        # Parse the RSS feed and limit results
-        links = parse_rss_feed(response.text)[:limit]
-        
-        return links
-
-def format_search_term(entity_type: str, resolved_name: str, sport: Optional[str] = None) -> str:
-    """Legacy helper retained for compatibility; now returns name only."""
-    return resolved_name
-
-def parse_rss_feed(xml_content: str) -> List[Dict[str, Any]]:
-    """
-    Parse an RSS feed and extract the items.
-    """
-    root = ET.fromstring(xml_content)
-    items = []
-    
-    # Find all item elements
-    for item in root.findall(".//item"):
-        # Extract item properties
-        title = item.find("title").text if item.find("title") is not None else ""
-        link = item.find("link").text if item.find("link") is not None else ""
-        description = item.find("description").text if item.find("description") is not None else ""
-        pub_date_raw = item.find("pubDate").text if item.find("pubDate") is not None else ""
-        # Convert pubDate to ISO and timestamp if possible for easier sorting
-        pub_date = pub_date_raw
-        pub_ts = None
-        try:
-            from email.utils import parsedate_to_datetime
-            dt = parsedate_to_datetime(pub_date_raw) if pub_date_raw else None
-            if dt is not None:
-                pub_ts = int(dt.timestamp())
-                pub_date = dt.isoformat()
-        except Exception:
-            pass
-        source = item.find("source").text if item.find("source") is not None else ""
-        image_url = _extract_image_url(item)
-        
-        items.append({
-            "title": title,
-            "link": link,
-            "description": description,
-            "pub_date": pub_date,
-            "source": source,
-            "pub_ts": pub_ts,
-            "image_url": image_url
-        })
-    
-    return items

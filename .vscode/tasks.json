@@ -7,7 +7,7 @@
 			"command": "python",
 			"args": [
 				"-m",
-				"app.scripts.seed_local_dbs"
+				"app.database.seed_local_dbs"
 			],
 			"isBackground": false,
 			"problemMatcher": [

@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Optional
 import httpx
 from fastapi import HTTPException
 
-from app.core.config import settings
+from app.config import settings
 from app.services.cache import basic_cache, stats_cache
 
 logger = logging.getLogger(__name__)

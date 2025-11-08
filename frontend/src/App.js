@@ -1,4 +1,5 @@
 import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell } from '@mantine/core';
 import { useThemeMode } from './ThemeProvider';
@@ -58,11 +59,14 @@ function AppContent() {
 }
 
 function App() {
+  const [client] = React.useState(() => new QueryClient());
   return (
     <ThemeProvider>
       <LanguageProvider>
         <SportContextProvider>
-          <AppContent />
+          <QueryClientProvider client={client}>
+            <AppContent />
+          </QueryClientProvider>
         </SportContextProvider>
       </LanguageProvider>
     </ThemeProvider>

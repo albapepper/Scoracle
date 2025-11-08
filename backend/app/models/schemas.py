@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
+from datetime import datetime
 
 class PlayerBase(BaseModel):
     id: str
@@ -134,3 +135,21 @@ class TeamFullResponse(BaseModel):
 
 class ErrorEnvelope(BaseModel):
     error: Dict[str, Any]
+
+# --- Widgets (server-rendered) ---
+
+class WidgetDiagnostics(BaseModel):
+    provider: Optional[str] = None
+    cache: Optional[str] = None  # 'hit' | 'miss'
+    request_id: Optional[str] = None
+    latency_ms: Optional[int] = None
+
+class WidgetEnvelope(BaseModel):
+    type: str  # 'player' | 'team' | etc.
+    version: str = "1"
+    cacheKey: str
+    ttl: int
+    generatedAt: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
+    etag: Optional[str] = None
+    diagnostics: Optional[WidgetDiagnostics] = None
+    payload: Dict[str, Any]

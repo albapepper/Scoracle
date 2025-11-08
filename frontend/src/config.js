@@ -3,6 +3,7 @@
 
 export const FEATURES = {
   ENABLE_WIDGETS: (process.env.REACT_APP_ENABLE_WIDGETS || 'false').toLowerCase() === 'true',
+  USE_SERVER_WIDGETS: (process.env.REACT_APP_USE_SERVER_WIDGETS || 'true').toLowerCase() === 'true', // pivot flag
 };
 
 // Centralized API-Sports widget key (frontend-only). Do NOT commit real keys.

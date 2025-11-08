@@ -2,8 +2,7 @@ import aiosqlite
 import asyncio
 import logging
 from typing import List, Optional, Dict, Any
-from app.core.config import settings
-import os
+from app.config import settings
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -31,14 +30,12 @@ class EntityRegistry:
         if db_path:
             resolved = Path(db_path)
         else:
-            # Always anchor at project root (two levels up from this file: backend/app/db -> project root) then instance/registry.db
             project_root = Path(__file__).resolve().parents[3]
             resolved = project_root / settings.REGISTRY_DB_PATH
         resolved.parent.mkdir(parents=True, exist_ok=True)
         self.db_path = str(resolved)
         logger.info("Entity registry path set to %s", self.db_path)
         self._conn: Optional[aiosqlite.Connection] = None
-        # Ingestion state
         self.ingesting: bool = False
         self.players_ingested: int = 0
         self.teams_ingested: int = 0
@@ -107,15 +104,12 @@ class EntityRegistry:
         return cnt
 
     async def ingest_sport(self, sport: str):
-        # Registry ingestion disabled during migration away from balldontlie.
-        # Future: implement ingestion via API‑Sports endpoints if needed.
         logger.info("Registry ingestion skipped for %s (disabled)", sport.upper())
         self.last_error = None
         self.players_ingested = 0
         self.teams_ingested = 0
 
     async def ensure_ingested_if_empty(self, sport: str):
-        # Non-blocking helper: call from background task
         try:
             if await self.count(sport, "player") == 0 or await self.count(sport, "team") == 0:
                 logger.info("Registry empty for %s; starting background ingestion", sport)
@@ -124,12 +118,6 @@ class EntityRegistry:
                 logger.info("Registry already populated for %s; skipping ingestion", sport)
         except Exception as e:
             logger.error("ensure_ingested_if_empty failed: %s", e)
-
-    async def _ingest_nba_players(self):
-        logger.info("NBA registry ingestion disabled (balldontlie removed)")
-
-    async def _ingest_nba_teams(self):
-        logger.info("NBA registry ingestion disabled (balldontlie removed)")
 
     def status(self):
         return {

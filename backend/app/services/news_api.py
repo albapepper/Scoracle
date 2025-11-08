@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Tuple
 
 import httpx
 
-from app.core.config import settings
+from app.config import settings
 
 
 DEFAULT_ENDPOINT = "https://newsapi.org/v2/everything"

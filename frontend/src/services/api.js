@@ -54,3 +54,17 @@ export const getTeamRoster = async (teamId, season, sport) => {
 };
 
 // Removed legacy /full aggregate helpers (use lean summary endpoints and widgets instead)
+
+// Widgets (server-rendered) services
+export const getWidgetEnvelope = async (type, id, { sport, season, debug } = {}) => {
+  const params = { ...(sport && { sport }), ...(season && { season }), ...(debug && { debug: 1 }) };
+  if (type === 'player') {
+    const response = await apiClient.get(`/widgets/player/${id}`, { params });
+    return response.data;
+  }
+  if (type === 'team') {
+    const response = await apiClient.get(`/widgets/team/${id}`, { params });
+    return response.data;
+  }
+  throw new Error(`Unsupported widget type: ${type}`);
+};
