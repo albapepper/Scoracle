@@ -1,64 +1,31 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { useIndexedDBSync } from '../hooks/useIndexedDBSync';
+import React, { createContext, useContext, useMemo, useState, useCallback } from 'react';
 
-// Create context
-const SportContext = createContext();
-
-// Sport options
-const SPORTS = [
-  { id: 'NBA', name: 'Basketball', display: 'NBA' },
-  { id: 'NFL', name: 'American Football', display: 'NFL' },
-  { id: 'FOOTBALL', name: 'Soccer', display: 'Football' },
+// Simple sport registry; expand as backend enumerations grow.
+const DEFAULT_SPORTS = [
+  { id: 'soccer', display: 'Soccer' },
+  { id: 'basketball', display: 'Basketball' },
 ];
 
-export const SportContextProvider = ({ children }) => {
-  // Default to FOOTBALL to avoid accidental basketball default
-  const [activeSport, setActiveSport] = useState('FOOTBALL');
-  
-  // Trigger IndexedDB sync when sport changes
-  const { syncing, syncError, syncStats } = useIndexedDBSync(activeSport);
-  
-  // Load from URL (?sport=FOOTBALL) or localStorage on initial render
-  useEffect(() => {
-    try {
-      const usp = new URLSearchParams(window.location.search);
-      const fromUrl = usp.get('sport');
-      if (fromUrl && SPORTS.some(s => s.id === fromUrl.toUpperCase())) {
-        setActiveSport(fromUrl.toUpperCase());
-        return; // URL wins
-      }
-    } catch (_) {}
-    const savedSport = localStorage.getItem('activeSport');
-    if (savedSport && SPORTS.some(sport => sport.id === savedSport)) {
-      setActiveSport(savedSport);
-    }
-  }, []);
-  
-  // Save to localStorage when sport changes
-  useEffect(() => {
-    localStorage.setItem('activeSport', activeSport);
-  }, [activeSport]);
-  
-  // Change the active sport
-  const changeSport = (sportId) => {
-    if (SPORTS.some(sport => sport.id === sportId)) {
+const SportContext = createContext(null);
+
+export function SportContextProvider({ children }) {
+  const [activeSport, setActiveSport] = useState('soccer');
+  const sports = DEFAULT_SPORTS;
+
+  const changeSport = useCallback((sportId) => {
+    if (sports.some(s => s.id === sportId)) {
       setActiveSport(sportId);
     }
-  };
-  
-  return (
-    <SportContext.Provider 
-      value={{ 
-        activeSport, 
-        changeSport, 
-        sports: SPORTS,
-        indexedDBSync: { syncing, syncError, syncStats }
-      }}
-    >
-      {children}
-    </SportContext.Provider>
-  );
-};
+  }, [sports]);
 
-// Custom hook to use the sport context
-export const useSportContext = () => useContext(SportContext);
+  const value = useMemo(() => ({ activeSport, sports, changeSport }), [activeSport, sports, changeSport]);
+  return <SportContext.Provider value={value}>{children}</SportContext.Provider>;
+}
+
+export function useSportContext() {
+  const ctx = useContext(SportContext);
+  if (!ctx) throw new Error('useSportContext must be used within SportContextProvider');
+  return ctx;
+}
+
+export default SportContext;

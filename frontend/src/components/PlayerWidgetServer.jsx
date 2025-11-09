@@ -1,8 +1,10 @@
 import React from 'react';
 import { Card, Skeleton, Text, Group, Badge } from '@mantine/core';
-import useWidgetEnvelope from '../hooks/useWidgetEnvelope';
+import { useWidgetEnvelope } from '../features/widgets/useWidgetEnvelope';
 import { useSportContext } from '../context/SportContext';
 
+// Server-side widget envelope consumer for player stats.
+// TODO: Extend mapping once backend standardizes statistic keys per sport.
 export default function PlayerWidgetServer({ playerId, season }) {
   const { activeSport } = useSportContext();
   const { data, isLoading, error, refetch, isFetching } = useWidgetEnvelope('player', playerId, { sport: activeSport, season });
@@ -39,26 +41,27 @@ export default function PlayerWidgetServer({ playerId, season }) {
   const team = payload.team || {};
   const loading = isFetching;
 
+  const STAT_GROUPS = [
+    { label: 'points', keys: ['pts', 'points', 'points_per_game'] },
+    { label: 'assists', keys: ['ast', 'assists', 'assists_per_game'] },
+    { label: 'rebounds', keys: ['reb', 'rebounds', 'rebounds_per_game'] },
+    { label: 'steals', keys: ['stl', 'steals', 'steals_per_game'] },
+    { label: 'blocks', keys: ['blk', 'blocks', 'blocks_per_game'] },
+  ];
+
   return (
     <Card withBorder p="md">
       <Group position="apart" mb="xs">
-        <Text fw={600}>{payload.name}</Text>
+        <Text fw={600}>{payload.name || 'Player'}</Text>
         {team?.abbreviation && <Badge>{team.abbreviation}</Badge>}
       </Group>
       <Text size="sm" color="dimmed">Season: {payload.season || season || 'current'}</Text>
       <Group mt="md" spacing="lg" wrap="wrap">
-        {['points', 'assists', 'rebounds', 'steals', 'blocks'].map(label => {
-          const keyMap = {
-            points: ['pts', 'points', 'points_per_game'],
-            assists: ['ast', 'assists', 'assists_per_game'],
-            rebounds: ['reb', 'rebounds', 'rebounds_per_game'],
-            steals: ['stl', 'steals', 'steals_per_game'],
-            blocks: ['blk', 'blocks', 'blocks_per_game']
-          };
-          const val = keyMap[label].map(k => stats[k]).find(v => v !== undefined && v !== null);
+        {STAT_GROUPS.map(({ label, keys }) => {
+          const val = keys.map(k => stats[k]).find(v => v !== undefined && v !== null);
           return (
-            <Card key={label} shadow="xs" p={"xs"} style={{ minWidth: 90 }}>
-              <Text size="xs" color="dimmed" transform="uppercase">{label}</Text>
+            <Card key={label} shadow="xs" p="xs" style={{ minWidth: 90 }}>
+              <Text size="xs" color="dimmed" style={{ textTransform: 'uppercase' }}>{label}</Text>
               <Text fw={600}>{loading ? '…' : (val ?? '—')}</Text>
             </Card>
           );

@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Container, Group, Box, Paper, ActionIcon, Drawer, Switch, Select, Stack, Text, Tooltip } from '@mantine/core';
 import { IconMenu2 } from '@tabler/icons-react';
-import theme from '../theme';
+import { theme, useThemeMode } from '../theme';
 import { useLanguage } from '../context/LanguageContext';
-import { useThemeMode } from '../ThemeProvider';
 import { useTranslation } from 'react-i18next';
 
 function Header() {

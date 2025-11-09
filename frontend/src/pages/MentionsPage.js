@@ -14,11 +14,11 @@ import {
   Box,
 } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { useThemeMode } from '../ThemeProvider';
-import { getThemeColors } from '../theme';
-import { getEntityMentions as fetchEntityMentions } from '../services/api';
-import ApiSportsConfig from '../components/ApiSportsConfig';
+import { useThemeMode, getThemeColors } from '../theme';
 import { useSportContext } from '../context/SportContext';
+// Feature hooks (new structure)
+import { useEntityMentions } from '../features/entities/hooks/useEntityMentions';
+import { useWidgetEnvelope } from '../features/widgets/useWidgetEnvelope';
 
 function MentionsPage() {
   const { entityType, entityId } = useParams();
@@ -28,9 +28,7 @@ function MentionsPage() {
   const colors = getThemeColors(colorScheme);
   const season = useMemo(() => String(new Date().getFullYear()), []);
 
-  const [mentions, setMentions] = useState([]);
   const [entityInfo, setEntityInfo] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [entityName, setEntityName] = useState('');
 
@@ -46,48 +44,29 @@ function MentionsPage() {
     } catch (_) {}
   }, [changeSport]);
 
+  // Widget hook replaces manual fetch effect
+  const { data: widgetEnv, isLoading: widgetLoading, error: widgetErrorObj } = useWidgetEnvelope(
+    entityType,
+    entityId,
+    { sport: activeSport, season }
+  );
+  const widgetError = widgetErrorObj ? (widgetErrorObj.message || 'Failed to load widget') : '';
+
+  // Mentions hook (feature module)
+  const { data: mentionsData, isLoading: mentionsLoading, error: mentionsError } = useEntityMentions(
+    entityType,
+    entityId,
+    activeSport
+  );
   useEffect(() => {
-    const scriptId = 'api-sports-widget-script';
-    document.getElementById(scriptId)?.remove();
-
-    const script = document.createElement('script');
-    script.id = scriptId;
-    script.src = `https://widgets.api-sports.io/3.1.0/widgets.js?cb=${Date.now()}`;
-    script.async = true;
-    script.type = 'module';
-    script.crossOrigin = 'anonymous';
-    
-    document.body.appendChild(script);
-
-    script.onload = () => {
-      window.dispatchEvent(new Event('DOMContentLoaded'));
-    };
-
-    return () => {
-      document.getElementById(scriptId)?.remove();
-    };
-  }, [entityId, entityType]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      setError('');
-      try {
-        const data = await fetchEntityMentions(entityType, entityId, activeSport);
-        const sortedMentions = (data.mentions || []).sort(
-          (a, b) => new Date(b.pub_date) - new Date(a.pub_date)
-        );
-        setMentions(sortedMentions);
-        setEntityInfo(data.entity_info || null);
-      } catch (err) {
-        setError(t('mentions.failedLoad'));
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
-  }, [entityType, entityId, activeSport, t]);
+    if (mentionsError) setError(t('mentions.failedLoad'));
+    else setError('');
+    setEntityInfo(mentionsData?.entity_info || null);
+  }, [mentionsError, mentionsData, t]);
+  const mentions = useMemo(() => {
+    const arr = mentionsData?.mentions || [];
+    return [...arr].sort((a, b) => new Date(b.pub_date) - new Date(a.pub_date));
+  }, [mentionsData]);
 
   const displayName = entityName || (entityType === 'player'
     ? [entityInfo?.first_name, entityInfo?.last_name].filter(Boolean).join(' ').trim()
@@ -96,14 +75,14 @@ function MentionsPage() {
   return (
     <Container size="md" py="xl">
       <Stack spacing="xl">
-        {isLoading && (
+        {(mentionsLoading || widgetLoading) && (
           <Stack spacing="lg" align="center">
             <Loader size="xl" color={colors.ui.primary} />
             <Text mt="md">{t('mentions.loading')}</Text>
           </Stack>
         )}
 
-        {error && !isLoading && (
+        {error && !(mentionsLoading || widgetLoading) && (
           <Stack spacing="lg" align="center">
             <Title order={3} c={colors.status.error}>
               {error}
@@ -119,7 +98,7 @@ function MentionsPage() {
           </Stack>
         )}
 
-        {!isLoading && !error && (
+        {!(mentionsLoading || widgetLoading) && !error && (
           <>
             <Card shadow="sm" p="lg" radius="md" withBorder>
               <Stack spacing="lg" align="center">
@@ -127,23 +106,35 @@ function MentionsPage() {
                   {displayName}
                 </Title>
                 <Box w="100%" style={{ display: 'flex', justifyContent: 'center' }}>
-                  <div id="widget-container">
-                    {entityType === 'team' ? (
-                      <api-sports-widget
-                        data-type="team"
-                        data-team-id={entityId}
-                      ></api-sports-widget>
-                    ) : (
-                      <api-sports-widget
-                        data-type="player"
-                        data-player-id={entityId}
-                        data-season={season}
-                      ></api-sports-widget>
+                  <div id="widget-container" style={{ width: '100%' }}>
+                    {widgetError && (
+                      <Text size="sm" c="red" ta="center">{widgetError}</Text>
                     )}
-                    <ApiSportsConfig
-                      sport={activeSport}
-                      theme={colorScheme === 'dark' ? 'grey' : 'white'}
-                    />
+                    {!widgetError && !widgetEnv && (
+                      <Loader size="sm" />
+                    )}
+                    {widgetEnv && widgetEnv.payload && !widgetEnv.payload.error && (
+                      <Card withBorder shadow="xs" p="sm" radius="md" style={{ overflow: 'hidden' }}>
+                        <Title order={4} ta="center" mb="xs">{displayName}</Title>
+                        <Text size="xs" c="dimmed" ta="center">Widget v{widgetEnv.version}</Text>
+                        {/* Render basic stats summary if present */}
+                        {widgetEnv.payload.statistics && Object.keys(widgetEnv.payload.statistics).length > 0 ? (
+                          <Stack gap={4} mt="sm">
+                            {Object.entries(widgetEnv.payload.statistics).slice(0, 6).map(([k,v]) => (
+                              <Group key={k} justify="space-between">
+                                <Text size="xs" c="dimmed">{k}</Text>
+                                <Text size="xs" fw={500}>{String(v)}</Text>
+                              </Group>
+                            ))}
+                          </Stack>
+                        ) : (
+                          <Text size="xs" ta="center" c="dimmed" mt="sm">No statistics available.</Text>
+                        )}
+                      </Card>
+                    )}
+                    {widgetEnv && widgetEnv.payload && widgetEnv.payload.error && (
+                      <Text size="sm" c="red" ta="center">{widgetEnv.payload.error}</Text>
+                    )}
                   </div>
                 </Box>
                 <Button

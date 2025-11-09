@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, Title, Text, SegmentedControl, Stack } from '@mantine/core';
 import { useSportContext } from '../context/SportContext';
-import { searchEntities } from '../services/api'; // fallback search
+import apiSearch from '../features/search/api';
 import EntityAutocomplete from './EntityAutocomplete';
-import { useThemeMode } from '../ThemeProvider';
-import { getThemeColors } from '../theme';
+import { useThemeMode, getThemeColors } from '../theme';
 import { useTranslation } from 'react-i18next';
 
 function SearchForm() {
@@ -37,7 +36,7 @@ function SearchForm() {
         return;
       }
       // Fallback: perform legacy search
-      const results = await searchEntities(query, entityType, activeSport);
+  const results = await apiSearch.searchEntities(query, entityType, activeSport);
       if (results.results && results.results.length === 1) {
         const only = results.results[0];
         const plainName = (only.name || only.label || query).trim();

@@ -4,8 +4,8 @@
  * with version tracking and minimal updates.
  */
 
-import axios from 'axios';
-import { upsertPlayers, upsertTeams, getStats } from './indexedDB';
+import { http } from '../app/http';
+import { upsertPlayers, upsertTeams, getStats, getMeta, setMeta } from './indexedDB';
 
 const SYNC_CONFIG = {
   STORAGE_KEY_PREFIX: 'scoracle_sync_',
@@ -45,34 +45,32 @@ export const shouldSync = (sport) => {
 /**
  * Sync players for a sport from backend to IndexedDB
  */
-export const syncPlayers = async (sport) => {
+export const syncViaBootstrap = async (sport) => {
   try {
-    console.log(`[Sync] Fetching players for ${sport}...`);
-
-    const response = await axios.get(`/api/v1/${sport}/sync/players`);
-    const { items, count, timestamp } = response.data;
-
-    if (!items || items.length === 0) {
-      console.warn(`[Sync] No players found for ${sport}`);
-      return { success: true, itemsCount: 0 };
+    console.log(`[Sync] Bootstrap fetch for ${sport}...`);
+    const currentVersion = await getMeta(`${sport}:datasetVersion`);
+    const data = await http.get(`/${sport}/bootstrap`, { params: currentVersion ? { since: currentVersion } : undefined });
+    if (!data) {
+      console.log(`[Sync] Bootstrap 304 for ${sport}, no changes.`);
+      return { success: true, players: 0, teams: 0, fromCache: true };
     }
-
-    console.log(`[Sync] Upserting ${count} players to IndexedDB...`);
-
-    // Upsert all players
-    const upsertedCount = await upsertPlayers(sport, items);
-
-    // Update sync metadata
+    const { players, teams, datasetVersion, generatedAt } = data;
+    const pItems = players?.items || [];
+    const tItems = teams?.items || [];
+    console.log(`[Sync] Upserting ${pItems.length} players and ${tItems.length} teams for ${sport} (v=${datasetVersion}).`);
+    const pCount = await upsertPlayers(sport, pItems);
+    const tCount = await upsertTeams(sport, tItems);
+    await setMeta(`${sport}:datasetVersion`, datasetVersion);
     setSyncMetadata(sport, {
       lastSyncTime: Date.now(),
-      lastSyncTimestamp: timestamp,
-      playerCount: count,
+      lastSyncTimestamp: generatedAt,
+      playerCount: pItems.length,
+      teamCount: tItems.length,
+      datasetVersion,
     });
-
-    console.log(`[Sync] Successfully synced ${upsertedCount} players for ${sport}`);
-    return { success: true, itemsCount: upsertedCount };
+    return { success: true, players: pCount, teams: tCount, fromCache: false };
   } catch (error) {
-    console.error(`[Sync] Error syncing players for ${sport}:`, error);
+    console.error(`[Sync] Bootstrap error for ${sport}:`, error);
     return { success: false, error: error.message };
   }
 };
@@ -80,39 +78,6 @@ export const syncPlayers = async (sport) => {
 /**
  * Sync teams for a sport from backend to IndexedDB
  */
-export const syncTeams = async (sport) => {
-  try {
-    console.log(`[Sync] Fetching teams for ${sport}...`);
-
-    const response = await axios.get(`/api/v1/${sport}/sync/teams`);
-    const { items, count, timestamp } = response.data;
-
-    if (!items || items.length === 0) {
-      console.warn(`[Sync] No teams found for ${sport}`);
-      return { success: true, itemsCount: 0 };
-    }
-
-    console.log(`[Sync] Upserting ${count} teams to IndexedDB...`);
-
-    // Upsert all teams
-    const upsertedCount = await upsertTeams(sport, items);
-
-    // Update sync metadata
-    const metadata = getSyncMetadata(sport) || {};
-    setSyncMetadata(sport, {
-      ...metadata,
-      lastSyncTime: Date.now(),
-      lastSyncTimestamp: timestamp,
-      teamCount: count,
-    });
-
-    console.log(`[Sync] Successfully synced ${upsertedCount} teams for ${sport}`);
-    return { success: true, itemsCount: upsertedCount };
-  } catch (error) {
-    console.error(`[Sync] Error syncing teams for ${sport}:`, error);
-    return { success: false, error: error.message };
-  }
-};
 
 /**
  * Full sync: fetch and cache both players and teams for a sport
@@ -120,21 +85,10 @@ export const syncTeams = async (sport) => {
 export const fullSync = async (sport) => {
   try {
     console.log(`[Sync] Starting full sync for ${sport}...`);
-
-    const playerResult = await syncPlayers(sport);
-    const teamResult = await syncTeams(sport);
-
-    if (!playerResult.success || !teamResult.success) {
-      throw new Error('One or more sync operations failed');
-    }
-
-    console.log(`[Sync] Full sync complete for ${sport}: ${playerResult.itemsCount} players, ${teamResult.itemsCount} teams`);
-
-    return {
-      success: true,
-      players: playerResult.itemsCount,
-      teams: teamResult.itemsCount,
-    };
+    const result = await syncViaBootstrap(sport);
+    if (!result.success) throw new Error(result.error || 'Sync failed');
+    console.log(`[Sync] Full sync complete for ${sport}: ${result.players} players, ${result.teams} teams`);
+    return { success: true, players: result.players, teams: result.teams };
   } catch (error) {
     console.error(`[Sync] Full sync error for ${sport}:`, error);
     return { success: false, error: error.message };

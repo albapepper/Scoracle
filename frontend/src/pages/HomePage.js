@@ -2,9 +2,9 @@ import React from 'react';
 import { Container, Title, Text, Stack, Paper, SegmentedControl, Box } from '@mantine/core';
 import SearchForm from '../components/SearchForm';
 import { useSportContext } from '../context/SportContext';
-import { useThemeMode } from '../ThemeProvider';
-import { getThemeColors } from '../theme';
+import { useThemeMode, getThemeColors } from '../theme';
 import { useTranslation } from 'react-i18next';
+import { useIndexedDBSync } from '../hooks/useIndexedDBSync';
 
 function HomePage() {
   const { activeSport, sports, changeSport } = useSportContext();
@@ -12,6 +12,8 @@ function HomePage() {
   const colors = getThemeColors(colorScheme);
   const { t } = useTranslation();
   const activeSportDisplay = sports.find((sport) => sport.id === activeSport)?.display || activeSport;
+  // Trigger local IndexedDB seed/sync in the background for the active sport
+  useIndexedDBSync(activeSport);
   
   return (
     <Container size="lg" py="xl">

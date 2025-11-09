@@ -18,6 +18,8 @@ from app.database.local_dbs import (
 )
 from app.services.apisports import apisports_service
 from app.config import settings
+from datetime import datetime, timezone
+import hashlib, json
 
 router = APIRouter()
 
@@ -359,6 +361,70 @@ async def sport_sync_teams(sport: str):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to sync teams: {str(e)}")
+
+
+def _hash_bootstrap_payload(payload: dict) -> str:
+    try:
+        data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    except Exception:
+        data = repr(payload).encode("utf-8")
+    return hashlib.sha256(data).hexdigest()[:32]
+
+
+@router.get("/{sport}/bootstrap")
+async def sport_bootstrap(sport: str, request: Request, since: str | None = Query(None)):
+    """Unified bootstrap endpoint returning players & teams for initial client seeding.
+
+    Provides a datasetVersion tied to counts + day stamp so the frontend can decide
+    whether to perform a full refresh. Intended to supersede /sync/players & /sync/teams.
+    """
+    s = sport.upper()
+    try:
+        from app.database.local_dbs import list_all_players, list_all_teams, get_player_by_id as _lp
+        players_raw = list_all_players(s)
+        teams_raw = list_all_teams(s)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed bootstrap: {str(e)}")
+
+    players_items = []
+    for pid, name in players_raw:
+        parts = (name or "").split()
+        first_name = parts[0] if parts else ""
+        last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
+        try:
+            row = _lp(s, int(pid))
+            current_team = row.get("current_team") if row else None
+        except Exception:
+            current_team = None
+        players_items.append({
+            "id": int(pid),
+            "firstName": first_name,
+            "lastName": last_name,
+            "currentTeam": current_team,
+        })
+
+    teams_items = [
+        {"id": int(tid), "name": name}
+        for (tid, name) in teams_raw
+    ]
+
+    generated_at = datetime.now(timezone.utc).isoformat()
+    dataset_version = f"{s.lower()}-{len(players_items)}p-{len(teams_items)}t-{generated_at[:10]}"
+    payload = {
+        "sport": s,
+        "datasetVersion": dataset_version,
+        "generatedAt": generated_at,
+        "players": {"count": len(players_items), "items": players_items},
+        "teams": {"count": len(teams_items), "items": teams_items},
+    }
+    etag = _hash_bootstrap_payload({"v": 1, "sport": s, "pc": len(players_items), "tc": len(teams_items)})
+    from fastapi.responses import JSONResponse, Response
+    inm = request.headers.get("if-none-match")
+    headers = {"ETag": etag, "Cache-Control": "public, max-age=300, stale-while-revalidate=600"}
+    # If-None-Match takes precedence; else allow simple since=datasetVersion
+    if (inm and inm == etag) or (since and since == dataset_version):
+        return Response(status_code=304, headers=headers)
+    return JSONResponse(payload, headers=headers)
 
 
 def _summarize_comentions_for_mentions(sport: str, mentions: list[dict], target_entity: tuple[str, str]) -> list[dict]:

@@ -1,139 +1,31 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { TextInput, Paper, Loader, ScrollArea, Text } from '@mantine/core';
 import { IconSearch } from '@tabler/icons-react';
 import { useSportContext } from '../context/SportContext';
-import axios from 'axios';
-import { useThemeMode } from '../ThemeProvider';
-import { getThemeColors } from '../theme';
+import apiEntities from '../features/entities/api';
+import apiWidgets from '../features/widgets/api';
+import { useThemeMode, getThemeColors } from '../theme';
 import { useTranslation } from 'react-i18next';
-import { searchPlayers as searchPlayersIDB, searchTeams as searchTeamsIDB, initializeIndexedDB } from '../services/indexedDB';
+import { useAutocomplete } from '../features/autocomplete/useAutocomplete';
 
-// Simple debounce hook
-function useDebounce(value, delay) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const h = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(h);
-  }, [value, delay]);
-  return debounced;
-}
+// Debounce is handled inside useAutocomplete
 
 export default function EntityAutocomplete({ entityType, onSelect, placeholder }) {
   const { activeSport } = useSportContext();
+  const queryClient = useQueryClient();
   const { t } = useTranslation();
   const { colorScheme } = useThemeMode();
   const colors = getThemeColors(colorScheme);
-  const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState([]);
-  const [error, setError] = useState('');
-  const [skipNextFetch, setSkipNextFetch] = useState(false);
-  const [useIndexedDB, setUseIndexedDB] = useState(false);
-  const debounced = useDebounce(query, 300);
-  const abortRef = useRef();
-
-  // Initialize IndexedDB on component mount
-  useEffect(() => {
-    initializeIndexedDB()
-      .then(() => {
-        console.log('[EntityAutocomplete] IndexedDB initialized');
-        setUseIndexedDB(true);
-      })
-      .catch(err => {
-        console.warn('[EntityAutocomplete] IndexedDB initialization failed, will use API:', err);
-        setUseIndexedDB(false);
-      });
-  }, []);
-
-  useEffect(() => {
-    const trimmed = debounced.trim();
-
-    if (skipNextFetch) {
-      return;
-    }
-
-    if (trimmed.length < 2) {
-      setResults([]);
-      setError('');
-      return;
-    }
-
-    const fetchData = async () => {
-      if (abortRef.current) abortRef.current.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-      setLoading(true);
-      setError('');
-      try {
-        let localResults = [];
-
-        // Try IndexedDB first if available
-        if (useIndexedDB) {
-          try {
-            if (entityType === 'player') {
-              const idbResults = await searchPlayersIDB(activeSport, debounced, 15);
-              localResults = idbResults.map(p => ({
-                id: p.playerId,
-                label: p.currentTeam ? `${p.fullName} (${p.currentTeam})` : p.fullName,
-                name: p.fullName,
-                entity_type: 'player',
-                sport: activeSport,
-                team: p.currentTeam || null,
-                team_abbr: null,
-                source: 'indexeddb',
-              }));
-            } else if (entityType === 'team') {
-              const idbResults = await searchTeamsIDB(activeSport, debounced, 15);
-              localResults = idbResults.map(t => ({
-                id: t.teamId,
-                label: t.name,
-                name: t.name,
-                entity_type: 'team',
-                sport: activeSport,
-                league: null,
-                team_abbr: null,
-                source: 'indexeddb',
-              }));
-            }
-          } catch (idbErr) {
-            console.warn('[EntityAutocomplete] IndexedDB search failed, falling back to API:', idbErr);
-          }
-        }
-
-        // If no local results, fall back to API
-        if (localResults.length === 0) {
-          const resp = await axios.get(`/api/v1/${activeSport}/autocomplete/${entityType}`, {
-            params: { q: debounced },
-            signal: controller.signal,
-          });
-          localResults = resp.data.results || [];
-        }
-
-        setResults(localResults);
-      } catch (err) {
-        if (!axios.isCancel(err)) {
-          setError(t('search.autocompleteFailed'));
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [debounced, entityType, activeSport, t, skipNextFetch, useIndexedDB]);
+  const { query, setQuery, results, loading, error } = useAutocomplete({ sport: activeSport, entityType, debounceMs: 300, limit: 15 });
 
   const handleSelect = (item) => {
     onSelect(item);
-    if (abortRef.current) {
-      abortRef.current.abort();
-    }
     const label = item.label || '';
     setQuery(label);
-    setResults([]);
-    setSkipNextFetch(true);
   };
 
   const handleChange = (e) => {
-    setSkipNextFetch(false);
     setQuery(e.target.value);
   };
 
@@ -155,6 +47,34 @@ export default function EntityAutocomplete({ entityType, onSelect, placeholder }
               <div
                 key={`${r.entity_type}-${r.id}`}
                 onClick={() => handleSelect(r)}
+                onMouseEnter={() => {
+                  // Prefetch entity basics and widget envelope to improve perceived speed
+                  try {
+                    if (r.entity_type === 'player') {
+                      queryClient.prefetchQuery({
+                        queryKey: ['entity','player', r.id, activeSport],
+                        queryFn: () => apiEntities.getPlayerDetails(r.id, undefined, activeSport),
+                        staleTime: 60_000,
+                      });
+                      queryClient.prefetchQuery({
+                        queryKey: ['widget','player', r.id, activeSport],
+                        queryFn: () => apiWidgets.getWidgetEnvelope('player', r.id, { sport: activeSport }),
+                        staleTime: 60_000,
+                      });
+                    } else if (r.entity_type === 'team') {
+                      queryClient.prefetchQuery({
+                        queryKey: ['entity','team', r.id, activeSport],
+                        queryFn: () => apiEntities.getTeamDetails(r.id, undefined, activeSport),
+                        staleTime: 60_000,
+                      });
+                      queryClient.prefetchQuery({
+                        queryKey: ['widget','team', r.id, activeSport],
+                        queryFn: () => apiWidgets.getWidgetEnvelope('team', r.id, { sport: activeSport }),
+                        staleTime: 60_000,
+                      });
+                    }
+                  } catch (_) {}
+                }}
                 style={{
                   padding: '6px 10px',
                   cursor: 'pointer',
@@ -168,7 +88,7 @@ export default function EntityAutocomplete({ entityType, onSelect, placeholder }
           </ScrollArea.Autosize>
         </Paper>
       )}
-      {!loading && debounced.length >= 2 && results.length === 0 && !error && (
+      {!loading && query.length >= 2 && results.length === 0 && !error && (
         <Text size="xs" mt={4} c="dimmed">{t('search.noMatches')}</Text>
       )}
     </div>

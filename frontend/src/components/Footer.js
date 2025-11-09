@@ -1,7 +1,7 @@
 import React from 'react';
 import { Container, Group, Text, Anchor, Paper } from '@mantine/core';
-import { useThemeMode } from '../ThemeProvider';
-import { getThemeColors } from '../theme';
+import DiagnosticsBadge from './dev/DiagnosticsBadge';
+import { useThemeMode, getThemeColors } from '../theme';
 import { useTranslation } from 'react-i18next';
 
 function Footer() {
@@ -25,6 +25,7 @@ function Footer() {
             <Anchor href="#" target="_blank" c="dimmed" size="sm">
               {t('footer.privacy')}
             </Anchor>
+            <DiagnosticsBadge />
           </Group>
         </Group>
       </Container>

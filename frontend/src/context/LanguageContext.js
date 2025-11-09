@@ -1,38 +1,38 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useMemo, useState } from 'react';
 import i18n from '../i18n';
 
-const LanguageContext = createContext();
+const LanguageContext = createContext(null);
 
-const LANGUAGES = [
-  { id: 'en', label: 'English', display: 'EN' },
-  { id: 'es', label: 'Español', display: 'ES' },
-  { id: 'de', label: 'Deutsch', display: 'DE' },
-  { id: 'fr', label: 'Français', display: 'FR' },
-  { id: 'it', label: 'Italiano', display: 'IT' },
-];
+export function LanguageProvider({ children }) {
+  const [language, setLanguage] = useState(i18n.language || 'en');
 
-export const LanguageProvider = ({ children }) => {
-  const [language, setLanguage] = useState('en');
+  const languages = useMemo(
+    () => [
+      { id: 'en', display: 'English', label: 'EN' },
+      // Add more languages as you add resources to i18n
+    ],
+    []
+  );
 
-  useEffect(() => {
-    const saved = localStorage.getItem('language');
-    if (saved && LANGUAGES.some(l => l.id === saved)) setLanguage(saved);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('language', language);
-    try { i18n.changeLanguage(language); } catch (e) { /* no-op */ }
-  }, [language]);
-
-  const changeLanguage = (langId) => {
-    if (LANGUAGES.some(l => l.id === langId)) setLanguage(langId);
+  const changeLanguage = (lang) => {
+    setLanguage(lang);
+    if (i18n.language !== lang) {
+      void i18n.changeLanguage(lang);
+    }
   };
 
-  return (
-    <LanguageContext.Provider value={{ language, changeLanguage, languages: LANGUAGES }}>
-      {children}
-    </LanguageContext.Provider>
+  const value = useMemo(
+    () => ({ language, languages, changeLanguage }),
+    [language, languages]
   );
-};
 
-export const useLanguage = () => useContext(LanguageContext);
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+}
+
+export function useLanguage() {
+  const ctx = useContext(LanguageContext);
+  if (!ctx) throw new Error('useLanguage must be used within LanguageProvider');
+  return ctx;
+}
+
+export default LanguageContext;

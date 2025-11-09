@@ -45,6 +45,12 @@ export const initializeIndexedDB = async () => {
     request.onupgradeneeded = (event) => {
       const database = event.target.result;
 
+      // Meta store for dataset info
+      if (!database.objectStoreNames.contains('meta')) {
+        const metaStore = database.createObjectStore('meta', { keyPath: 'key' });
+        metaStore.createIndex('key', 'key', { unique: true });
+      }
+
       // Create Players store
       if (!database.objectStoreNames.contains(STORES.PLAYERS)) {
         const playerStore = database.createObjectStore(STORES.PLAYERS, { keyPath: 'id' });
@@ -150,7 +156,7 @@ export const searchPlayers = async (sport, query, limit = 8) => {
     const index = store.index('sport_normalized');
 
     const normalizedQuery = normalizeText(query);
-    const results = [];
+  // results placeholder removed (unused)
 
     // First, try exact prefix match on normalized name
     const prefixRange = IDBKeyRange.bound(
@@ -217,7 +223,7 @@ export const searchTeams = async (sport, query, limit = 8) => {
     const index = store.index('sport_normalized');
 
     const normalizedQuery = normalizeText(query);
-    const results = [];
+  // results placeholder removed (unused)
 
     // Try exact prefix match
     const prefixRange = IDBKeyRange.bound(
@@ -366,6 +372,30 @@ export const getStats = async () => {
     tx.onerror = () => reject(tx.error);
   });
 };
+
+// ============ META STORE HELPERS ============
+
+export async function getMeta(key) {
+  if (!db) await initializeIndexedDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(['meta'], 'readonly');
+    const store = tx.objectStore('meta');
+    const req = store.get(key);
+    req.onsuccess = () => resolve(req.result ? req.result.value : null);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function setMeta(key, value) {
+  if (!db) await initializeIndexedDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(['meta'], 'readwrite');
+    const store = tx.objectStore('meta');
+    store.put({ key, value, updatedAt: Date.now() });
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  });
+}
 
 // ============ HELPER FUNCTIONS ============
 
