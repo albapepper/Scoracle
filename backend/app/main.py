@@ -15,6 +15,7 @@ from app.config import settings
 from app.routers import widgets, sport, news, twitter, reddit
 from app.utils.middleware import CorrelationIdMiddleware, RateLimitMiddleware
 from app.utils.errors import build_error_payload, map_status_to_code
+from app.services import news_fast
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,14 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("Starting application lifespan")
     try:
+        # Optional cache warming: build automatons for active sports
+        try:
+            active_sports = {"NBA", "EPL", "FOOTBALL"}
+            for s in active_sports:
+                news_fast._get_automatons(s)
+            logger.info("Warmed news_fast automatons: %s", ", ".join(sorted(active_sports)))
+        except Exception:
+            logger.warning("Automaton warmup skipped due to error", exc_info=True)
         yield
     finally:
         logger.info("Stopping application lifespan")

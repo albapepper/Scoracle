@@ -8,6 +8,28 @@ const resources = {
 			mentions_heading: 'Mentions',
 			entity_heading: 'Entity',
 			not_found_message: 'Page not found',
+			language_changed: 'Language changed to {{lng}}',
+			// Mentions UI
+			mentions: {
+				rankingsTab: 'Rankings',
+				linkedTeams: 'Linked teams',
+				linkedPlayers: 'Linked players',
+			},
+		},
+	},
+	es: {
+		translation: {
+			search_placeholder: 'Buscar entidades...',
+			mentions_heading: 'Menciones',
+			entity_heading: 'Entidad',
+			not_found_message: 'Página no encontrada',
+			language_changed: 'Idioma cambiado a {{lng}}',
+			// UI de Menciones
+			mentions: {
+				rankingsTab: 'Rankings',
+				linkedTeams: 'Equipos relacionados',
+				linkedPlayers: 'Jugadores relacionados',
+			},
 		},
 	},
 };

@@ -1,14 +1,25 @@
-import { useQuery } from '@tanstack/react-query';
+import React from 'react';
 import api from '../../entities/api';
 
 export function useEntitySummary(entityType, entityId, sport, opts = {}) {
-  const fn = entityType === 'team'
-    ? () => api.getTeamDetails(entityId, undefined, sport)
-    : () => api.getPlayerDetails(entityId, undefined, sport);
-  return useQuery({
-    queryKey: ['entity', entityType, entityId, sport],
-    queryFn: fn,
-    enabled: !!entityType && !!entityId && !!sport,
-    staleTime: opts.staleTime ?? 60_000,
-  });
+  const enabled = !!entityType && !!entityId && !!sport;
+  const [state, setState] = React.useState({ data: null, isLoading: enabled, error: null });
+  React.useEffect(() => {
+    let alive = true;
+    async function run() {
+      if (!enabled) return;
+      try {
+        const data = entityType === 'team'
+          ? await api.getTeamDetails(entityId, undefined, sport)
+          : await api.getPlayerDetails(entityId, undefined, sport);
+        if (alive) setState({ data, isLoading: false, error: null });
+      } catch (e) {
+        if (alive) setState({ data: null, isLoading: false, error: e });
+      }
+    }
+    setState((s) => ({ ...s, isLoading: enabled }));
+    run();
+    return () => { alive = false; };
+  }, [entityType, entityId, sport, enabled]);
+  return state;
 }

@@ -1,19 +1,22 @@
 import React, { createContext, useContext, useMemo, useState, useCallback } from 'react';
 
+export interface SportInfo { id: string; display: string }
+export interface SportContextValue { activeSport: string; sports: SportInfo[]; changeSport: (id: string) => void }
+
 // Simple sport registry; expand as backend enumerations grow.
-const DEFAULT_SPORTS = [
+const DEFAULT_SPORTS: SportInfo[] = [
   { id: 'soccer', display: 'Soccer' },
   { id: 'basketball', display: 'Basketball' },
 ];
 
-export const SportContext = createContext(null);
+export const SportContext = createContext<SportContextValue | null>(null);
 
-export function SportContextProvider({ children }) {
-  const [activeSport, setActiveSport] = useState('soccer');
+export function SportContextProvider({ children }: { children: React.ReactNode }) {
+  const [activeSport, setActiveSport] = useState<string>('soccer');
   const sports = DEFAULT_SPORTS;
 
-  const changeSport = useCallback((sportId) => {
-    if (sports.some(s => s.id === sportId)) {
+  const changeSport = useCallback((sportId: string) => {
+    if (sports.some((s) => s.id === sportId)) {
       setActiveSport(sportId);
     }
   }, [sports]);
@@ -22,7 +25,7 @@ export function SportContextProvider({ children }) {
   return <SportContext.Provider value={value}>{children}</SportContext.Provider>;
 }
 
-export function useSportContext() {
+export function useSportContext(): SportContextValue {
   const ctx = useContext(SportContext);
   if (!ctx) throw new Error('useSportContext must be used within SportContextProvider');
   return ctx;

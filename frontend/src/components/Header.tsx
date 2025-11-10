@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './Header.css';
 import { Link } from 'react-router-dom';
 import { Container, Group, Box, Paper, ActionIcon, Drawer, Switch, Select, Stack, Text, Tooltip } from '@mantine/core';
 import { IconMenu2 } from '@tabler/icons-react';
@@ -6,17 +7,21 @@ import { theme, useThemeMode } from '../theme';
 import { useLanguage } from '../context/LanguageContext';
 import { useTranslation } from 'react-i18next';
 
-function Header() {
-  const { language, changeLanguage, languages } = useLanguage();
+const Header: React.FC = () => {
+  const { language, changeLanguage, languages } = useLanguage() as {
+    language: string;
+    changeLanguage: (lang: string) => void;
+    languages: Array<{ id: string; display: string; label: string }>;
+  };
   const { colorScheme, toggleColorScheme } = useThemeMode();
   const isDark = colorScheme === 'dark';
   const { t } = useTranslation();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Get appropriate header colors based on color scheme
-  const headerConfig = theme.header[colorScheme];
-  
-  const headerStyle = {
+  const headerConfig = (theme.header as any)[colorScheme];
+
+  const headerStyle: React.CSSProperties = {
     background: `linear-gradient(90deg, ${headerConfig.gradientStart}, ${headerConfig.gradientEnd})`,
     border: 'none',
     padding: '0.5rem 0',
@@ -37,7 +42,7 @@ function Header() {
         {/* Center: Brand/logo -> home */}
         <Box style={{ flex: 2, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <Link to="/" aria-label="Go to home" style={{ textDecoration: 'none' }}>
-            <img src="/scoracle-logo.png" alt="Scoracle" style={{ height: 54, display: 'block' }} />
+            <img src="/scoracle-logo.png" alt="Scoracle" className="header-logo" />
           </Link>
         </Box>
 
@@ -47,7 +52,7 @@ function Header() {
             aria-label={t('header.language') || 'Select language'}
             data={languages.map((l) => ({ value: l.id, label: l.display }))}
             value={language}
-            onChange={(v) => v && changeLanguage(v)}
+            onChange={(v) => v && changeLanguage(v || language)}
             size="xs"
             styles={{ input: { background: 'transparent', color: headerConfig.title.color, borderColor: 'rgba(255,255,255,0.4)' } }}
           />
@@ -57,23 +62,19 @@ function Header() {
         <Drawer opened={settingsOpen} onClose={() => setSettingsOpen(false)} title={t('header.settings')} position="left">
           <Stack>
             <Text fw={600}>{t('header.appearance')}</Text>
-            <Switch
-              checked={isDark}
-              onChange={toggleColorScheme}
-              label={t('header.darkMode')}
-            />
+            <Switch checked={isDark} onChange={toggleColorScheme} label={t('header.darkMode')} />
             <Text fw={600} mt="md">{t('header.language')}</Text>
             <Select
               aria-label={t('header.language') || 'Select language'}
               data={languages.map((l) => ({ value: l.id, label: `${l.display} — ${l.label}` }))}
               value={language}
-              onChange={(v) => v && changeLanguage(v)}
+              onChange={(v) => v && changeLanguage(v || language)}
             />
           </Stack>
         </Drawer>
       </Container>
     </Paper>
   );
-}
+};
 
 export default Header;

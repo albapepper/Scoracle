@@ -6,50 +6,48 @@ import apiSearch from '../features/search/api';
 import EntityAutocomplete from './EntityAutocomplete';
 import { useThemeMode, getThemeColors } from '../theme';
 import { useTranslation } from 'react-i18next';
+import type { AutocompleteResult } from '../features/autocomplete/types';
 
-function SearchForm() {
+export default function SearchForm() {
   const navigate = useNavigate();
   const { activeSport, sports } = useSportContext();
   const { t } = useTranslation();
-  const [query, setQuery] = useState(''); // still track for fallback submit
-  const [selected, setSelected] = useState(null);
-  const [entityType, setEntityType] = useState('player');
+  const [query, setQuery] = useState('');
+  const [selected, setSelected] = useState<AutocompleteResult | null>(null);
+  const [entityType, setEntityType] = useState<'player' | 'team'>('player');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const activeSportDisplay = sports.find((sport) => sport.id === activeSport)?.display || activeSport;
+  const activeSportDisplay = sports.find((s) => s.id === activeSport)?.display || activeSport;
   const { colorScheme } = useThemeMode();
   const colors = getThemeColors(colorScheme);
   
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    
     try {
-      if (!query.trim()) {
+      if (!query.trim() && !selected) {
         throw new Error(t('search.enterTerm'));
       }
-      // If user selected from autocomplete, trust that ID
       if (selected) {
         const plainName = (selected.name || selected.label || '').trim();
         navigate(`/mentions/${entityType}/${selected.id}?sport=${activeSport}&name=${encodeURIComponent(plainName)}`);
         return;
       }
-      // Fallback: perform legacy search
-  const results = await apiSearch.searchEntities(query, entityType, activeSport);
+      const results = await (apiSearch as any).searchEntities(query, entityType, activeSport);
       if (results.results && results.results.length === 1) {
         const only = results.results[0];
         const plainName = (only.name || only.label || query).trim();
         navigate(`/mentions/${entityType}/${only.id}?sport=${activeSport}&name=${encodeURIComponent(plainName)}`);
       } else if (results.results && results.results.length > 1) {
-        const firstResult = results.results[0];
-        const plainName = (firstResult.name || firstResult.label || query).trim();
-        navigate(`/mentions/${entityType}/${firstResult.id}?sport=${activeSport}&name=${encodeURIComponent(plainName)}`);
+        const first = results.results[0];
+        const plainName = (first.name || first.label || query).trim();
+        navigate(`/mentions/${entityType}/${first.id}?sport=${activeSport}&name=${encodeURIComponent(plainName)}`);
       } else {
         setError(t('search.noneFound', { entity: t(`common.entity.${entityType}`), query }));
       }
-    } catch (err) {
-      setError(err.message || t('search.errorGeneric'));
+    } catch (err: any) {
+      setError(err?.message || t('search.errorGeneric'));
     } finally {
       setIsLoading(false);
     }
@@ -68,7 +66,7 @@ function SearchForm() {
           
           <SegmentedControl
             value={entityType}
-            onChange={setEntityType}
+            onChange={(v) => setEntityType(v as 'player' | 'team')}
             data={[
               { label: t('common.entity.player'), value: 'player' },
               { label: t('common.entity.team'), value: 'team' },
@@ -108,5 +106,3 @@ function SearchForm() {
     </Card>
   );
 }
-
-export default SearchForm;

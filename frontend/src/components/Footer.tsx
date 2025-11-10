@@ -4,20 +4,19 @@ import DiagnosticsBadge from './dev/DiagnosticsBadge';
 import { useThemeMode, getThemeColors } from '../theme';
 import { useTranslation } from 'react-i18next';
 
-function Footer() {
+const Footer: React.FC = () => {
   const year = new Date().getFullYear();
   const { t } = useTranslation();
   const { colorScheme } = useThemeMode();
   const colors = getThemeColors(colorScheme);
-  
+
   return (
-  <Paper component="footer" withBorder radius={0} p="md" style={{ backgroundColor: colors.background.primary }}>
+    <Paper component="footer" withBorder radius={0} p="md" style={{ backgroundColor: colors.background.primary }}>
       <Container>
         <Group justify="space-between" align="center">
           <Text size="sm" c="dimmed">
             © {year} Scoracle. {t('footer.allRightsReserved')}
           </Text>
-
           <Group>
             <Anchor href="#" target="_blank" c="dimmed" size="sm">
               {t('footer.terms')}
@@ -31,6 +30,6 @@ function Footer() {
       </Container>
     </Paper>
   );
-}
+};
 
 export default Footer;

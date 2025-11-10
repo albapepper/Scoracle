@@ -1,4 +1,4 @@
-import { http } from '../../app/http';
+import { http } from '../_shared/http';
 
 export const getWidgetEnvelope = (type: string, id: string|number, { sport, season, debug }: { sport?: string; season?: string; debug?: boolean } = {}) => {
 	const params: any = { ...(sport && { sport }), ...(season && { season }), ...(debug && { debug: 1 }) };

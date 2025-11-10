@@ -1,14 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { Notification, Transition } from '@mantine/core';
 
-export default function ErrorToaster() {
-  const [items, setItems] = useState([]);
+interface ErrorItem {
+  id: string;
+  code: string;
+  message: string;
+  status?: number;
+  correlationId?: string;
+  url?: string;
+  ts: number;
+}
+
+export default function ErrorToaster(): JSX.Element | null {
+  const [items, setItems] = useState<ErrorItem[]>([]);
 
   useEffect(() => {
-    function handler(e) {
-      const detail = e.detail || {};
+    function handler(e: Event) {
+      const custom = e as CustomEvent;
+      const detail: any = custom.detail || {};
       const { error, status, correlationId, url } = detail;
-      // Ignore non-error envelopes
       if (!error || !error.code) return;
       setItems((prev) => [
         {
@@ -20,13 +30,14 @@ export default function ErrorToaster() {
           url,
           ts: Date.now(),
         },
-        ...prev.filter((i) => Date.now() - i.ts < 10_000).slice(0, 3), // keep recent few
+        ...prev.filter((i) => Date.now() - i.ts < 10_000).slice(0, 3),
       ]);
     }
-    window.addEventListener('scoracle:error', handler);
-    return () => window.removeEventListener('scoracle:error', handler);
+    window.addEventListener('scoracle:error', handler as EventListener);
+    return () => window.removeEventListener('scoracle:error', handler as EventListener);
   }, []);
 
+  if (!items.length) return null;
   return (
     <div style={{ position: 'fixed', bottom: 16, right: 16, zIndex: 5000, width: 340 }}>
       <Transition mounted={items.length > 0} transition="pop" duration={200} timingFunction="ease">

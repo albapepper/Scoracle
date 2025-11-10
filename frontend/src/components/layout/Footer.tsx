@@ -1,3 +1,2 @@
-// TypeScript wrapper re-exporting existing Footer implementation
-// @ts-ignore
-export { default } from '../Footer.js';
+// Layout-specific Footer re-export now points to TypeScript implementation
+export { default } from '../Footer';

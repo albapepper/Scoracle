@@ -1,4 +1,4 @@
-import { http } from '../../app/http';
+import { http } from '../_shared/http';
 
 export const getEntityMentions = (entityType: string, entityId: string|number, sport: string) => {
   return http.get(`/${sport}/${entityType}s/${entityId}/mentions`);
