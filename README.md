@@ -10,7 +10,7 @@ Scoracle is a modern web application that aggregates near‑real‑time sports n
 | Lean Endpoints | Sport-first endpoints return summaries; rich stats via client widgets |
 | Smart Caching | Tiered in‑memory TTL caches for summaries and stats (invalidate naturally via TTL) |
 | Mentions & Links | Configurable News API (fallback to refined Google RSS) |
-| React Query | Automatic request dedupe + caching on frontend |
+| Lightweight Data Layer | Typed hooks replace React Query; local caching and ETag/304 support via axios wrapper |
 | Entity Preload Cache | Client context seeds detail pages to eliminate blank loading states |
 | Error Envelope | Consistent JSON error contract for all unhandled exceptions |
 | Sport‑First Paths | Canonical `/api/v1/{sport}/...` routes for multi‑sport expansion |
@@ -71,6 +71,19 @@ API docs: [http://localhost:8000/api/docs](http://localhost:8000/api/docs)
 ```
  
 React dev server proxies to `http://localhost:8000` (see `package.json` `proxy`).
+
+### Local Tooling
+
+- Use `local.ps1` instead of Makefile:
+
+```powershell
+./local.ps1 backend   # start FastAPI on :8000
+./local.ps1 frontend  # start CRA dev server on :3000
+./local.ps1 up        # run both (backend in a job)
+./local.ps1 types     # generate OpenAPI TS types -> frontend/src/types/api.ts
+```
+
+TypeScript is fully enabled in the frontend and JS/JSX sources were migrated. The compiler is configured with `allowJs: false`.
 
 ## 📦 Caching Strategy
 

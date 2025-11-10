@@ -6,10 +6,8 @@ from datetime import datetime, timedelta, timezone
 import time
 import unicodedata
 import re
-
 import feedparser  # faster and robust RSS parser
-import pyahocorasick as ahocorasick
-
+import ahocorasick
 from app.database.local_dbs import list_all_players, list_all_teams
 from app.services.cache import widget_cache
 

@@ -17,13 +17,15 @@ export function useEntityMentions<T = any>(entityType?: string, entityId?: strin
       if (!enabled) return;
       try {
         const data = await api.getEntityMentions(entityType!, entityId!, sport!);
-        if (alive) setState({ data: data as T, isLoading: false, error: null });
+        if (!alive) return;
+        setState({ data: (data as unknown) as T, isLoading: false, error: null });
       } catch (e) {
-        if (alive) setState({ data: null, isLoading: false, error: e });
+        if (!alive) return;
+        setState({ data: null, isLoading: false, error: e });
       }
     }
     setState((s) => ({ ...s, isLoading: enabled }));
-    void run();
+    run();
     return () => { alive = false; };
   }, [entityType, entityId, sport, enabled]);
 
