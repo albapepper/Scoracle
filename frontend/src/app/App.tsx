@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell } from '@mantine/core';
-import { ThemeProvider, useThemeMode, getThemeColors } from '../theme';
+import { ThemeProvider, useThemeMode, getThemeColors } from '../theme/ThemeProvider';
 import { LanguageProvider } from '../context/LanguageContext';
 import HomePage from '../pages/HomePage/HomePage';
 import MentionsPage from '../pages/MentionsPage/MentionsPage';

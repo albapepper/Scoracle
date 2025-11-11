@@ -24,7 +24,8 @@ export function useEntityMentions<T = any>(entityType?: string, entityId?: strin
         setState({ data: null, isLoading: false, error: e });
       }
     }
-    setState((s) => ({ ...s, isLoading: enabled }));
+    // Ensure state shape is preserved even if s is unexpectedly undefined in some test environments
+    setState((s) => ({ ...(s ?? { data: null, error: null, isLoading: false }), isLoading: enabled }));
     run();
     return () => { alive = false; };
   }, [entityType, entityId, sport, enabled]);

@@ -10,7 +10,7 @@ Scoracle is a modern web application that aggregates near‑real‑time sports n
 | Lean Endpoints | Sport-first endpoints return summaries; rich stats via client widgets |
 | Smart Caching | Tiered in‑memory TTL caches for summaries and stats (invalidate naturally via TTL) |
 | Mentions & Links | Configurable News API (fallback to refined Google RSS) |
-| Lightweight Data Layer | Typed hooks replace React Query; local caching and ETag/304 support via axios wrapper |
+| Lightweight Data Layer | Typed hooks replace prior React Query usage; local caching and ETag/304 support via axios wrapper |
 | Entity Preload Cache | Client context seeds detail pages to eliminate blank loading states |
 | Error Envelope | Consistent JSON error contract for all unhandled exceptions |
 | Sport‑First Paths | Canonical `/api/v1/{sport}/...` routes for multi‑sport expansion |
@@ -74,7 +74,7 @@ React dev server proxies to `http://localhost:8000` (see `package.json` `proxy`)
 
 ### Local Tooling
 
-- Use `local.ps1` instead of Makefile:
+* Use `local.ps1` instead of Makefile:
 
 ```powershell
 ./local.ps1 backend   # start FastAPI on :8000
@@ -169,26 +169,26 @@ Alternatively, you can set `REACT_APP_APISPORTS_WIDGET_KEY` for compatibility. A
 
 This repo is configured for Vercel:
 
-- Frontend: React app under `frontend/` is built with `@vercel/static-build` and served as a static site.
-- Backend: FastAPI app is exposed as a Python Serverless Function at `/api` via `api/index.py`.
-- Local SQLite seeds under `instance/localdb/` are bundled read‑only and used by sync endpoints to seed the client’s IndexedDB.
+* Frontend: React app under `frontend/` is built with `@vercel/static-build` and served as a static site.
+* Backend: FastAPI app is exposed as a Python Serverless Function at `/api` via `api/index.py`.
+* Local SQLite seeds under `instance/localdb/` are bundled read‑only and used by sync endpoints to seed the client’s IndexedDB.
 
 Steps:
 
 1. Connect the repository to Vercel.
 2. No framework selection needed; `vercel.json` handles builds and routes.
 3. Environment variables (Project → Settings → Environment Variables):
-   - `API_SPORTS_KEY`
-   - Optional: `NEWS_API_KEY`, `NEWS_API_ENDPOINT`
+   * `API_SPORTS_KEY`
+   * Optional: `NEWS_API_KEY`, `NEWS_API_ENDPOINT`
 4. Deploy. After deploy:
-   - App UI: `https://<your-domain>/`
-   - API docs: `https://<your-domain>/api/docs`
-   - Health: `https://<your-domain>/api/health`
+   * App UI: `https://<your-domain>/`
+   * API docs: `https://<your-domain>/api/docs`
+   * Health: `https://<your-domain>/api/health`
 
 Notes:
 
-- The serverless filesystem is read‑only; the app opens SQLite in read‑only mode automatically on Vercel.
-- If bundle size grows, consider splitting sport DBs or moving them to an external object store/CDN.
+* The serverless filesystem is read‑only; the app opens SQLite in read‑only mode automatically on Vercel.
+* If bundle size grows, consider splitting sport DBs or moving them to an external object store/CDN.
 
 ## 📄 License
 
