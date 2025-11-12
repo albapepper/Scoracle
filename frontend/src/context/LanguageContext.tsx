@@ -12,7 +12,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const languages = useMemo<LanguageInfo[]>(
     () => [
       { id: 'en', display: 'English', label: 'EN' },
-      // Extend with more locales as resources are added
+      { id: 'es', display: 'Español', label: 'ES' },
+      { id: 'de', display: 'Deutsch', label: 'DE' },
+      { id: 'pt', display: 'Português', label: 'PT' },
+      { id: 'it', display: 'Italiano', label: 'IT' },
     ],
     []
   );

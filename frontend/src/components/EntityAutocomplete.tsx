@@ -20,6 +20,13 @@ export default function EntityAutocomplete({ entityType, onSelect, placeholder }
   const { colorScheme } = useThemeMode();
   const colors = getThemeColors(colorScheme);
   const { query, setQuery, results, loading, error } = useAutocomplete({ sport: activeSport, entityType, debounceMs: 300, limit: 15 });
+  
+  // Debug logging
+  React.useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[EntityAutocomplete]', { activeSport, entityType, query, resultsCount: results.length, loading, error });
+    }
+  }, [activeSport, entityType, query, results.length, loading, error]);
 
   const handleSelect = (item: any) => {
     onSelect(item);

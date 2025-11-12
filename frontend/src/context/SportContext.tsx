@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState, useCallback } from 'react';
+import React, { createContext, useContext, useMemo, useState, useCallback, useEffect } from 'react';
 import { useIndexedDBSync } from '../hooks/useIndexedDBSync';
 import { mapSportToBackendCode } from '../utils/sportMapping';
 
@@ -22,10 +22,23 @@ export function SportContextProvider({ children }: { children: React.ReactNode }
   const backendSportCode = mapSportToBackendCode(activeSport);
   
   // Auto-sync IndexedDB when sport changes
-  const { isSyncing, syncError } = useIndexedDBSync({
+  const { isSyncing, syncError, hasData, playersCount, teamsCount } = useIndexedDBSync({
     sport: backendSportCode,
     autoSync: true,
   });
+  
+  // Debug logging for sync status
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[SportContext] ${backendSportCode} sync status:`, { 
+        isSyncing, 
+        hasData, 
+        playersCount, 
+        teamsCount, 
+        syncError: syncError || null 
+      });
+    }
+  }, [backendSportCode, isSyncing, hasData, playersCount, teamsCount, syncError]);
 
   const changeSport = useCallback((sportId: string) => {
     if (sports.some((s) => s.id === sportId)) {

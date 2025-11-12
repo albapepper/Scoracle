@@ -3,7 +3,7 @@ import './Header.css';
 import { Link } from 'react-router-dom';
 import { Container, Group, Box, Paper, ActionIcon, Drawer, Switch, Select, Stack, Text, Tooltip } from '@mantine/core';
 import { IconMenu2 } from '@tabler/icons-react';
-import { useThemeMode, getThemeColors, getBoxShadow } from '../theme';
+import { useThemeMode, getThemeColors } from '../theme';
 import { useLanguage } from '../context/LanguageContext';
 import { useTranslation } from 'react-i18next';
 
@@ -20,13 +20,11 @@ const Header: React.FC = () => {
 
   // Get appropriate header colors based on color scheme
   const colors = getThemeColors(colorScheme);
-  const shadows = getBoxShadow(colorScheme);
 
   const headerStyle: React.CSSProperties = {
-    background: colors.background.tertiary,
+    background: colors.background.primary,
     borderBottom: `1px solid ${colors.ui.border}`,
     padding: '0.5rem 0',
-    boxShadow: shadows.sm,
   };
 
   return (

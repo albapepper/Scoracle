@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AutocompleteResult } from './types';
 import { mapSportToBackendCode } from '../../utils/sportMapping';
+import { searchPlayers as searchPlayersDB, searchTeams as searchTeamsDB } from '../../services/indexedDB';
+import { mapResults } from './worker/map';
 
 export interface UseAutocompleteOptions {
 	sport: string;
@@ -57,12 +59,23 @@ export function useAutocomplete({ sport, entityType, debounceMs = 200, limit = 1
 		const onMsg = (e: MessageEvent) => {
 			const data = (e.data || {}) as any;
 			if (data.type !== 'results') return;
-			if (data.requestId !== reqIdRef.current) return; // stale
+			if (data.requestId !== reqIdRef.current) {
+				if (process.env.NODE_ENV !== 'production') {
+					console.log('[useAutocomplete] Stale result ignored:', data.requestId, 'current:', reqIdRef.current);
+				}
+				return; // stale
+			}
 			setLoading(false);
 			if (data.error) {
+				if (process.env.NODE_ENV !== 'production') {
+					console.error('[useAutocomplete] Search error:', data.error);
+				}
 				setError(String(data.error));
 				setResults([]);
 			} else {
+				if (process.env.NODE_ENV !== 'production') {
+					console.log('[useAutocomplete] Received results:', data.results?.length || 0, 'results');
+				}
 				setError('');
 				setResults((data.results || []) as AutocompleteResult[]);
 			}
@@ -72,19 +85,51 @@ export function useAutocomplete({ sport, entityType, debounceMs = 200, limit = 1
 	}, [worker]);
 
 	useEffect(() => {
-		if (!worker) return;
 		if (!query || query.trim().length < 2) {
 			setResults([]);
 			setError('');
 			setLoading(false);
 			return;
 		}
-		const id = setTimeout(() => {
+		
+		const id = setTimeout(async () => {
 			reqIdRef.current += 1;
+			const currentReqId = reqIdRef.current;
 			setLoading(true);
-			// Use backend sport code for IndexedDB search
-			worker.postMessage({ type: 'search', sport: backendSportCode, entityType, query, limit, requestId: reqIdRef.current });
+			
+			if (process.env.NODE_ENV !== 'production') {
+				console.log('[useAutocomplete] Searching:', { sport: backendSportCode, entityType, query, limit, hasWorker: !!worker });
+			}
+			
+			try {
+				if (worker) {
+					// Use worker if available
+					worker.postMessage({ type: 'search', sport: backendSportCode, entityType, query, limit, requestId: currentReqId });
+				} else {
+					// Fallback: search IndexedDB directly
+					const raw = entityType === 'team'
+						? await searchTeamsDB(backendSportCode, query, limit)
+						: await searchPlayersDB(backendSportCode, query, limit);
+					
+					if (currentReqId !== reqIdRef.current) return; // Stale request
+					
+					const mapped = mapResults(raw as any, entityType, backendSportCode);
+					if (process.env.NODE_ENV !== 'production') {
+						console.log('[useAutocomplete] Direct search results:', mapped.length);
+					}
+					setResults(mapped);
+					setError('');
+					setLoading(false);
+				}
+			} catch (err: any) {
+				if (currentReqId !== reqIdRef.current) return; // Stale request
+				console.error('[useAutocomplete] Search error:', err);
+				setError(err?.message || 'Search failed');
+				setResults([]);
+				setLoading(false);
+			}
 		}, debounceMs);
+		
 		return () => clearTimeout(id);
 	}, [query, backendSportCode, entityType, limit, debounceMs, worker]);
 

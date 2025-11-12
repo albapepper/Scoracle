@@ -111,7 +111,7 @@ export async function syncSport(sport: SportCode, force: boolean = false): Promi
         if (age < DEFAULT_MAX_AGE_MS) {
           // Try conditional request
           try {
-            const response = await http.raw.get(`/api/v1/${sportUpper.toLowerCase()}/bootstrap`, {
+            const response = await http.raw.get(`/${sportUpper.toLowerCase()}/bootstrap`, {
               headers: {
                 'If-None-Match': lastVersion,
               },
@@ -142,7 +142,7 @@ export async function syncSport(sport: SportCode, force: boolean = false): Promi
     }
 
     // Fetch bootstrap data from backend
-    const bootstrap = await http.get<BootstrapResponse>(`/api/v1/${sportUpper.toLowerCase()}/bootstrap`);
+    const bootstrap = await http.get<BootstrapResponse>(`/${sportUpper.toLowerCase()}/bootstrap`);
     
     if (!bootstrap || !bootstrap.players || !bootstrap.teams) {
       throw new Error('Invalid bootstrap response format');
