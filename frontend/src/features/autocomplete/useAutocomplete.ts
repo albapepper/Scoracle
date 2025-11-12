@@ -38,7 +38,7 @@ export function useAutocomplete({ sport, entityType, debounceMs = 200, limit = 1
 					const meta = (0, eval)('import.meta') as ImportMeta;
 					// Module worker URL resolution
 					// @ts-ignore - new URL with import.meta is supported by bundler
-					workerRef.current = new Worker(new URL('./worker/autocomplete.worker.js', (meta as any).url), { type: 'module' } as any);
+					workerRef.current = new Worker(new URL('./worker/autocomplete.worker.ts', (meta as any).url), { type: 'module' } as any);
 				} catch {
 					// Fallback: disable worker in environments that don't support module workers
 					workerRef.current = null;

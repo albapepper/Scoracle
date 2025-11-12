@@ -7,7 +7,14 @@ export interface UseEntityMentionsState<T = any> {
   error: unknown;
 }
 
-export function useEntityMentions<T = any>(entityType?: string, entityId?: string | number, sport?: string): UseEntityMentionsState<T> {
+export type EntityMentionsFetcher<T = any> = (entityType: string, entityId: string | number, sport: string) => Promise<T>;
+
+export function useEntityMentions<T = any>(
+  entityType?: string,
+  entityId?: string | number,
+  sport?: string,
+  fetcher?: EntityMentionsFetcher<T>
+): UseEntityMentionsState<T> {
   const enabled = !!entityType && !!entityId && !!sport;
   const [state, setState] = React.useState<UseEntityMentionsState<T>>({ data: null, isLoading: enabled, error: null });
 
@@ -16,7 +23,8 @@ export function useEntityMentions<T = any>(entityType?: string, entityId?: strin
     async function run() {
       if (!enabled) return;
       try {
-        const data = await api.getEntityMentions(entityType!, entityId!, sport!);
+        const loader = fetcher || (api.getEntityMentions as EntityMentionsFetcher<T>);
+        const data = await loader(entityType!, entityId!, sport!);
         if (!alive) return;
         setState({ data: (data as unknown) as T, isLoading: false, error: null });
       } catch (e) {
@@ -28,7 +36,7 @@ export function useEntityMentions<T = any>(entityType?: string, entityId?: strin
     setState((s) => ({ ...(s ?? { data: null, error: null, isLoading: false }), isLoading: enabled }));
     run();
     return () => { alive = false; };
-  }, [entityType, entityId, sport, enabled]);
+  }, [entityType, entityId, sport, enabled, fetcher]);
 
   return state;
 }
