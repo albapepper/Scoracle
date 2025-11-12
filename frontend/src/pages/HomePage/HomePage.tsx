@@ -5,7 +5,6 @@ import SearchForm from '../../components/SearchForm';
 import { useSportContext } from '../../context/SportContext';
 import { useThemeMode, getThemeColors } from '../../theme';
 import { useTranslation } from 'react-i18next';
-import { useIndexedDBSync } from '../../hooks/useIndexedDBSync';
 
 const HomePage: React.FC = () => {
 	const { activeSport, sports, changeSport } = useSportContext();
@@ -13,18 +12,17 @@ const HomePage: React.FC = () => {
 	const colors = getThemeColors(colorScheme);
 	const { t } = useTranslation();
 	const activeSportDisplay = sports.find((s) => s.id === activeSport)?.display || activeSport;
-	useIndexedDBSync(activeSport);
 
 	return (
 		<Container size="lg" py="xl">
 			<Stack gap="xl" align="center">
 				<Box style={{ width: '100%', maxWidth: 600 }}>
 					<Paper
-						shadow="xs"
+						shadow="sm"
 						p="md"
-						radius="md"
-						withBorder
-						style={{ backgroundColor: colors.background.secondary, borderColor: colors.ui.border }}
+						radius="lg"
+						withBorder={false}
+						style={{ backgroundColor: colors.background.tertiary }}
 					>
 						<Title order={2} ta="center" mb="md" style={{ color: colors.text.accent }}>
 							{t('home.title')}

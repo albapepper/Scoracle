@@ -27,49 +27,77 @@ export interface ThemeTokens {
 const theme: ThemeTokens = {
   light: {
     colors: {
-      background: { primary: '#f8f8f5', secondary: '#f3efe6', tertiary: '#e8e8e2' },
-      text: { primary: '#333333', secondary: '#666666', accent: '#3d4c53', muted: '#929292' },
-      ui: { primary: '#546a7b', secondary: '#728ca0', accent: '#879e7e', border: '#d9d9d6' },
+      // Bone color palette: Warm, soft backgrounds for comfortable viewing
+      background: { primary: '#F5F1E8', secondary: '#F0ECE0', tertiary: '#EBE6D8' },
+      // High contrast text for readability
+      text: { primary: '#1A1A1A', secondary: '#666666', accent: '#2D3748', muted: '#A0AEC0' },
+      // Subtle, professional UI colors
+      ui: { primary: '#4A5568', secondary: '#718096', accent: '#4299E1', border: '#E2E8F0' },
+      // Data visualization palette: accessible, distinct colors
       visualization: {
-        primary: '#546a7b', secondary: '#879e7e', tertiary: '#a87d5f', quaternary: '#8b6d8a', quintary: '#6a7a77',
-        percentiles: ['#d8e2ec','#b0c4d4','#879eb8','#61799d','#3d5680']
+        primary: '#4299E1', secondary: '#48BB78', tertiary: '#ED8936', quaternary: '#9F7AEA', quintary: '#38B2AC',
+        percentiles: ['#EBF8FF','#BEE3F8','#90CDF4','#63B3ED','#4299E1']
       },
-      status: { success: '#879e7e', warning: '#c9b178', error: '#b37264', info: '#728ca0' }
+      status: { success: '#48BB78', warning: '#ED8936', error: '#F56565', info: '#4299E1' }
     },
   },
   dark: {
     colors: {
-      background: { primary: '#222220', secondary: '#2a2a27', tertiary: '#323230' },
-      text: { primary: '#e8e8e8', secondary: '#b8b8b8', accent: '#d4dce1', muted: '#7a7a7a' },
-      ui: { primary: '#8ab4d1', secondary: '#6d96b8', accent: '#a8c98a', border: '#3a3a36' },
+      // Soft dark gray backgrounds (comfortable, not too dark)
+      background: { primary: '#2D2D2D', secondary: '#353535', tertiary: '#3D3D3D' },
+      // Soft whites for text
+      text: { primary: '#F5F5F5', secondary: '#B8B8B8', accent: '#E2E8F0', muted: '#718096' },
+      // Muted UI colors for dark mode
+      ui: { primary: '#A0AEC0', secondary: '#718096', accent: '#63B3ED', border: '#2D3748' },
+      // Dark mode optimized visualization palette
       visualization: {
-        primary: '#8ab4d1', secondary: '#a8c98a', tertiary: '#d4a876', quaternary: '#c9afc9', quintary: '#95a9a5',
-        percentiles: ['#3a4452','#4a5f73','#5a7a94','#7a9bb5','#8ab4d1']
+        primary: '#63B3ED', secondary: '#68D391', tertiary: '#F6AD55', quaternary: '#B794F4', quintary: '#4FD1C7',
+        percentiles: ['#2D3748','#4A5568','#718096','#90CDF4','#63B3ED']
       },
-      status: { success: '#a8c98a', warning: '#d4b876', error: '#d4876a', info: '#8ab4d1' }
+      status: { success: '#68D391', warning: '#F6AD55', error: '#FC8181', info: '#63B3ED' }
     },
   },
   typography: {
-    fontFamily: { primary: "'Source Serif Pro', Georgia, serif", secondary: "'Source Sans Pro', 'Segoe UI', sans-serif" },
+    // Anthropic-style: Modern sans-serif with system font fallbacks
+    fontFamily: { 
+      primary: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif", 
+      secondary: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif" 
+    },
     fontWeight: { light: 300, regular: 400, medium: 500, semibold: 600, bold: 700 },
-    lineHeight: { tight: 1.2, base: 1.5, relaxed: 1.8 },
+    // Generous line heights for readability
+    lineHeight: { tight: 1.3, base: 1.6, relaxed: 1.8 },
   },
-  spacing: { xs: '0.25rem', sm: '0.5rem', md: '1rem', lg: '1.5rem', xl: '2rem', xxl: '3rem' },
-  borderRadius: { sm: '2px', md: '4px', lg: '8px', xl: '16px', full: '9999px' },
+  // More generous spacing scale
+  spacing: { xs: '0.5rem', sm: '0.75rem', md: '1.5rem', lg: '2.5rem', xl: '4rem', xxl: '6rem' },
+  // Subtle, modern border radius
+  borderRadius: { sm: '4px', md: '6px', lg: '8px', xl: '12px', full: '9999px' },
+  // Minimal, soft shadows
   boxShadow: {
-    light: { sm: '0 1px 2px rgba(0, 0, 0, 0.05)', md: '0 2px 4px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.07)', lg: '0 4px 6px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06)', xl: '0 10px 15px rgba(0, 0, 0, 0.03), 0 4px 6px rgba(0, 0, 0, 0.05)' },
-    dark: { sm: '0 1px 3px rgba(0, 0, 0, 0.3)', md: '0 2px 6px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2)', lg: '0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2)', xl: '0 10px 20px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.2)' },
+    light: { 
+      sm: '0 1px 2px rgba(0, 0, 0, 0.04)', 
+      md: '0 2px 4px rgba(0, 0, 0, 0.04)', 
+      lg: '0 4px 8px rgba(0, 0, 0, 0.04)', 
+      xl: '0 8px 16px rgba(0, 0, 0, 0.04)' 
+    },
+    dark: { 
+      sm: '0 1px 2px rgba(0, 0, 0, 0.5)', 
+      md: '0 2px 4px rgba(0, 0, 0, 0.5)', 
+      lg: '0 4px 8px rgba(0, 0, 0, 0.5)', 
+      xl: '0 8px 16px rgba(0, 0, 0, 0.5)' 
+    },
   },
 };
 
 theme.header = {
   light: {
-    gradientStart: '#2b6fb4', gradientEnd: '#1e5aa0',
-    title: { color: '#ffffff', strokeWidth: '1.25px', strokeColor: 'rgba(0,0,0,0.9)', textShadow: '0 0 1px rgba(0,0,0,0.6), 0 1px 0 rgba(0,0,0,0.6)' }
+    // Minimal header: same as cards (tertiary bone)
+    gradientStart: '#EBE6D8', gradientEnd: '#EBE6D8',
+    title: { color: '#1A1A1A', strokeWidth: '0px', strokeColor: 'transparent', textShadow: 'none' }
   },
   dark: {
-    gradientStart: '#2d3f4f', gradientEnd: '#1f2d39',
-    title: { color: '#e8e8e8', strokeWidth: '0.5px', strokeColor: 'rgba(0,0,0,0.3)', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }
+    // Dark mode header: same as cards (tertiary dark gray)
+    gradientStart: '#3D3D3D', gradientEnd: '#3D3D3D',
+    title: { color: '#F5F5F5', strokeWidth: '0px', strokeColor: 'transparent', textShadow: 'none' }
   }
 };
 

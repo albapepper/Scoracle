@@ -3,8 +3,6 @@ import { useParams, Link, useLocation } from 'react-router-dom';
 import { Container, Title, Card, Button, Text, Stack, Group, Badge, Loader } from '@mantine/core';
 import PlayerWidgetServer from '../../components/PlayerWidgetServer';
 import { useTranslation } from 'react-i18next';
-// Using JS context without TS types; suppress type checking
-// @ts-ignore
 import { useSportContext } from '../../context/SportContext';
 import { useFastNews } from '../../features/news/useFastNews';
 

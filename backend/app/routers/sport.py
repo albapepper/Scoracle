@@ -317,15 +317,21 @@ async def sport_sync_players(sport: str):
     from datetime import datetime, timezone
     s = sport.upper()
     try:
-        from app.database.local_dbs import list_all_players
+        from app.database.local_dbs import list_all_players, _strip_specials_preserve_case, _first_last_only
         players_raw = list_all_players(s)
         items = []
         for pid, name in players_raw:
-            parts = (name or "").split()
+            # Ensure name is cleaned of special characters
+            cleaned_name = _strip_specials_preserve_case(name or "")
+            cleaned_name = _first_last_only(cleaned_name)
+            parts = cleaned_name.split()
             first_name = parts[0] if parts else ""
             last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
             player_record = local_get_player_by_id(s, int(pid))
             current_team = player_record.get("current_team") if player_record else None
+            # Clean team name too if present
+            if current_team:
+                current_team = _strip_specials_preserve_case(current_team)
             items.append({
                 "id": int(pid),
                 "firstName": first_name,
@@ -347,12 +353,13 @@ async def sport_sync_teams(sport: str):
     from datetime import datetime, timezone
     s = sport.upper()
     try:
-        from app.database.local_dbs import list_all_teams
+        from app.database.local_dbs import list_all_teams, _strip_specials_preserve_case
         teams_raw = list_all_teams(s)
-        items = [
-            {"id": int(tid), "name": name}
-            for (tid, name) in teams_raw
-        ]
+        items = []
+        for tid, name in teams_raw:
+            # Ensure name is cleaned of special characters
+            cleaned_name = _strip_specials_preserve_case(name or "")
+            items.append({"id": int(tid), "name": cleaned_name})
         return {
             "sport": s,
             "items": items,
@@ -388,12 +395,19 @@ async def sport_bootstrap(sport: str, request: Request, since: str | None = Quer
 
     players_items = []
     for pid, name in players_raw:
-        parts = (name or "").split()
+        # Ensure name is cleaned of special characters (should already be clean from DB, but double-check)
+        from app.database.local_dbs import _strip_specials_preserve_case, _first_last_only
+        cleaned_name = _strip_specials_preserve_case(name or "")
+        cleaned_name = _first_last_only(cleaned_name)
+        parts = cleaned_name.split()
         first_name = parts[0] if parts else ""
         last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
         try:
             row = _lp(s, int(pid))
             current_team = row.get("current_team") if row else None
+            # Clean team name too if present
+            if current_team:
+                current_team = _strip_specials_preserve_case(current_team)
         except Exception:
             current_team = None
         players_items.append({
@@ -403,10 +417,21 @@ async def sport_bootstrap(sport: str, request: Request, since: str | None = Quer
             "currentTeam": current_team,
         })
 
-    teams_items = [
-        {"id": int(tid), "name": name}
-        for (tid, name) in teams_raw
-    ]
+    # Get team details including league/division
+    teams_items = []
+    for tid, name in teams_raw:
+        # Ensure name is cleaned of special characters (should already be clean from DB, but double-check)
+        from app.database.local_dbs import _strip_specials_preserve_case
+        cleaned_name = _strip_specials_preserve_case(name or "")
+        team_data = {"id": int(tid), "name": cleaned_name}
+        # Get league/division from database
+        try:
+            team_row = local_get_team_by_id(s, int(tid))
+            if team_row and team_row.get("current_league"):
+                team_data["league"] = team_row.get("current_league")
+        except Exception:
+            pass
+        teams_items.append(team_data)
 
     generated_at = datetime.now(timezone.utc).isoformat()
     dataset_version = f"{s.lower()}-{len(players_items)}p-{len(teams_items)}t-{generated_at[:10]}"

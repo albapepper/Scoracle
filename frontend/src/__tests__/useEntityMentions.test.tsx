@@ -19,7 +19,7 @@ const fetcher = jest.fn(async () => mockResponse);
 
 describe('useEntityMentions', () => {
   it('fetches mentions when enabled', async () => {
-    const { result } = renderHook(() => useEntityMentions('player', 'p1', 'soccer'));
+    const { result } = renderHook(() => useEntityMentions('player', 'p1', 'football'));
     // Wait for state to settle
   await waitFor(() => expect(result.current.isLoading).toBe(false));
   await waitFor(() => expect(result.current.data).toEqual(mockResponse));

@@ -5,7 +5,7 @@
  */
 
 export const DB_NAME = 'scoracle';
-export const DB_VERSION = 1;
+export const DB_VERSION = 2; // Incremented to add 'meta' store for sync metadata
 
 export const STORES = {
   PLAYERS: 'players',
@@ -24,6 +24,7 @@ export interface PlayerBootstrap {
 export interface TeamBootstrap {
   id: string | number;
   name: string;
+  league?: string; // League name for football, division for NBA/NFL
 }
 
 export interface PlayerRecord {
@@ -43,6 +44,7 @@ export interface TeamRecord {
   teamId: string | number;
   sport: SportCode;
   name: string;
+  league?: string; // League name for football, division for NBA/NFL
   normalized_name: string;
   updatedAt: number;
 }
@@ -154,6 +156,7 @@ export const upsertTeams = async (sport: SportCode, teams: TeamBootstrap[]): Pro
         teamId: team.id,
         sport,
         name: team.name,
+        league: team.league,
         normalized_name: normalizedName,
         updatedAt: Date.now(),
       };
@@ -373,6 +376,13 @@ export async function getMeta<T = unknown>(key: string): Promise<T | null> {
   if (!db) await initializeIndexedDB();
   return new Promise((resolve, reject) => {
     if (!db) return reject(new Error('DB not initialized'));
+    
+    // Check if meta store exists (for databases created before version 2)
+    if (!db.objectStoreNames.contains('meta')) {
+      resolve(null);
+      return;
+    }
+    
     const tx = db.transaction(['meta'], 'readonly');
     const store = tx.objectStore('meta');
     const req = store.get(key) as IDBRequest<{ key: string; value: T } | undefined>;
@@ -385,6 +395,16 @@ export async function setMeta<T = unknown>(key: string, value: T): Promise<boole
   if (!db) await initializeIndexedDB();
   return new Promise((resolve, reject) => {
     if (!db) return reject(new Error('DB not initialized'));
+    
+    // Check if meta store exists (for databases created before version 2)
+    if (!db.objectStoreNames.contains('meta')) {
+      // If meta store doesn't exist, we need to upgrade the database
+      // This shouldn't happen if DB_VERSION is incremented, but handle gracefully
+      console.warn('Meta store not found. Database may need upgrade.');
+      resolve(false);
+      return;
+    }
+    
     const tx = db.transaction(['meta'], 'readwrite');
     const store = tx.objectStore('meta');
     store.put({ key, value, updatedAt: Date.now() });

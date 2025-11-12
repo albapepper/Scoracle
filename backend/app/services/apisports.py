@@ -1009,13 +1009,16 @@ class ApiSportsService:
                 team = t.get("team") or t
                 name = team.get("name")
                 code = team.get("code") or name
+                # Check if API provides division/conference info
+                division = team.get("division")
+                conference = team.get("conference")
                 result = {
                     "id": team.get("id"),
                     "name": name,
                     "abbreviation": code,
-                    "city": None,
-                    "conference": None,
-                    "division": None,
+                    "city": team.get("city"),
+                    "conference": conference,
+                    "division": division,
                 }
                 basic_cache.set(cache_key, result, ttl=600)
                 return result

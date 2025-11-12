@@ -2,6 +2,8 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell } from '@mantine/core';
 import { LanguageProvider } from '../context/LanguageContext';
+import { SportContextProvider } from '../context/SportContext';
+import { ThemeProvider, useThemeMode, getThemeColors } from '../theme';
 import HomePage from '../pages/HomePage/HomePage';
 import MentionsPage from '../pages/MentionsPage/MentionsPage';
 import EntityPage from '../pages/EntityPage/EntityPage';
@@ -9,47 +11,6 @@ import NotFoundPage from '../pages/NotFoundPage';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import ErrorToaster from '../components/dev/ErrorToaster';
-
-// LanguageContext is fully typed via src/context/LanguageContext.tsx
-
-// Local inline ThemeProvider implementation to replace missing ../theme/ThemeProvider module.
-type ColorScheme = 'light' | 'dark';
-
-interface ThemeContextValue {
-  colorScheme: ColorScheme;
-  toggleColorScheme: () => void;
-}
-
-const ThemeContext = React.createContext<ThemeContextValue>({
-  colorScheme: 'light',
-  toggleColorScheme: () => {}
-});
-
-export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
-  const [colorScheme, setColorScheme] = React.useState<ColorScheme>('light');
-  const toggleColorScheme = () => setColorScheme(cs => (cs === 'light' ? 'dark' : 'light'));
-  return (
-    <ThemeContext.Provider value={{ colorScheme, toggleColorScheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
-};
-
-export function useThemeMode(): ThemeContextValue {
-  return React.useContext(ThemeContext);
-}
-
-export function getThemeColors(colorScheme: ColorScheme) {
-  return {
-    background: {
-      primary: colorScheme === 'light' ? '#ffffff' : '#1A1B1E'
-    }
-  };
-}
-
-// JS module export interop
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const SportContextProvider: React.ComponentType<any> = require('../context/SportContext').SportContextProvider;
 
 function AppContent(): JSX.Element {
   const { colorScheme } = useThemeMode();

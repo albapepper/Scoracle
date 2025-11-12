@@ -12,14 +12,17 @@ const createLightMantineTheme = () => {
   const lightColors = theme.light.colors;
   return createTheme({
     colors: {
-      primary: ['#f0f4f8','#e2e8f0','#cbd5e0','#a0b0c0','#8096af','#66809f','#546a7b','#455b70','#364c63','#273b52'],
-      accent: ['#edf2eb','#dae5d6','#c7d8c1','#b4cbad','#a1be99','#8eb185','#879e7e','#748a6c','#607658','#4d6247']
+      // Anthropic-inspired color scale
+      primary: ['#F7FAFC','#EDF2F7','#E2E8F0','#CBD5E0','#A0AEC0','#718096','#4A5568','#2D3748','#1A202C','#171923'],
+      accent: ['#EBF8FF','#BEE3F8','#90CDF4','#63B3ED','#4299E1','#3182CE','#2C5282','#2A4365','#1A365D','#153450']
     },
     primaryColor: 'primary',
+    fontFamily: theme.typography.fontFamily.primary,
+    headings: { fontFamily: theme.typography.fontFamily.primary },
     components: {
       Button: { defaultProps: { color: 'primary' } },
-      Card: { styles: { root: { backgroundColor: lightColors.background.secondary, borderColor: lightColors.ui.border } } },
-      Paper: { styles: { root: { backgroundColor: lightColors.background.secondary, borderColor: lightColors.ui.border } } },
+      Card: { styles: { root: { backgroundColor: lightColors.background.tertiary, borderColor: 'transparent', borderWidth: '0px' } } },
+      Paper: { styles: { root: { backgroundColor: lightColors.background.tertiary, borderColor: 'transparent', borderWidth: '0px' } } },
     },
   // Mantine v5 no longer accepts top-level colorScheme; we control via our context.
     other: { colors: lightColors, typography: theme.typography, spacing: theme.spacing, borderRadius: theme.borderRadius, boxShadow: theme.boxShadow.light },
@@ -30,14 +33,17 @@ const createDarkMantineTheme = () => {
   const darkColors = theme.dark.colors;
   return createTheme({
     colors: {
-      primary: ['#e2ecf5','#c5d8eb','#a8c4e1','#8ab0d8','#6d9cce','#5888c5','#3d70b6','#2e56a3','#1f3c90','#10227d'],
-      accent: ['#e8f1e0','#d1e3c1','#bad5a2','#a3c783','#8cb964','#75ab45','#5e9d26','#478f07','#308100','#197300']
+      // Dark mode optimized color scale
+      primary: ['#171923','#1A202C','#2D3748','#4A5568','#718096','#A0AEC0','#CBD5E0','#E2E8F0','#EDF2F7','#F7FAFC'],
+      accent: ['#153450','#1A365D','#2A4365','#2C5282','#3182CE','#4299E1','#63B3ED','#90CDF4','#BEE3F8','#EBF8FF']
     },
     primaryColor: 'primary',
+    fontFamily: theme.typography.fontFamily.primary,
+    headings: { fontFamily: theme.typography.fontFamily.primary },
     components: {
       Button: { defaultProps: { color: 'primary' } },
-      Card: { styles: { root: { backgroundColor: darkColors.background.secondary, borderColor: darkColors.ui.border, color: darkColors.text.primary } } },
-      Paper: { styles: { root: { backgroundColor: darkColors.background.secondary, borderColor: darkColors.ui.border, color: darkColors.text.primary } } },
+      Card: { styles: { root: { backgroundColor: darkColors.background.secondary, borderColor: darkColors.ui.border, color: darkColors.text.primary, borderWidth: '1px' } } },
+      Paper: { styles: { root: { backgroundColor: darkColors.background.secondary, borderColor: darkColors.ui.border, color: darkColors.text.primary, borderWidth: '1px' } } },
     },
   // Mantine v5 no longer accepts top-level colorScheme; we control via our context.
     other: { colors: darkColors, typography: theme.typography, spacing: theme.spacing, borderRadius: theme.borderRadius, boxShadow: theme.boxShadow.dark },

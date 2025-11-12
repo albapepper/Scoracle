@@ -5,35 +5,45 @@ import { useAutocomplete } from '../useAutocomplete';
 
 // Mock Worker for test environment
 class MockWorker {
+  handlers: Record<string, any>;
+  onmessage: ((event: MessageEvent) => void) | null = null;
+
   constructor() {
     this.handlers = {};
   }
-  postMessage(msg) {
+
+  postMessage(msg: { type: string; query: string; requestId: number; entityType: string; sport: string }) {
     // Simulate async search resolution
     setTimeout(() => {
       if (msg.type === 'search') {
         const { query, requestId, entityType, sport } = msg;
         if (query.trim().length < 2) {
-          this.onmessage({ data: { type: 'results', requestId, results: [] } });
+          if (this.onmessage) {
+            this.onmessage({ data: { type: 'results', requestId, results: [] } } as MessageEvent);
+          }
         } else {
           const fake = [
             entityType === 'player'
               ? { id: 1, label: 'Test Player', name: 'Test Player', entity_type: 'player', sport }
               : { id: 10, label: 'Test Team', name: 'Test Team', entity_type: 'team', sport },
           ];
-          this.onmessage({ data: { type: 'results', requestId, results: fake } });
+          if (this.onmessage) {
+            this.onmessage({ data: { type: 'results', requestId, results: fake } } as MessageEvent);
+          }
         }
       }
     }, 5);
   }
-  addEventListener(type, handler) {
+
+  addEventListener(type: string, handler: (event: MessageEvent) => void) {
     if (type === 'message') this.onmessage = handler;
   }
+
   removeEventListener() {}
 }
 
 // Patch global Worker
-global.Worker = MockWorker;
+(global as any).Worker = MockWorker;
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -88,3 +98,4 @@ describe('useAutocomplete', () => {
     });
   });
 });
+

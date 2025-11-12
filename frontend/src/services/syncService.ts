@@ -1,109 +1,230 @@
 /**
- * Sync Service for Scoracle (TypeScript)
- * Handles syncing player and team data from backend to IndexedDB
- * with version tracking and minimal updates.
+ * Sync Service for IndexedDB
+ * Fetches entity data from backend and populates IndexedDB for local autocomplete.
+ * Supports ETag-based caching and sport-specific syncing.
  */
 
 import { http } from '../app/http';
-import { upsertPlayers, upsertTeams, getStats, getMeta, setMeta } from './indexedDB';
+import { upsertPlayers, upsertTeams, getMeta, setMeta, initializeIndexedDB, type SportCode } from './indexedDB';
 
-export interface SyncMetadata {
-  lastSyncTime: number;
-  lastSyncTimestamp?: number;
-  playerCount: number;
-  teamCount: number;
-  datasetVersion?: string | number;
+export interface BootstrapResponse {
+  sport: string;
+  datasetVersion: string;
+  generatedAt: string;
+  players: {
+    count: number;
+    items: Array<{
+      id: number;
+      firstName?: string;
+      lastName?: string;
+      currentTeam?: string;
+    }>;
+  };
+  teams: {
+    count: number;
+    items: Array<{
+      id: number;
+      name: string;
+      league?: string; // League name for football, division for NBA/NFL
+    }>;
+  };
 }
 
-const SYNC_CONFIG = {
-  STORAGE_KEY_PREFIX: 'scoracle_sync_',
-  CHECK_INTERVAL_MS: 24 * 60 * 60 * 1000, // 24 hours
-} as const;
-
-/** Get the last sync metadata for a sport */
-export const getSyncMetadata = (sport: string): SyncMetadata | null => {
-  const key = `${SYNC_CONFIG.STORAGE_KEY_PREFIX}${sport}`;
-  const stored = localStorage.getItem(key);
-  return stored ? JSON.parse(stored) : null;
-};
-
-/** Save sync metadata */
-const setSyncMetadata = (sport: string, metadata: SyncMetadata) => {
-  const key = `${SYNC_CONFIG.STORAGE_KEY_PREFIX}${sport}`;
-  localStorage.setItem(key, JSON.stringify(metadata));
-};
-
-/** Check if a sport needs syncing */
-export const shouldSync = (sport: string): boolean => {
-  const metadata = getSyncMetadata(sport);
-  if (!metadata) return true; // Never synced
-
-  const now = Date.now();
-  const timeSinceLastSync = now - (metadata.lastSyncTime || 0);
-
-  return timeSinceLastSync > SYNC_CONFIG.CHECK_INTERVAL_MS;
-};
-
-interface BootstrapResponse {
-  players?: { items: any[] };
-  teams?: { items: any[] };
-  datasetVersion?: string | number;
-  generatedAt?: number;
+export interface SyncResult {
+  success: boolean;
+  sport: string;
+  playersCount: number;
+  teamsCount: number;
+  datasetVersion: string;
+  timestamp: number;
+  error?: string;
+  fromCache?: boolean;
 }
 
-/** Sync players & teams for a sport from backend to IndexedDB */
-export const syncViaBootstrap = async (sport: string): Promise<{ success: boolean; players: number; teams: number; fromCache: boolean; error?: string }> => {
-  try {
-    console.log(`[Sync] Bootstrap fetch for ${sport}...`);
-    const currentVersion = await getMeta(`${sport}:datasetVersion`);
-    const data = await http.get<BootstrapResponse>(`/${sport}/bootstrap`, { params: currentVersion ? { since: currentVersion } : undefined });
-    if (!data) {
-      console.log(`[Sync] Bootstrap 304 for ${sport}, no changes.`);
-      return { success: true, players: 0, teams: 0, fromCache: true };
-    }
-    const { players, teams, datasetVersion, generatedAt } = data;
-    const pItems = players?.items || [];
-    const tItems = teams?.items || [];
-    console.log(`[Sync] Upserting ${pItems.length} players and ${tItems.length} teams for ${sport} (v=${datasetVersion}).`);
-    const pCount = await upsertPlayers(sport, pItems as any);
-    const tCount = await upsertTeams(sport, tItems as any);
-    await setMeta(`${sport}:datasetVersion`, datasetVersion);
-    setSyncMetadata(sport, {
-      lastSyncTime: Date.now(),
-      lastSyncTimestamp: generatedAt,
-      playerCount: pItems.length,
-      teamCount: tItems.length,
-      datasetVersion,
-    });
-    return { success: true, players: pCount, teams: tCount, fromCache: false };
-  } catch (error: any) {
-    console.error(`[Sync] Bootstrap error for ${sport}:`, error);
-    return { success: false, players: 0, teams: 0, fromCache: false, error: error.message };
-  }
-};
+const SYNC_META_KEY_PREFIX = 'sync:';
+const DEFAULT_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-/** Full sync: fetch and cache both players and teams for a sport */
-export const fullSync = async (sport: string): Promise<{ success: boolean; players: number; teams: number; error?: string }> => {
+/**
+ * Get the last sync timestamp for a sport
+ */
+export async function getLastSyncTimestamp(sport: SportCode): Promise<number | null> {
   try {
-    console.log(`[Sync] Starting full sync for ${sport}...`);
-    const result = await syncViaBootstrap(sport);
-    if (!result.success) throw new Error(result.error || 'Sync failed');
-    console.log(`[Sync] Full sync complete for ${sport}: ${result.players} players, ${result.teams} teams`);
-    return { success: true, players: result.players, teams: result.teams };
-  } catch (error: any) {
-    console.error(`[Sync] Full sync error for ${sport}:`, error);
-    return { success: false, players: 0, teams: 0, error: error.message };
-  }
-};
-
-/** Get current IndexedDB stats */
-export const getIndexedDBStats = async (): Promise<{ players: number; teams: number } | null> => {
-  try {
-    return await getStats();
+    const key = `${SYNC_META_KEY_PREFIX}${sport}`;
+    const meta = await getMeta<{ timestamp: number; datasetVersion: string }>(key);
+    return meta?.timestamp || null;
   } catch (error) {
-    console.error('[Sync] Error getting IndexedDB stats:', error);
+    console.warn(`Failed to get last sync timestamp for ${sport}:`, error);
     return null;
   }
-};
+}
 
-export { SYNC_CONFIG };
+/**
+ * Get the last dataset version for a sport
+ */
+export async function getLastDatasetVersion(sport: SportCode): Promise<string | null> {
+  try {
+    const key = `${SYNC_META_KEY_PREFIX}${sport}`;
+    const meta = await getMeta<{ timestamp: number; datasetVersion: string }>(key);
+    return meta?.datasetVersion || null;
+  } catch (error) {
+    console.warn(`Failed to get last dataset version for ${sport}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Check if a sport needs syncing
+ */
+export async function shouldSync(sport: SportCode, maxAgeMs: number = DEFAULT_MAX_AGE_MS): Promise<boolean> {
+  const lastSync = await getLastSyncTimestamp(sport);
+  if (!lastSync) return true; // Never synced
+  
+  const age = Date.now() - lastSync;
+  return age > maxAgeMs;
+}
+
+/**
+ * Sync entity data for a sport from backend to IndexedDB
+ */
+export async function syncSport(sport: SportCode, force: boolean = false): Promise<SyncResult> {
+  await initializeIndexedDB();
+  
+  const sportUpper = sport.toUpperCase();
+  const result: SyncResult = {
+    success: false,
+    sport: sportUpper,
+    playersCount: 0,
+    teamsCount: 0,
+    datasetVersion: '',
+    timestamp: Date.now(),
+  };
+
+  try {
+    // Check if we should skip sync (unless forced)
+    if (!force) {
+      const lastVersion = await getLastDatasetVersion(sportUpper);
+      const lastSync = await getLastSyncTimestamp(sportUpper);
+      
+      // If we have recent data, check with backend using ETag/If-None-Match
+      if (lastVersion && lastSync) {
+        const age = Date.now() - lastSync;
+        if (age < DEFAULT_MAX_AGE_MS) {
+          // Try conditional request
+          try {
+            const response = await http.raw.get(`/api/v1/${sportUpper.toLowerCase()}/bootstrap`, {
+              headers: {
+                'If-None-Match': lastVersion,
+              },
+            });
+            
+            if (response.status === 304) {
+              // Not modified - use cached data
+              result.success = true;
+              result.fromCache = true;
+              result.timestamp = lastSync;
+              result.datasetVersion = lastVersion;
+              
+              // Get counts from meta if available
+              const meta = await getMeta<{ playersCount: number; teamsCount: number }>(`${SYNC_META_KEY_PREFIX}${sportUpper}:counts`);
+              if (meta) {
+                result.playersCount = meta.playersCount;
+                result.teamsCount = meta.teamsCount;
+              }
+              
+              return result;
+            }
+          } catch (e) {
+            // If conditional request fails, proceed with full sync
+            console.warn(`Conditional request failed for ${sportUpper}, proceeding with full sync:`, e);
+          }
+        }
+      }
+    }
+
+    // Fetch bootstrap data from backend
+    const bootstrap = await http.get<BootstrapResponse>(`/api/v1/${sportUpper.toLowerCase()}/bootstrap`);
+    
+    if (!bootstrap || !bootstrap.players || !bootstrap.teams) {
+      throw new Error('Invalid bootstrap response format');
+    }
+
+    // Transform and upsert players
+    const playerBootstrap = bootstrap.players.items.map((p) => ({
+      id: p.id,
+      firstName: p.firstName,
+      lastName: p.lastName,
+      currentTeam: p.currentTeam,
+    }));
+
+    const playersCount = await upsertPlayers(sportUpper, playerBootstrap);
+
+    // Transform and upsert teams
+    const teamBootstrap = bootstrap.teams.items.map((t) => ({
+      id: t.id,
+      name: t.name,
+      league: t.league,
+    }));
+
+    const teamsCount = await upsertTeams(sportUpper, teamBootstrap);
+
+    // Store sync metadata
+    const syncMeta = {
+      timestamp: Date.now(),
+      datasetVersion: bootstrap.datasetVersion,
+    };
+    await setMeta(`${SYNC_META_KEY_PREFIX}${sportUpper}`, syncMeta);
+    
+    // Store counts for quick access
+    await setMeta(`${SYNC_META_KEY_PREFIX}${sportUpper}:counts`, {
+      playersCount,
+      teamsCount,
+    });
+
+    result.success = true;
+    result.playersCount = playersCount;
+    result.teamsCount = teamsCount;
+    result.datasetVersion = bootstrap.datasetVersion;
+    result.timestamp = syncMeta.timestamp;
+
+    console.log(`✅ Synced ${sportUpper}: ${playersCount} players, ${teamsCount} teams`);
+    
+    return result;
+  } catch (error: any) {
+    console.error(`❌ Failed to sync ${sportUpper}:`, error);
+    result.error = error?.message || 'Unknown error';
+    return result;
+  }
+}
+
+/**
+ * Check if IndexedDB has data for a sport
+ */
+export async function hasSportData(sport: SportCode): Promise<boolean> {
+  const lastSync = await getLastSyncTimestamp(sport.toUpperCase());
+  return lastSync !== null;
+}
+
+/**
+ * Get sync statistics for a sport
+ */
+export async function getSyncStats(sport: SportCode): Promise<{
+  lastSync: number | null;
+  datasetVersion: string | null;
+  playersCount: number;
+  teamsCount: number;
+} | null> {
+  const sportUpper = sport.toUpperCase();
+  const lastSync = await getLastSyncTimestamp(sportUpper);
+  const datasetVersion = await getLastDatasetVersion(sportUpper);
+  
+  const countsMeta = await getMeta<{ playersCount: number; teamsCount: number }>(`${SYNC_META_KEY_PREFIX}${sportUpper}:counts`);
+  
+  if (!lastSync) return null;
+  
+  return {
+    lastSync,
+    datasetVersion: datasetVersion || null,
+    playersCount: countsMeta?.playersCount || 0,
+    teamsCount: countsMeta?.teamsCount || 0,
+  };
+}

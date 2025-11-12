@@ -1,73 +1,161 @@
 /**
- * Custom hook for managing IndexedDB sync
- * Automatically syncs player and team data when sport changes
+ * React hook for syncing IndexedDB with backend data
+ * Automatically syncs when sport changes and on initial load
  */
 
-import { useEffect, useState } from 'react';
-import { fullSync, shouldSync, getSyncMetadata } from '../services/syncService';
+import { useEffect, useState, useCallback } from 'react';
+import { syncSport, shouldSync, hasSportData, getSyncStats, type SyncResult } from '../services/syncService';
+import type { SportCode } from '../services/indexedDB';
 
-export interface SyncStats {
-  players: number;
-  teams: number;
-  fromCache: boolean;
+export interface UseIndexedDBSyncOptions {
+  /** Sport to sync */
+  sport: SportCode;
+  /** Auto-sync on mount if data is missing or stale */
+  autoSync?: boolean;
+  /** Maximum age in ms before considering data stale (default: 24 hours) */
+  maxAgeMs?: number;
+  /** Force sync even if data exists */
+  force?: boolean;
 }
 
-export interface UseIndexedDBSyncState {
-  syncing: boolean;
+export interface UseIndexedDBSyncReturn {
+  /** Whether a sync is currently in progress */
+  isSyncing: boolean;
+  /** Last sync timestamp (null if never synced) */
+  lastSyncTime: number | null;
+  /** Last sync result */
+  lastSyncResult: SyncResult | null;
+  /** Sync error, if any */
   syncError: string | null;
-  syncStats: SyncStats | null;
+  /** Dataset version from last sync */
+  datasetVersion: string | null;
+  /** Number of players synced */
+  playersCount: number;
+  /** Number of teams synced */
+  teamsCount: number;
+  /** Manually trigger a sync */
+  sync: (force?: boolean) => Promise<SyncResult>;
+  /** Check if sport has data */
+  hasData: boolean;
 }
 
-export const useIndexedDBSync = (sport?: string | null): UseIndexedDBSyncState => {
-  const [syncing, setSyncing] = useState(false);
+/**
+ * Hook for managing IndexedDB sync for a sport
+ */
+export function useIndexedDBSync({
+  sport,
+  autoSync = true,
+  maxAgeMs,
+  force = false,
+}: UseIndexedDBSyncOptions): UseIndexedDBSyncReturn {
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncResult, setLastSyncResult] = useState<SyncResult | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
-  const [syncStats, setSyncStats] = useState<SyncStats | null>(null);
+  const [hasData, setHasData] = useState(false);
+  const [stats, setStats] = useState<{
+    lastSync: number | null;
+    datasetVersion: string | null;
+    playersCount: number;
+    teamsCount: number;
+  } | null>(null);
 
+  // Load initial stats
   useEffect(() => {
-    if (!sport) return;
-
-    const performSync = async () => {
-      // Check if we should sync
-      if (!shouldSync(sport)) {
-        console.log(`[useIndexedDBSync] ${sport} already synced recently, skipping`);
-        const metadata = getSyncMetadata(sport) as any;
-        setSyncStats({
-          players: metadata?.playerCount || 0,
-          teams: metadata?.teamCount || 0,
-          fromCache: true,
-        });
-        return;
+    let mounted = true;
+    
+    async function loadStats() {
+      const sportStats = await getSyncStats(sport);
+      if (mounted) {
+        setStats(sportStats);
+        setHasData(sportStats !== null);
       }
-
-      setSyncing(true);
-      setSyncError(null);
-
-      try {
-        console.log(`[useIndexedDBSync] Starting sync for ${sport}...`);
-        const result = await fullSync(sport);
-
-        if ((result as any).success) {
-          setSyncStats({
-            players: (result as any).players,
-            teams: (result as any).teams,
-            fromCache: false,
-          });
-          console.log(`[useIndexedDBSync] Sync complete:`, result);
-        } else {
-          setSyncError((result as any).error || 'Unknown sync error');
-        }
-      } catch (error: any) {
-        console.error(`[useIndexedDBSync] Sync error:`, error);
-        setSyncError(error?.message || 'Failed to sync data');
-      } finally {
-        setSyncing(false);
-      }
+    }
+    
+    loadStats();
+    return () => {
+      mounted = false;
     };
-
-    void performSync();
   }, [sport]);
 
-  return { syncing, syncError, syncStats };
-};
+  // Sync function
+  const sync = useCallback(async (forceSync: boolean = false): Promise<SyncResult> => {
+    setIsSyncing(true);
+    setSyncError(null);
+    
+    try {
+      const result = await syncSport(sport, forceSync || force);
+      setLastSyncResult(result);
+      
+      if (result.success) {
+        setSyncError(null);
+        // Reload stats after successful sync
+        const updatedStats = await getSyncStats(sport);
+        setStats(updatedStats);
+        setHasData(updatedStats !== null);
+      } else {
+        setSyncError(result.error || 'Sync failed');
+      }
+      
+      return result;
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Unknown sync error';
+      setSyncError(errorMessage);
+      const errorResult: SyncResult = {
+        success: false,
+        sport: sport.toUpperCase(),
+        playersCount: 0,
+        teamsCount: 0,
+        datasetVersion: '',
+        timestamp: Date.now(),
+        error: errorMessage,
+      };
+      setLastSyncResult(errorResult);
+      return errorResult;
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [sport, force]);
+
+  // Auto-sync on sport change or mount
+  useEffect(() => {
+    if (!autoSync) return;
+    
+    let mounted = true;
+    
+    async function checkAndSync() {
+      const needsSync = await shouldSync(sport, maxAgeMs);
+      const hasDataCheck = await hasSportData(sport);
+      
+      if (mounted && (!hasDataCheck || needsSync || force)) {
+        await sync(force);
+      } else if (mounted) {
+        // Data exists and is fresh, just load stats
+        const sportStats = await getSyncStats(sport);
+        if (mounted) {
+          setStats(sportStats);
+          setHasData(sportStats !== null);
+        }
+      }
+    }
+    
+    checkAndSync();
+    
+    return () => {
+      mounted = false;
+    };
+  }, [sport, autoSync, maxAgeMs, force, sync]);
+
+  return {
+    isSyncing,
+    lastSyncTime: stats?.lastSync || null,
+    lastSyncResult,
+    syncError,
+    datasetVersion: stats?.datasetVersion || null,
+    playersCount: stats?.playersCount || 0,
+    teamsCount: stats?.teamsCount || 0,
+    sync,
+    hasData,
+  };
+}
 
 export default useIndexedDBSync;

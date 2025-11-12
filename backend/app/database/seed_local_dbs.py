@@ -10,6 +10,15 @@ from app.config import settings
 
 # League ids (API-Sports) for football umbrella (Top 5 + MLS)
 FOOTBALL_LEAGUES = [39, 140, 135, 78, 61, 253]
+# League name mapping for football
+LEAGUE_NAMES = {
+    39: "Premier League",
+    140: "La Liga",
+    135: "Serie A",
+    78: "Bundesliga",
+    61: "Ligue 1",
+    253: "MLS"
+}
 ALPHA = list("abcdefghijklmnopqrstuvwxyz")
 
 
@@ -20,25 +29,27 @@ async def seed_football_api():
 		try:
 			rows = await apisports_service.list_football_teams(league_id, season="2025")
 			print(f"FOOTBALL teams raw rows league {league_id}: {len(rows)}")
+			league_name = LEAGUE_NAMES.get(league_id, f"League {league_id}")
 			teams: List[Tuple[int, str, str]] = []
 			for r in rows:
 				name = r.get("name") or r.get("abbreviation") or str(r.get("id"))
 				if r.get("id") is not None:
-					teams.append((int(r["id"]), name, "football"))
+					teams.append((int(r["id"]), name, league_name))
 			if teams:
-				print(f"FOOTBALL teams upserting {len(teams)} from league {league_id}")
+				print(f"FOOTBALL teams upserting {len(teams)} from league {league_id} ({league_name})")
 				upsert_teams("FOOTBALL", teams)
 			else:
 				# Fallback via search if listing returned empty
 				rows2 = await apisports_service.search_teams("a", "FOOTBALL", league_override=league_id, season_override="2025")
 				print(f"FOOTBALL teams fallback rows league {league_id}: {len(rows2)}")
+				league_name = LEAGUE_NAMES.get(league_id, f"League {league_id}")
 				teams2 = []
 				for r in rows2:
 					name = r.get("name") or r.get("abbreviation") or str(r.get("id"))
 					if r.get("id") is not None:
-						teams2.append((int(r["id"]), name, "football"))
+						teams2.append((int(r["id"]), name, league_name))
 				if teams2:
-					print(f"FOOTBALL teams upserting {len(teams2)} from league {league_id} (fallback)")
+					print(f"FOOTBALL teams upserting {len(teams2)} from league {league_id} ({league_name}) (fallback)")
 					upsert_teams("FOOTBALL", teams2)
 		except Exception as e:
 			print(f"football teams seed warn (league {league_id}):", e)
@@ -74,10 +85,24 @@ async def seed_nba_api():
 	try:
 		rows = await apisports_service.list_nba_teams(league='standard')
 		teams: List[Tuple[int, str, str]] = []
+		# Fetch division info for each team
 		for r in rows:
 			name = r.get("name") or r.get("abbreviation") or str(r.get("id"))
-			if r.get("id") is not None:
-				teams.append((int(r["id"]), name, "NBA"))
+			team_id = r.get("id")
+			if team_id is not None:
+				# Fetch team details to get division
+				division = None
+				try:
+					team_details = await apisports_service.get_basketball_team_basic(str(team_id))
+					division = team_details.get("division")
+					if division:
+						# Format: "Atlantic" -> "Atlantic Division"
+						if "Division" not in division:
+							division = f"{division} Division"
+				except Exception as e:
+					print(f"Warning: Could not fetch division for NBA team {team_id}: {e}")
+					division = None
+				teams.append((int(team_id), name, division or "NBA"))
 		print(f"NBA teams raw rows: {len(rows)}; filtered: {len(teams)}")
 		if teams:
 			print(f"NBA teams upserting {len(teams)}")
@@ -197,16 +222,30 @@ async def seed_nfl_api():
 		print("nfl teams list warn:", e)
 		rows = []
 	teams: List[Tuple[int, str, str]] = []
+	# Fetch division info for each team
 	for r in rows:
 		name = r.get("name") or r.get("abbreviation") or str(r.get("id"))
-		if r.get("id") is not None:
-			teams.append((int(r["id"]), name, "NFL"))
+		team_id = r.get("id")
+		if team_id is not None:
+			# Fetch team details to get division
+			division = None
+			try:
+				team_details = await apisports_service.get_nfl_team_basic(str(team_id))
+				division = team_details.get("division")
+				if division:
+					# Format: "AFC North" -> "AFC North Division" or keep as is
+					if "Division" not in division and division:
+						division = f"{division} Division"
+			except Exception as e:
+				print(f"Warning: Could not fetch division for NFL team {team_id}: {e}")
+				division = None
+			teams.append((int(team_id), name, division or "NFL"))
+			team_rows.append(r)  # Keep original row for player seeding
 	print(f"NFL teams raw rows: {len(rows)}; filtered: {len(teams)}")
 	if teams:
 		print(f"NFL teams upserting {len(teams)}")
 		upsert_teams("NFL", teams)
 		teams_upserted = True
-		team_rows = rows
 	# 2) Fallback: search across alphabet
 	if not teams_upserted:
 		from string import ascii_lowercase
@@ -224,7 +263,16 @@ async def seed_nfl_api():
 				name = r.get("name") or r.get("abbreviation") or str(tid)
 				if tid is not None and tid not in seen:
 					seen.add(tid)
-					teams2.append((int(tid), name, "NFL"))
+					# Try to get division
+					division = None
+					try:
+						team_details = await apisports_service.get_nfl_team_basic(str(tid))
+						division = team_details.get("division")
+						if division and "Division" not in division:
+							division = f"{division} Division"
+					except Exception:
+						division = None
+					teams2.append((int(tid), name, division or "NFL"))
 					found_dicts.append({"id": tid, "name": name})
 			await asyncio.sleep(0.05)
 		if teams2:

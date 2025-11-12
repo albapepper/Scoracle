@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AutocompleteResult } from './types';
+import { mapSportToBackendCode } from '../../utils/sportMapping';
 
 export interface UseAutocompleteOptions {
 	sport: string;
@@ -23,6 +24,9 @@ export function useAutocomplete({ sport, entityType, debounceMs = 200, limit = 1
 	const [error, setError] = useState('');
 	const reqIdRef = useRef(0);
 	const workerRef = useRef<Worker | null>(null);
+	
+	// Map frontend sport ID to backend sport code for IndexedDB search
+	const backendSportCode = useMemo(() => mapSportToBackendCode(sport), [sport]);
 
 	const worker = useMemo(() => {
 		if (typeof Worker === 'undefined') return null;
@@ -78,10 +82,11 @@ export function useAutocomplete({ sport, entityType, debounceMs = 200, limit = 1
 		const id = setTimeout(() => {
 			reqIdRef.current += 1;
 			setLoading(true);
-			worker.postMessage({ type: 'search', sport, entityType, query, limit, requestId: reqIdRef.current });
+			// Use backend sport code for IndexedDB search
+			worker.postMessage({ type: 'search', sport: backendSportCode, entityType, query, limit, requestId: reqIdRef.current });
 		}, debounceMs);
 		return () => clearTimeout(id);
-	}, [query, sport, entityType, limit, debounceMs, worker]);
+	}, [query, backendSportCode, entityType, limit, debounceMs, worker]);
 
 	return { query, setQuery, results, loading, error };
 }

@@ -54,9 +54,8 @@ export default function SearchForm() {
   };
   
   return (
-    <Card shadow="sm" p="lg" radius="md" withBorder style={{ 
-      backgroundColor: colors.background.secondary,
-      borderColor: colors.ui.border
+    <Card shadow="sm" p="lg" radius="lg" withBorder={false} style={{ 
+      backgroundColor: colors.background.tertiary
     }}>
       <form onSubmit={handleSubmit}>
         <Stack>
