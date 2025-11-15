@@ -32,7 +32,7 @@ const theme: ThemeTokens = {
       // High contrast text for readability
       text: { primary: '#1A1A1A', secondary: '#666666', accent: '#2D3748', muted: '#A0AEC0' },
       // Subtle, professional UI colors
-      ui: { primary: '#4A5568', secondary: '#718096', accent: '#4299E1', border: '#E2E8F0' },
+      ui: { primary: '#4A5568', secondary: '#5B7FA8', accent: '#4299E1', border: '#E2E8F0' },
       // Data visualization palette: accessible, distinct colors
       visualization: {
         primary: '#4299E1', secondary: '#48BB78', tertiary: '#ED8936', quaternary: '#9F7AEA', quintary: '#38B2AC',
@@ -48,7 +48,7 @@ const theme: ThemeTokens = {
       // Soft whites for text
       text: { primary: '#F5F5F5', secondary: '#B8B8B8', accent: '#E2E8F0', muted: '#718096' },
       // Muted UI colors for dark mode
-      ui: { primary: '#A0AEC0', secondary: '#718096', accent: '#63B3ED', border: '#2D3748' },
+      ui: { primary: '#A0AEC0', secondary: '#C97D60', accent: '#63B3ED', border: '#2D3748' },
       // Dark mode optimized visualization palette
       visualization: {
         primary: '#63B3ED', secondary: '#68D391', tertiary: '#F6AD55', quaternary: '#B794F4', quintary: '#4FD1C7',

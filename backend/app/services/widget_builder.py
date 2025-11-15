@@ -7,47 +7,78 @@ from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
 
 
-def build_player_basic_widget(entity_info: Dict[str, Any], sport: str) -> str:
-    """Build a basic player widget for the mentions page.
+def build_player_basic_widget(profile_data: Dict[str, Any], sport: str) -> str:
+    """Build a basic player widget displaying all fields from profile endpoint.
     
-    Displays: logo/image, name, nationality, college, age, height, weight, team, position
+    Displays all data fields from the API-Sports profile response.
     """
-    first = entity_info.get("first_name") or ""
-    last = entity_info.get("last_name") or ""
-    name = f"{first} {last}".strip() or entity_info.get("name", "Unknown Player")
+    import json
     
-    # Extract fields
-    logo_url = entity_info.get("logo_url") or entity_info.get("image") or entity_info.get("photo")
-    nationality = entity_info.get("nationality") or entity_info.get("country")
-    college = entity_info.get("college") or entity_info.get("university")
-    age = entity_info.get("age")
-    height = entity_info.get("height")
-    weight = entity_info.get("weight")
-    position = entity_info.get("position")
-    team = entity_info.get("team", {})
-    team_name = team.get("name") or team.get("abbreviation") or ""
+    # Extract name from various possible fields
+    name = ""
+    if profile_data.get("firstname") or profile_data.get("firstName") or profile_data.get("first_name"):
+        first = profile_data.get("firstname") or profile_data.get("firstName") or profile_data.get("first_name") or ""
+        last = profile_data.get("lastname") or profile_data.get("lastName") or profile_data.get("last_name") or ""
+        name = f"{first} {last}".strip()
+    elif profile_data.get("name"):
+        name = profile_data.get("name")
+    else:
+        name = "Unknown Player"
+    
+    # Extract logo/image from various possible fields
+    logo_url = (profile_data.get("logo") or profile_data.get("logo_url") or 
+                profile_data.get("image") or profile_data.get("photo") or
+                profile_data.get("player", {}).get("photo") if isinstance(profile_data.get("player"), dict) else None)
     
     # Build logo/image HTML
     logo_html = ""
     if logo_url:
-        logo_html = f'<img src="{logo_url}" alt="{name}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin-bottom: 1rem;" />'
+        logo_html = f'<img src="{logo_url}" alt="{name}" style="width: 100px; height: 100px; object-fit: contain; border-radius: 8px; margin-bottom: 1rem;" />'
     
-    # Build info rows
+    # Helper function to format field values
+    def format_value(value):
+        if value is None:
+            return None
+        if isinstance(value, (dict, list)):
+            return json.dumps(value, indent=2)
+        return str(value)
+    
+    # Helper function to format field names
+    def format_label(key):
+        return key.replace("_", " ").replace("-", " ").title()
+    
+    # Build info rows from all fields (excluding nested objects we'll handle separately)
     info_rows = []
-    if nationality:
-        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">Nationality</span><span style="font-weight: 500;">{nationality}</span></div>')
-    if college:
-        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">College</span><span style="font-weight: 500;">{college}</span></div>')
-    if age:
-        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">Age</span><span style="font-weight: 500;">{age}</span></div>')
-    if height:
-        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">Height</span><span style="font-weight: 500;">{height}</span></div>')
-    if weight:
-        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">Weight</span><span style="font-weight: 500;">{weight}</span></div>')
-    if position:
-        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">Position</span><span style="font-weight: 500;">{position}</span></div>')
-    if team_name:
-        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">Team</span><span style="font-weight: 500;">{team_name}</span></div>')
+    skip_keys = {"id", "logo", "logo_url", "image", "photo"}  # Skip these as they're handled separately
+    
+    # Flatten nested structures
+    def flatten_dict(d, prefix=""):
+        items = []
+        for k, v in d.items():
+            if k in skip_keys:
+                continue
+            key = f"{prefix}.{k}" if prefix else k
+            if isinstance(v, dict):
+                items.extend(flatten_dict(v, key))
+            elif isinstance(v, list) and len(v) > 0 and isinstance(v[0], dict):
+                # Handle list of objects
+                items.append((key, f"[{len(v)} items]"))
+            else:
+                items.append((key, v))
+        return items
+    
+    # Get all fields
+    all_fields = flatten_dict(profile_data)
+    
+    # Sort fields for consistent display
+    all_fields.sort(key=lambda x: x[0])
+    
+    # Build rows
+    for key, value in all_fields:
+        formatted_value = format_value(value)
+        if formatted_value and formatted_value not in ("None", "null", ""):
+            label = format_label(key)
+            info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">{label}</span><span style="font-weight: 500; text-align: right; max-width: 60%; word-break: break-word;">{formatted_value}</span></div>')
     
     info_html = "".join(info_rows) if info_rows else '<p style="color: #999; margin-top: 0.5rem;">No additional information available.</p>'
     
@@ -66,36 +97,71 @@ def build_player_basic_widget(entity_info: Dict[str, Any], sport: str) -> str:
     return html
 
 
-def build_team_basic_widget(entity_info: Dict[str, Any], sport: str) -> str:
-    """Build a basic team widget for the mentions page.
+def build_team_basic_widget(profile_data: Dict[str, Any], sport: str) -> str:
+    """Build a basic team widget displaying all fields from profile endpoint.
     
-    Displays: logo/image, name, location, league, stadium, division
+    Displays all data fields from the API-Sports profile response.
     """
-    name = entity_info.get("name") or "Unknown Team"
+    import json
     
-    # Extract fields
-    logo_url = entity_info.get("logo_url") or entity_info.get("image") or entity_info.get("logo")
-    city = entity_info.get("city")
-    location = city or entity_info.get("location")
-    league = entity_info.get("league") or entity_info.get("conference")
-    stadium = entity_info.get("stadium") or entity_info.get("venue") or entity_info.get("arena")
-    division = entity_info.get("division")
+    # Extract name - handle nested team object if present
+    team_obj = profile_data.get("team") if isinstance(profile_data.get("team"), dict) else profile_data
+    name = team_obj.get("name") or profile_data.get("name") or "Unknown Team"
+    
+    # Extract logo/image from various possible fields
+    logo_url = (profile_data.get("logo") or team_obj.get("logo") or 
+                profile_data.get("logo_url") or team_obj.get("logo_url") or
+                profile_data.get("image") or team_obj.get("image"))
     
     # Build logo/image HTML
     logo_html = ""
     if logo_url:
-        logo_html = f'<img src="{logo_url}" alt="{name}" style="width: 100px; height: 100px; object-fit: contain; margin-bottom: 1rem;" />'
+        logo_html = f'<img src="{logo_url}" alt="{name}" style="width: 120px; height: 120px; object-fit: contain; margin-bottom: 1rem;" />'
     
-    # Build info rows
+    # Helper function to format field values
+    def format_value(value):
+        if value is None:
+            return None
+        if isinstance(value, (dict, list)):
+            return json.dumps(value, indent=2)
+        return str(value)
+    
+    # Helper function to format field names
+    def format_label(key):
+        return key.replace("_", " ").replace("-", " ").title()
+    
+    # Build info rows from all fields
     info_rows = []
-    if location:
-        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">Location</span><span style="font-weight: 500;">{location}</span></div>')
-    if league:
-        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">League</span><span style="font-weight: 500;">{league}</span></div>')
-    if stadium:
-        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">Stadium</span><span style="font-weight: 500;">{stadium}</span></div>')
-    if division:
-        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">Division</span><span style="font-weight: 500;">{division}</span></div>')
+    skip_keys = {"id", "logo", "logo_url", "image"}  # Skip these as they're handled separately
+    
+    # Flatten nested structures
+    def flatten_dict(d, prefix=""):
+        items = []
+        for k, v in d.items():
+            if k in skip_keys:
+                continue
+            key = f"{prefix}.{k}" if prefix else k
+            if isinstance(v, dict):
+                items.extend(flatten_dict(v, key))
+            elif isinstance(v, list) and len(v) > 0 and isinstance(v[0], dict):
+                # Handle list of objects
+                items.append((key, f"[{len(v)} items]"))
+            else:
+                items.append((key, v))
+        return items
+    
+    # Get all fields
+    all_fields = flatten_dict(profile_data)
+    
+    # Sort fields for consistent display
+    all_fields.sort(key=lambda x: x[0])
+    
+    # Build rows
+    for key, value in all_fields:
+        formatted_value = format_value(value)
+        if formatted_value and formatted_value not in ("None", "null", ""):
+            label = format_label(key)
+            info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">{label}</span><span style="font-weight: 500; text-align: right; max-width: 60%; word-break: break-word;">{formatted_value}</span></div>')
     
     info_html = "".join(info_rows) if info_rows else '<p style="color: #999; margin-top: 0.5rem;">No additional information available.</p>'
     

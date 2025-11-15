@@ -730,13 +730,21 @@ class ApiSportsService:
                 team = t.get('team') or t
                 name = team.get('name')
                 code = team.get('code') or team.get('nickname') or name
+                # Extract logo from top level (API returns it directly in response)
+                logo = t.get('logo') or team.get('logo')
+                # Extract conference/division from leagues.standard structure
+                leagues = t.get('leagues', {})
+                standard = leagues.get('standard', {}) if isinstance(leagues, dict) else {}
+                conference = standard.get('conference') or team.get('conference')
+                division = standard.get('division') or team.get('division')
                 result = {
                     "id": team.get('id'),
                     "name": name,
                     "abbreviation": code,
                     "city": team.get('city'),
-                    "conference": team.get('conference'),
-                    "division": team.get('division'),
+                    "conference": conference,
+                    "division": division,
+                    "logo_url": logo,
                 }
                 basic_cache.set(cache_key, result, ttl=600)
                 return result
@@ -911,16 +919,20 @@ class ApiSportsService:
                 resp = payload.get('response') if isinstance(payload, dict) else None
                 if not resp:
                     raise HTTPException(status_code=404, detail="EPL team not found")
-                team = (resp[0].get('team') or {})
+                t = resp[0]
+                team = t.get('team') or t
                 name = team.get('name')
                 code = team.get('code') or name
+                # Extract logo from team object or top level
+                logo = team.get('logo') or t.get('logo')
                 result = {
                     "id": team.get('id'),
                     "name": name,
                     "abbreviation": code,
-                    "city": None,
+                    "city": team.get('city'),
                     "conference": None,
                     "division": None,
+                    "logo_url": logo,
                 }
                 basic_cache.set(cache_key, result, ttl=600)
                 return result
@@ -1009,6 +1021,8 @@ class ApiSportsService:
                 team = t.get("team") or t
                 name = team.get("name")
                 code = team.get("code") or name
+                # Extract logo from top level or team object
+                logo = t.get("logo") or team.get("logo")
                 # Check if API provides division/conference info
                 division = team.get("division")
                 conference = team.get("conference")
@@ -1019,6 +1033,7 @@ class ApiSportsService:
                     "city": team.get("city"),
                     "conference": conference,
                     "division": division,
+                    "logo_url": logo,
                 }
                 basic_cache.set(cache_key, result, ttl=600)
                 return result
@@ -1030,6 +1045,213 @@ class ApiSportsService:
             raise HTTPException(status_code=502, detail="API-Sports NFL team error")
         except httpx.HTTPError as e:
             logger.error("API-Sports NFL team network error", extra={"error": str(e), "team_id": team_id})
+            raise HTTPException(status_code=502, detail="API-Sports network error")
+
+
+    # --- Profile endpoints for basic widgets ---
+    
+    async def get_nba_player_profile(self, player_id: str) -> Dict[str, Any]:
+        """Fetch NBA player profile from /players endpoint.
+        
+        Endpoint: GET /players?id={player_id}
+        Returns full profile response.
+        """
+        cache_key = f"apisports:nba:player_profile:{player_id}"
+        cached = basic_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        base = self._base_url_for('NBA')
+        headers = self._headers_for_base(base)
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                r = await client.get(f"{base}/players", headers=headers, params={"id": player_id})
+                r.raise_for_status()
+                payload = r.json()
+                resp = payload.get('response') if isinstance(payload, dict) else None
+                if not resp or len(resp) == 0:
+                    raise HTTPException(status_code=404, detail="NBA player not found")
+                # Return the full first response object
+                profile = resp[0]
+                basic_cache.set(cache_key, profile, ttl=600)
+                return profile
+        except httpx.HTTPStatusError as e:
+            status = e.response.status_code if e.response is not None else None
+            logger.error("API-Sports NBA player profile fetch failed", extra={"status": status, "player_id": player_id})
+            if status in (401, 403):
+                raise HTTPException(status_code=502, detail="API-Sports authentication failed; check API key")
+            raise HTTPException(status_code=502, detail="API-Sports NBA player profile error")
+        except httpx.HTTPError as e:
+            logger.error("API-Sports NBA player profile network error", extra={"error": str(e), "player_id": player_id})
+            raise HTTPException(status_code=502, detail="API-Sports network error")
+    
+    async def get_nba_team_profile(self, team_id: str) -> Dict[str, Any]:
+        """Fetch NBA team profile from /teams endpoint.
+        
+        Endpoint: GET /teams?id={team_id}
+        Returns full profile response.
+        """
+        cache_key = f"apisports:nba:team_profile:{team_id}"
+        cached = basic_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        base = self._base_url_for('NBA')
+        headers = self._headers_for_base(base)
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                r = await client.get(f"{base}/teams", headers=headers, params={"id": team_id})
+                r.raise_for_status()
+                payload = r.json()
+                resp = payload.get('response') if isinstance(payload, dict) else None
+                if not resp or len(resp) == 0:
+                    raise HTTPException(status_code=404, detail="NBA team not found")
+                # Return the full first response object
+                profile = resp[0]
+                basic_cache.set(cache_key, profile, ttl=600)
+                return profile
+        except httpx.HTTPStatusError as e:
+            status = e.response.status_code if e.response is not None else None
+            logger.error("API-Sports NBA team profile fetch failed", extra={"status": status, "team_id": team_id})
+            if status in (401, 403):
+                raise HTTPException(status_code=502, detail="API-Sports authentication failed; check API key")
+            raise HTTPException(status_code=502, detail="API-Sports NBA team profile error")
+        except httpx.HTTPError as e:
+            logger.error("API-Sports NBA team profile network error", extra={"error": str(e), "team_id": team_id})
+            raise HTTPException(status_code=502, detail="API-Sports network error")
+    
+    async def get_football_player_profile(self, player_id: str) -> Dict[str, Any]:
+        """Fetch Football player profile from /players/profiles endpoint.
+        
+        Endpoint: GET /players/profiles?player={player_id}
+        Returns full profile response.
+        """
+        cache_key = f"apisports:football:player_profile:{player_id}"
+        cached = basic_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        base = self._base_url_for('EPL')
+        headers = self._headers_for_base(base)
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                r = await client.get(f"{base}/players/profiles", headers=headers, params={"player": player_id})
+                r.raise_for_status()
+                payload = r.json()
+                resp = payload.get('response') if isinstance(payload, dict) else None
+                if not resp or len(resp) == 0:
+                    raise HTTPException(status_code=404, detail="Football player not found")
+                # Return the full first response object
+                profile = resp[0]
+                basic_cache.set(cache_key, profile, ttl=600)
+                return profile
+        except httpx.HTTPStatusError as e:
+            status = e.response.status_code if e.response is not None else None
+            logger.error("API-Sports Football player profile fetch failed", extra={"status": status, "player_id": player_id})
+            if status in (401, 403):
+                raise HTTPException(status_code=502, detail="API-Sports authentication failed; check API key")
+            raise HTTPException(status_code=502, detail="API-Sports Football player profile error")
+        except httpx.HTTPError as e:
+            logger.error("API-Sports Football player profile network error", extra={"error": str(e), "player_id": player_id})
+            raise HTTPException(status_code=502, detail="API-Sports network error")
+    
+    async def get_football_team_profile(self, team_id: str) -> Dict[str, Any]:
+        """Fetch Football team profile from /teams endpoint.
+        
+        Endpoint: GET /teams?id={team_id}
+        Returns full profile response.
+        """
+        cache_key = f"apisports:football:team_profile:{team_id}"
+        cached = basic_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        base = self._base_url_for('EPL')
+        headers = self._headers_for_base(base)
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                r = await client.get(f"{base}/teams", headers=headers, params={"id": team_id})
+                r.raise_for_status()
+                payload = r.json()
+                resp = payload.get('response') if isinstance(payload, dict) else None
+                if not resp or len(resp) == 0:
+                    raise HTTPException(status_code=404, detail="Football team not found")
+                # Return the full first response object
+                profile = resp[0]
+                basic_cache.set(cache_key, profile, ttl=600)
+                return profile
+        except httpx.HTTPStatusError as e:
+            status = e.response.status_code if e.response is not None else None
+            logger.error("API-Sports Football team profile fetch failed", extra={"status": status, "team_id": team_id})
+            if status in (401, 403):
+                raise HTTPException(status_code=502, detail="API-Sports authentication failed; check API key")
+            raise HTTPException(status_code=502, detail="API-Sports Football team profile error")
+        except httpx.HTTPError as e:
+            logger.error("API-Sports Football team profile network error", extra={"error": str(e), "team_id": team_id})
+            raise HTTPException(status_code=502, detail="API-Sports network error")
+    
+    async def get_nfl_player_profile(self, player_id: str) -> Dict[str, Any]:
+        """Fetch NFL player profile from /players endpoint.
+        
+        Endpoint: GET /players?id={player_id}
+        Returns full profile response.
+        """
+        cache_key = f"apisports:nfl:player_profile:{player_id}"
+        cached = basic_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        base = self._base_url_for('NFL')
+        headers = self._headers_for_base(base)
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                r = await client.get(f"{base}/players", headers=headers, params={"id": player_id})
+                r.raise_for_status()
+                payload = r.json()
+                resp = payload.get('response') if isinstance(payload, dict) else None
+                if not resp or len(resp) == 0:
+                    raise HTTPException(status_code=404, detail="NFL player not found")
+                # Return the full first response object
+                profile = resp[0]
+                basic_cache.set(cache_key, profile, ttl=600)
+                return profile
+        except httpx.HTTPStatusError as e:
+            status = e.response.status_code if e.response is not None else None
+            logger.error("API-Sports NFL player profile fetch failed", extra={"status": status, "player_id": player_id})
+            if status in (401, 403):
+                raise HTTPException(status_code=502, detail="API-Sports authentication failed; check API key")
+            raise HTTPException(status_code=502, detail="API-Sports NFL player profile error")
+        except httpx.HTTPError as e:
+            logger.error("API-Sports NFL player profile network error", extra={"error": str(e), "player_id": player_id})
+            raise HTTPException(status_code=502, detail="API-Sports network error")
+    
+    async def get_nfl_team_profile(self, team_id: str) -> Dict[str, Any]:
+        """Fetch NFL team profile from /teams endpoint.
+        
+        Endpoint: GET /teams?id={team_id}
+        Returns full profile response.
+        """
+        cache_key = f"apisports:nfl:team_profile:{team_id}"
+        cached = basic_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        base = self._base_url_for('NFL')
+        headers = self._headers_for_base(base)
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                r = await client.get(f"{base}/teams", headers=headers, params={"id": team_id})
+                r.raise_for_status()
+                payload = r.json()
+                resp = payload.get('response') if isinstance(payload, dict) else None
+                if not resp or len(resp) == 0:
+                    raise HTTPException(status_code=404, detail="NFL team not found")
+                # Return the full first response object
+                profile = resp[0]
+                basic_cache.set(cache_key, profile, ttl=600)
+                return profile
+        except httpx.HTTPStatusError as e:
+            status = e.response.status_code if e.response is not None else None
+            logger.error("API-Sports NFL team profile fetch failed", extra={"status": status, "team_id": team_id})
+            if status in (401, 403):
+                raise HTTPException(status_code=502, detail="API-Sports authentication failed; check API key")
+            raise HTTPException(status_code=502, detail="API-Sports NFL team profile error")
+        except httpx.HTTPError as e:
+            logger.error("API-Sports NFL team profile network error", extra={"error": str(e), "team_id": team_id})
             raise HTTPException(status_code=502, detail="API-Sports network error")
 
 
