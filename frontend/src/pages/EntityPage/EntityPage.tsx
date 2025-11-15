@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
-import { Container, Title, Card, Button, Text, Stack, Group, Badge, Loader } from '@mantine/core';
+import { Container, Title, Card, Button, Text, Stack, Box } from '@mantine/core';
 import Widget from '../../components/Widget';
 import { useTranslation } from 'react-i18next';
 import { useSportContext } from '../../context/SportContext';
-import { useFastNews } from '../../features/news/useFastNews';
+import { useThemeMode, getThemeColors } from '../../theme';
+import { getEntityNameFromUrl, buildEntityUrl } from '../../utils/entityName';
 
 export default function EntityPage() {
 	const { entityType, entityId } = useParams();
@@ -12,18 +13,19 @@ export default function EntityPage() {
 	const type = (entityType || '').toLowerCase() === 'team' ? 'team' : 'player';
 	const { t } = useTranslation();
 	const { activeSport } = useSportContext();
+	const { colorScheme } = useThemeMode();
+	const colors = getThemeColors(colorScheme);
 	const season = useMemo(() => String(new Date().getFullYear()), []);
 
-	const usp = new URLSearchParams(search);
-	const qName = usp.get('name') || '';
-	const { data: fastNews, isLoading: fastLoading } = useFastNews({
-		query: qName,
-		mode: type as any,
-		enabled: !!qName,
-		hours: 48,
-	});
+	const [entityName, setEntityName] = useState<string>('');
+
+	useEffect(() => {
+		const name = getEntityNameFromUrl(search);
+		if (name) setEntityName(name);
+	}, [search]);
 
 	// Build widget URLs
+	const basicWidgetUrl = `/api/v1/${activeSport}/${type}s/${entityId}/widget/basic`;
 	const baseUrl = `/api/v1/${activeSport}/${type}s/${entityId}/widget`;
 	const widgetUrls = {
 		offense: `${baseUrl}/offense${season ? `?season=${season}` : ''}`,
@@ -32,60 +34,66 @@ export default function EntityPage() {
 		discipline: `${baseUrl}/discipline${season ? `?season=${season}` : ''}`,
 	};
 
+	// Determine card titles based on sport
+	const isFootball = activeSport?.toUpperCase() === 'FOOTBALL' || activeSport?.toUpperCase() === 'EPL';
+	const cardTitles = {
+		topLeft: isFootball ? 'Attacking' : 'Offense',
+		topRight: 'Defensive',
+		bottomLeft: isFootball ? 'Set Pieces/Dead Ball' : 'Special Teams',
+		bottomRight: 'Discipline',
+	};
+
+	const displayName = entityName || `${entityType} ${entityId}`;
+
 	return (
 		<Container size="lg" py="xl">
 							<div className="entity-page-columns">
-				<Card withBorder p="lg">
-									<div className="entity-page-header-row">
-						<Title order={2}>{t('entityPage.title', 'Statistical Profile')}</Title>
+				{/* Entity Info Card - Perfect duplicate of MentionsPage top card */}
+				<Card shadow="sm" p="lg" radius="md" withBorder>
+					<Stack gap="lg" align="center">
+						<Title order={2} style={{ color: colors.text.primary, textAlign: 'center' }}>{displayName}</Title>
+						<Box w="100%" style={{ display: 'flex', justifyContent: 'center' }}>
+							{basicWidgetUrl && <Widget url={basicWidgetUrl} />}
+						</Box>
 						<Button
 							component={Link}
-							to={`/mentions/${type}/${entityId}?sport=${encodeURIComponent(activeSport)}`}
-							variant="light"
+							to={buildEntityUrl('/mentions', type, entityId || '', activeSport, displayName)}
+							style={{ backgroundColor: colors.ui.primary, color: 'white' }}
+							size="md"
+							fullWidth
 						>
-							{t('entityPage.recentMentions', 'Recent Mentions')}
+							{t('mentions.mentions', 'Mentions')}
 						</Button>
-							</div>
-				</Card>
-
-				<Card withBorder p="lg">
-					<Stack gap="md">
-						<Widget url={widgetUrls.offense} />
-						<Widget url={widgetUrls.defensive} />
-						<Widget url={widgetUrls.specialTeams} />
-						<Widget url={widgetUrls.discipline} />
 					</Stack>
 				</Card>
-				<Card withBorder p="lg">
-					<Title order={4}>Fast Mentions</Title>
-					{fastLoading && <Loader size="sm" />}
-					{!fastLoading && fastNews && (
-						<Stack gap={6} mt="sm">
-							{type === 'player' && (
-								<Stack gap={4}>
-									<Title order={6}>Linked Teams</Title>
-									{(fastNews as any).linked_teams?.slice(0,10).map((row: any) => (
-										<Group key={row[0]} justify="space-between">
-											<Text>{row[0]}</Text>
-											<Badge>{row[1]}</Badge>
-										</Group>
-									)) || <Text size="xs" c="dimmed">None</Text>}
-								</Stack>
-							)}
-							{type === 'team' && (
-								<Stack gap={4}>
-									<Title order={6}>Linked Players</Title>
-									{(fastNews as any).linked_players?.slice(0,10).map((row: any) => (
-										<Group key={row[0]} justify="space-between">
-											<Text>{row[0]}</Text>
-											<Badge>{row[1]}</Badge>
-										</Group>
-									)) || <Text size="xs" c="dimmed">None</Text>}
-								</Stack>
-							)}
+
+				{/* Advanced Stats Widgets - 2x2 grid, separate cards */}
+				<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+					<Card shadow="sm" p="lg" radius="md" withBorder>
+						<Stack gap="xs" align="center">
+							<Title order={4}>{cardTitles.topLeft}</Title>
+							<Text size="sm" c="dimmed">{t('entityPage.comingSoon', 'Coming soon')}</Text>
 						</Stack>
-					)}
-				</Card>
+					</Card>
+					<Card shadow="sm" p="lg" radius="md" withBorder>
+						<Stack gap="xs" align="center">
+							<Title order={4}>{cardTitles.topRight}</Title>
+							<Text size="sm" c="dimmed">{t('entityPage.comingSoon', 'Coming soon')}</Text>
+						</Stack>
+					</Card>
+					<Card shadow="sm" p="lg" radius="md" withBorder>
+						<Stack gap="xs" align="center">
+							<Title order={4}>{cardTitles.bottomLeft}</Title>
+							<Text size="sm" c="dimmed">{t('entityPage.comingSoon', 'Coming soon')}</Text>
+						</Stack>
+					</Card>
+					<Card shadow="sm" p="lg" radius="md" withBorder>
+						<Stack gap="xs" align="center">
+							<Title order={4}>{cardTitles.bottomRight}</Title>
+							<Text size="sm" c="dimmed">{t('entityPage.comingSoon', 'Coming soon')}</Text>
+						</Stack>
+					</Card>
+				</div>
 			</div>
 		</Container>
 	);

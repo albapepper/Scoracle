@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { Container, Title, Text, Card, Group, Button, Loader, Stack, Tabs, Box, Badge } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { useThemeMode, getThemeColors } from '../../theme';
 import { useSportContext } from '../../context/SportContext';
 import Widget from '../../components/Widget';
 import { useFastNewsByEntity } from '../../features/news/useFastNews';
+import { getEntityNameFromUrl, buildEntityUrl } from '../../utils/entityName';
 
 type Params = { entityType?: string; entityId?: string };
 
@@ -20,15 +21,17 @@ function MentionsPage() {
   const [error, setError] = useState<string>('');
   const [entityName, setEntityName] = useState<string>('');
 
+  const { search } = useLocation();
+  
   useEffect(() => {
     try {
-      const usp = new URLSearchParams(window.location.search);
-      const n = usp.get('name');
+      const usp = new URLSearchParams(search);
+      const n = getEntityNameFromUrl(search);
       if (n) setEntityName(n);
-    const s = usp.get('sport');
-        if (s) setSport(s.toUpperCase());
+      const s = usp.get('sport');
+      if (s) setSport(s.toUpperCase());
     } catch (_) {}
-  }, [setSport]);
+  }, [search, setSport]);
 
   // Use fast news endpoint for both articles and rankings - uses entity-based endpoint
   const { data: fastNews, isLoading: fastLoading, error: fastError } = useFastNewsByEntity({
@@ -72,7 +75,7 @@ function MentionsPage() {
             </Box>
             <Button
               component={Link}
-              to={`/entity/${entityType}/${entityId}?sport=${encodeURIComponent(activeSport)}`}
+              to={buildEntityUrl('/entity', entityType || '', entityId || '', activeSport, displayName)}
               style={{ backgroundColor: colors.ui.primary, color: 'white' }}
               size="md"
               fullWidth
@@ -87,7 +90,6 @@ function MentionsPage() {
           <Tabs defaultValue="articles">
             <Tabs.List justify="center">
               <Tabs.Tab value="articles">{t('mentions.articlesTab', 'Articles')}</Tabs.Tab>
-              <Tabs.Tab value="rankings">{t('mentions.rankingsTab', 'Rankings')}</Tabs.Tab>
               <Tabs.Tab value="tweets">{t('mentions.tweetsTab', 'Tweets')}</Tabs.Tab>
               <Tabs.Tab value="reddit">{t('mentions.redditTab', 'Reddit')}</Tabs.Tab>
             </Tabs.List>
@@ -123,44 +125,6 @@ function MentionsPage() {
                     </Card>
                   ))}
                 </Stack>
-              )}
-            </Tabs.Panel>
-            <Tabs.Panel value="rankings" pt="md">
-              {fastLoading ? (
-                <Stack gap="md" align="center" py="xl">
-                  <Loader size="sm" color={colors.ui.primary} />
-                </Stack>
-              ) : fastNews ? (
-                <Stack gap="sm">
-                  {type === 'player' && (
-                    <>
-                      <Title order={5}>{t('mentions.linkedTeams', 'Linked Teams')}</Title>
-                      <Stack gap={6}>
-                        {(fastNews as any).linked_teams?.slice(0, 12).map((row: any) => (
-                          <Group key={row[0]} justify="space-between">
-                            <Text>{row[0]}</Text>
-                            <Badge>{row[1]}</Badge>
-                          </Group>
-                        )) || <Text c="dimmed">{t('mentions.none')}</Text>}
-                      </Stack>
-                    </>
-                  )}
-                  {type === 'team' && (
-                    <>
-                      <Title order={5}>{t('mentions.linkedPlayers', 'Linked Players')}</Title>
-                      <Stack gap={6}>
-                        {(fastNews as any).linked_players?.slice(0, 12).map((row: any) => (
-                          <Group key={row[0]} justify="space-between">
-                            <Text>{row[0]}</Text>
-                            <Badge>{row[1]}</Badge>
-                          </Group>
-                        )) || <Text c="dimmed">{t('mentions.none')}</Text>}
-                      </Stack>
-                    </>
-                  )}
-                </Stack>
-              ) : (
-                <Text c="dimmed">{t('mentions.none')}</Text>
               )}
             </Tabs.Panel>
             <Tabs.Panel value="tweets" pt="md">
