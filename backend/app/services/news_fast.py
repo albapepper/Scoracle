@@ -8,8 +8,9 @@ import unicodedata
 import re
 import feedparser  # faster and robust RSS parser
 import ahocorasick
-from app.database.local_dbs import list_all_players, list_all_teams
+from app.database.local_dbs import list_all_players, list_all_teams, get_player_by_id as local_get_player_by_id, get_team_by_id as local_get_team_by_id
 from app.services.cache import widget_cache
+from app.services.apisports import apisports_service
 
 
 _PLAYER_AUTOMATA: dict[str, ahocorasick.Automaton] = {}
@@ -192,20 +193,18 @@ def rank_mentions_for_player(articles: List[Any], player: str, P: ahocorasick.Au
 
 
 def summarize_entry(entry: Any) -> Dict[str, Any]:
+    """Optimized to return only essential fields: title, link, source, pub_date."""
     title = getattr(entry, "title", "") or ""
     link = getattr(entry, "link", "") or ""
-    desc = getattr(entry, "summary", None) or getattr(entry, "description", "") or ""
-    pub_ts = None
     pub_iso = None
     try:
         if getattr(entry, "published_parsed", None):
             dt = datetime.fromtimestamp(time.mktime(entry.published_parsed)).replace(tzinfo=timezone.utc)
-            pub_ts = int(dt.timestamp())
             pub_iso = dt.isoformat()
     except Exception:
         pass
     source = getattr(entry, "source", {}).get("title") if isinstance(getattr(entry, "source", None), dict) else ""
-    return {"title": title, "link": link, "description": desc, "pub_date": pub_iso, "pub_ts": pub_ts, "source": source}
+    return {"title": title, "link": link, "pub_date": pub_iso, "source": source}
 
 
 def _cascading_entries(resolved_query: str, hours: int) -> List[Any]:
@@ -244,6 +243,62 @@ def _detect_longest_match(norm_query: str, A: ahocorasick.Automaton) -> Tuple[Op
             best_len = alias_len
             best_canon = canon
     return best_canon, best_len
+
+
+async def resolve_entity_name(entity_type: str, entity_id: str, sport: Optional[str]) -> str:
+    """Resolve a human-friendly entity name for RSS queries.
+    Order: upstream basic info -> local DB -> raw id fallback.
+    """
+    sport_upper = (sport or "NBA").upper()
+    # Prefer upstream basic info; fallback to local DB if needed
+    try:
+        if sport_upper == 'NBA':
+            if entity_type == "player":
+                info = await apisports_service.get_basketball_player_basic(entity_id)
+                fn = (info.get("first_name") or "").strip()
+                ln = (info.get("last_name") or "").strip()
+                name = f"{fn} {ln}".strip()
+                if name:
+                    return name
+            elif entity_type == "team":
+                info = await apisports_service.get_basketball_team_basic(entity_id)
+                name = info.get("name") or info.get("abbreviation")
+                if name:
+                    return name
+        elif sport_upper in ('EPL', 'FOOTBALL'):
+            if entity_type == "player":
+                info = await apisports_service.get_football_player_basic(entity_id)
+                fn = (info.get("first_name") or "").strip()
+                ln = (info.get("last_name") or "").strip()
+                name = f"{fn} {ln}".strip()
+                if name:
+                    return name
+            elif entity_type == "team":
+                info = await apisports_service.get_football_team_basic(entity_id)
+                name = info.get("name") or info.get("abbreviation")
+                if name:
+                    return name
+    except Exception:
+        pass
+    # Local DB fallback
+    try:
+        if entity_type == "player":
+            row = local_get_player_by_id(sport_upper, int(entity_id))
+            if row and row.get("name"):
+                # Reduce to first + last token only
+                parts = str(row["name"]).split()
+                if parts:
+                    first = parts[0]
+                    last = "".join(parts[-1:]) if len(parts) > 1 else ""
+                    return (first + (" " + last if last else "")).strip()
+                return row["name"]
+        elif entity_type == "team":
+            row = local_get_team_by_id(sport_upper, int(entity_id))
+            if row and row.get("name"):
+                return row["name"]
+    except Exception:
+        pass
+    return entity_id  # final fallback
 
 
 def fast_mentions(query: str, sport: str, hours: int = 48, mode: str = "auto") -> Dict[str, Any]:

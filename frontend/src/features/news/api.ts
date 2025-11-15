@@ -6,9 +6,7 @@ export type FastNewsMode = 'auto' | 'player' | 'team';
 export interface FastNewsArticle {
   title: string;
   link: string;
-  description: string;
   pub_date?: string | null;
-  pub_ts?: number | null;
   source?: string | null;
 }
 
@@ -50,8 +48,15 @@ export async function fetchFastNews(query: string, sport: string, opts?: { hours
   params.set('sport', sport);
   if (opts?.hours) params.set('hours', String(opts.hours));
   if (opts?.mode) params.set('mode', opts.mode);
-  const { data } = await http.get(`/news/fast?${params.toString()}`);
-  return data;
+  return await http.get<FastNewsResponse>(`/news/fast?${params.toString()}`);
+}
+
+export async function fetchFastNewsByEntity(entityType: string, entityId: string, sport: string, opts?: { hours?: number; mode?: FastNewsMode }): Promise<FastNewsResponse> {
+  const params = new URLSearchParams();
+  params.set('sport', sport);
+  if (opts?.hours) params.set('hours', String(opts.hours));
+  if (opts?.mode) params.set('mode', opts.mode);
+  return await http.get<FastNewsResponse>(`/news/fast/${entityType}/${entityId}?${params.toString()}`);
 }
 // Placeholder news API aggregation facade
 export const api = {};

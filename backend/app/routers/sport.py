@@ -6,7 +6,7 @@ from fastapi import APIRouter, Path, Query, HTTPException, Request
 import time
 from typing import Optional
 
-from app.services.news_service import get_entity_mentions, get_entity_mentions_with_debug
+from app.services import news_fast
 from app.database.local_dbs import (
     get_player_by_id as local_get_player_by_id,
     get_team_by_id as local_get_team_by_id,
@@ -17,9 +17,17 @@ from app.database.local_dbs import (
     get_team_by_id,
 )
 from app.services.apisports import apisports_service
+from app.services.widget_builder import (
+    build_basic_widget,
+    build_offense_widget,
+    build_defensive_widget,
+    build_special_teams_widget,
+    build_discipline_widget,
+)
 from app.config import settings
 from datetime import datetime, timezone
 import hashlib, json
+from fastapi.responses import HTMLResponse
 
 router = APIRouter()
 
@@ -145,8 +153,9 @@ async def sport_player_stats(sport: str, player_id: str, season: str | None = Qu
 @router.get("/{sport}/players/{player_id}/mentions")
 async def sport_player_mentions(sport: str, player_id: str):
     s = sport.upper()
-    md = await get_entity_mentions_with_debug("player", player_id, s)
-    mentions = md.get("mentions", [])
+    resolved_name = await news_fast.resolve_entity_name("player", player_id, s)
+    result = news_fast.fast_mentions(query=resolved_name.strip(), sport=s, hours=48, mode="player")
+    mentions = result.get("articles", [])
     entity_info = None
     if not settings.LEAN_BACKEND:
         try:
@@ -253,8 +262,9 @@ async def sport_autocomplete_proxy(sport: str, entity_type: str, q: str = Query(
 @router.get("/{sport}/teams/{team_id}/mentions")
 async def sport_team_mentions(sport: str, team_id: str):
     s = sport.upper()
-    md = await get_entity_mentions_with_debug("team", team_id, s)
-    mentions = md.get("mentions", [])
+    resolved_name = await news_fast.resolve_entity_name("team", team_id, s)
+    result = news_fast.fast_mentions(query=resolved_name.strip(), sport=s, hours=48, mode="team")
+    mentions = result.get("articles", [])
     entity_info = None
     if not settings.LEAN_BACKEND:
         try:
@@ -516,3 +526,241 @@ async def sport_player_seasons(sport: str, player_id: str):
     defaults = settings.API_SPORTS_DEFAULTS.get(s, {})
     season = defaults.get("season") or "current"
     return {"player_id": player_id, "sport": s, "seasons": [str(season)]}
+
+
+# ===== Player Widget Routes =====
+
+@router.get("/{sport}/players/{player_id}/widget/basic", response_class=HTMLResponse)
+async def player_widget_basic(sport: str, player_id: str):
+    """Basic widget for mentions page."""
+    s = sport.upper()
+    entity_info = await _get_player_info(s, player_id)
+    html = build_basic_widget("player", entity_info, s)
+    return HTMLResponse(content=html)
+
+
+@router.get("/{sport}/players/{player_id}/widget/offense", response_class=HTMLResponse)
+async def player_widget_offense(sport: str, player_id: str, season: str | None = Query(None)):
+    """Offense widget for EntityPage."""
+    s = sport.upper()
+    entity_info = await _get_player_info(s, player_id)
+    stats = await _get_player_stats(s, player_id, season)
+    html = build_offense_widget("player", entity_info, stats, s)
+    return HTMLResponse(content=html)
+
+
+@router.get("/{sport}/players/{player_id}/widget/defensive", response_class=HTMLResponse)
+async def player_widget_defensive(sport: str, player_id: str, season: str | None = Query(None)):
+    """Defensive widget for EntityPage."""
+    s = sport.upper()
+    entity_info = await _get_player_info(s, player_id)
+    stats = await _get_player_stats(s, player_id, season)
+    html = build_defensive_widget("player", entity_info, stats, s)
+    return HTMLResponse(content=html)
+
+
+@router.get("/{sport}/players/{player_id}/widget/special-teams", response_class=HTMLResponse)
+async def player_widget_special_teams(sport: str, player_id: str, season: str | None = Query(None)):
+    """Special teams/set pieces widget for EntityPage."""
+    s = sport.upper()
+    entity_info = await _get_player_info(s, player_id)
+    stats = await _get_player_stats(s, player_id, season)
+    html = build_special_teams_widget("player", entity_info, stats, s)
+    return HTMLResponse(content=html)
+
+
+@router.get("/{sport}/players/{player_id}/widget/discipline", response_class=HTMLResponse)
+async def player_widget_discipline(sport: str, player_id: str, season: str | None = Query(None)):
+    """Discipline widget for EntityPage."""
+    s = sport.upper()
+    entity_info = await _get_player_info(s, player_id)
+    stats = await _get_player_stats(s, player_id, season)
+    html = build_discipline_widget("player", entity_info, stats, s)
+    return HTMLResponse(content=html)
+
+
+# ===== Team Widget Routes =====
+
+@router.get("/{sport}/teams/{team_id}/widget/basic", response_class=HTMLResponse)
+async def team_widget_basic(sport: str, team_id: str):
+    """Basic widget for mentions page."""
+    s = sport.upper()
+    entity_info = await _get_team_info(s, team_id)
+    html = build_basic_widget("team", entity_info, s)
+    return HTMLResponse(content=html)
+
+
+@router.get("/{sport}/teams/{team_id}/widget/offense", response_class=HTMLResponse)
+async def team_widget_offense(sport: str, team_id: str, season: str | None = Query(None)):
+    """Offense widget for EntityPage."""
+    s = sport.upper()
+    entity_info = await _get_team_info(s, team_id)
+    stats = await _get_team_stats(s, team_id, season)
+    html = build_offense_widget("team", entity_info, stats, s)
+    return HTMLResponse(content=html)
+
+
+@router.get("/{sport}/teams/{team_id}/widget/defensive", response_class=HTMLResponse)
+async def team_widget_defensive(sport: str, team_id: str, season: str | None = Query(None)):
+    """Defensive widget for EntityPage."""
+    s = sport.upper()
+    entity_info = await _get_team_info(s, team_id)
+    stats = await _get_team_stats(s, team_id, season)
+    html = build_defensive_widget("team", entity_info, stats, s)
+    return HTMLResponse(content=html)
+
+
+@router.get("/{sport}/teams/{team_id}/widget/special-teams", response_class=HTMLResponse)
+async def team_widget_special_teams(sport: str, team_id: str, season: str | None = Query(None)):
+    """Special teams/set pieces widget for EntityPage."""
+    s = sport.upper()
+    entity_info = await _get_team_info(s, team_id)
+    stats = await _get_team_stats(s, team_id, season)
+    html = build_special_teams_widget("team", entity_info, stats, s)
+    return HTMLResponse(content=html)
+
+
+@router.get("/{sport}/teams/{team_id}/widget/discipline", response_class=HTMLResponse)
+async def team_widget_discipline(sport: str, team_id: str, season: str | None = Query(None)):
+    """Discipline widget for EntityPage."""
+    s = sport.upper()
+    entity_info = await _get_team_info(s, team_id)
+    stats = await _get_team_stats(s, team_id, season)
+    html = build_discipline_widget("team", entity_info, stats, s)
+    return HTMLResponse(content=html)
+
+
+# ===== Helper Functions =====
+
+async def _get_player_info(sport: str, player_id: str) -> dict:
+    """Get player info for widgets."""
+    s = sport.upper()
+    if settings.LEAN_BACKEND:
+        row = get_player_by_id(s, int(player_id))
+        if not row:
+            raise HTTPException(status_code=404, detail="Player not found")
+        name = row.get("name") or ""
+        parts = name.split(" ")
+        return {
+            "id": row["id"],
+            "first_name": parts[0] if parts else None,
+            "last_name": " ".join(parts[1:]) if len(parts) > 1 else None,
+            "name": name,
+            "position": None,
+            "team": {"id": None, "name": row.get("current_team"), "abbreviation": row.get("current_team")},
+        }
+    elif s == 'NBA':
+        return await apisports_service.get_basketball_player_basic(player_id)
+    elif s in ('EPL', 'FOOTBALL'):
+        try:
+            return await apisports_service.get_football_player_basic(player_id)
+        except Exception:
+            row = get_player_by_id(s, int(player_id))
+            if not row:
+                raise HTTPException(status_code=404, detail="Player not found")
+            name = row.get("name") or ""
+            parts = name.split(" ")
+            return {
+                "id": row["id"],
+                "first_name": parts[0] if parts else None,
+                "last_name": " ".join(parts[1:]) if len(parts) > 1 else None,
+                "name": name,
+                "position": None,
+                "team": {"id": None, "name": row.get("current_team"), "abbreviation": row.get("current_team")},
+            }
+    elif s == 'NFL':
+        try:
+            return await apisports_service.get_nfl_player_basic(player_id)
+        except Exception:
+            row = get_player_by_id(s, int(player_id))
+            if not row:
+                raise HTTPException(status_code=404, detail="Player not found")
+            name = row.get("name") or ""
+            parts = name.split(" ")
+            return {
+                "id": row["id"],
+                "first_name": parts[0] if parts else None,
+                "last_name": " ".join(parts[1:]) if len(parts) > 1 else None,
+                "name": name,
+                "position": None,
+                "team": {"id": None, "name": row.get("current_team"), "abbreviation": row.get("current_team")},
+            }
+    else:
+        raise HTTPException(status_code=501, detail=f"Player widget not implemented for sport {s}")
+
+
+async def _get_team_info(sport: str, team_id: str) -> dict:
+    """Get team info for widgets."""
+    s = sport.upper()
+    if settings.LEAN_BACKEND:
+        row = get_team_by_id(s, int(team_id))
+        if not row:
+            raise HTTPException(status_code=404, detail="Team not found")
+        return {
+            "id": row["id"],
+            "name": row["name"],
+            "abbreviation": row["name"],
+            "city": None,
+            "conference": None,
+            "division": None,
+        }
+    elif s == 'NBA':
+        return await apisports_service.get_basketball_team_basic(team_id)
+    elif s in ('EPL', 'FOOTBALL'):
+        try:
+            return await apisports_service.get_football_team_basic(team_id)
+        except Exception:
+            row = get_team_by_id(s, int(team_id))
+            if not row:
+                raise HTTPException(status_code=404, detail="Team not found")
+            return {
+                "id": row["id"],
+                "name": row["name"],
+                "abbreviation": row["name"],
+                "city": None,
+                "conference": None,
+                "division": None,
+            }
+    elif s == 'NFL':
+        try:
+            return await apisports_service.get_nfl_team_basic(team_id)
+        except Exception:
+            row = get_team_by_id(s, int(team_id))
+            if not row:
+                raise HTTPException(status_code=404, detail="Team not found")
+            return {
+                "id": row["id"],
+                "name": row["name"],
+                "abbreviation": row["name"],
+                "city": None,
+                "conference": None,
+                "division": None,
+            }
+    else:
+        raise HTTPException(status_code=501, detail=f"Team widget not implemented for sport {s}")
+
+
+async def _get_player_stats(sport: str, player_id: str, season: str | None = None) -> dict:
+    """Get player stats for widgets."""
+    s = sport.upper()
+    season_norm = season if (season and season.lower() != "current") else None
+    if s == 'NBA':
+        try:
+            return await apisports_service.get_basketball_player_statistics(player_id, season_norm) or {}
+        except Exception:
+            return {}
+    # Add other sports as needed
+    return {}
+
+
+async def _get_team_stats(sport: str, team_id: str, season: str | None = None) -> dict:
+    """Get team stats for widgets."""
+    s = sport.upper()
+    season_norm = season if (season and season.lower() != "current") else None
+    if s == 'NBA':
+        try:
+            return await apisports_service.get_basketball_team_statistics(team_id, season_norm) or {}
+        except Exception:
+            return {}
+    # Add other sports as needed
+    return {}

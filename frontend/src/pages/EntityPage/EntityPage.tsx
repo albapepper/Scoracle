@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { Container, Title, Card, Button, Text, Stack, Group, Badge, Loader } from '@mantine/core';
-import PlayerWidgetServer from '../../components/PlayerWidgetServer';
+import Widget from '../../components/Widget';
 import { useTranslation } from 'react-i18next';
 import { useSportContext } from '../../context/SportContext';
 import { useFastNews } from '../../features/news/useFastNews';
@@ -23,7 +23,14 @@ export default function EntityPage() {
 		hours: 48,
 	});
 
-	// We have removed legacy client-side widgets; always render server widget envelope
+	// Build widget URLs
+	const baseUrl = `/api/v1/${activeSport}/${type}s/${entityId}/widget`;
+	const widgetUrls = {
+		offense: `${baseUrl}/offense${season ? `?season=${season}` : ''}`,
+		defensive: `${baseUrl}/defensive${season ? `?season=${season}` : ''}`,
+		specialTeams: `${baseUrl}/special-teams${season ? `?season=${season}` : ''}`,
+		discipline: `${baseUrl}/discipline${season ? `?season=${season}` : ''}`,
+	};
 
 	return (
 		<Container size="lg" py="xl">
@@ -42,13 +49,12 @@ export default function EntityPage() {
 				</Card>
 
 				<Card withBorder p="lg">
-					<div id="widget-container">
-						{type === 'player' ? (
-							<PlayerWidgetServer playerId={entityId as any} season={season} />
-						) : (
-							<Text size="sm" color="dimmed">Team widget (server) coming soon.</Text>
-						)}
-					</div>
+					<Stack gap="md">
+						<Widget url={widgetUrls.offense} />
+						<Widget url={widgetUrls.defensive} />
+						<Widget url={widgetUrls.specialTeams} />
+						<Widget url={widgetUrls.discipline} />
+					</Stack>
 				</Card>
 				<Card withBorder p="lg">
 					<Title order={4}>Fast Mentions</Title>
