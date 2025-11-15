@@ -18,7 +18,8 @@ from app.database.local_dbs import (
 )
 from app.services.apisports import apisports_service
 from app.services.widget_builder import (
-    build_basic_widget,
+    build_player_basic_widget,
+    build_team_basic_widget,
     build_offense_widget,
     build_defensive_widget,
     build_special_teams_widget,
@@ -532,10 +533,10 @@ async def sport_player_seasons(sport: str, player_id: str):
 
 @router.get("/{sport}/players/{player_id}/widget/basic", response_class=HTMLResponse)
 async def player_widget_basic(sport: str, player_id: str):
-    """Basic widget for mentions page."""
+    """Basic player widget for mentions page."""
     s = sport.upper()
     entity_info = await _get_player_info(s, player_id)
-    html = build_basic_widget("player", entity_info, s)
+    html = build_player_basic_widget(entity_info, s)
     return HTMLResponse(content=html)
 
 
@@ -583,10 +584,10 @@ async def player_widget_discipline(sport: str, player_id: str, season: str | Non
 
 @router.get("/{sport}/teams/{team_id}/widget/basic", response_class=HTMLResponse)
 async def team_widget_basic(sport: str, team_id: str):
-    """Basic widget for mentions page."""
+    """Basic team widget for mentions page."""
     s = sport.upper()
     entity_info = await _get_team_info(s, team_id)
-    html = build_basic_widget("team", entity_info, s)
+    html = build_team_basic_widget(entity_info, s)
     return HTMLResponse(content=html)
 
 
@@ -633,7 +634,7 @@ async def team_widget_discipline(sport: str, team_id: str, season: str | None = 
 # ===== Helper Functions =====
 
 async def _get_player_info(sport: str, player_id: str) -> dict:
-    """Get player info for widgets."""
+    """Get player info for widgets with enhanced fields."""
     s = sport.upper()
     if settings.LEAN_BACKEND:
         row = get_player_by_id(s, int(player_id))
@@ -648,12 +649,38 @@ async def _get_player_info(sport: str, player_id: str) -> dict:
             "name": name,
             "position": None,
             "team": {"id": None, "name": row.get("current_team"), "abbreviation": row.get("current_team")},
+            "height": None,
+            "weight": None,
+            "age": None,
+            "nationality": None,
+            "college": None,
+            "logo_url": None,
         }
     elif s == 'NBA':
-        return await apisports_service.get_basketball_player_basic(player_id)
+        basic = await apisports_service.get_basketball_player_basic(player_id)
+        # Try to get additional fields from raw API response if available
+        # For now, return basic structure - can be enhanced later with direct API calls
+        return {
+            **basic,
+            "height": basic.get("height"),
+            "weight": basic.get("weight"),
+            "age": basic.get("age"),
+            "nationality": basic.get("nationality") or basic.get("country"),
+            "college": basic.get("college") or basic.get("university"),
+            "logo_url": basic.get("logo_url") or basic.get("image") or basic.get("photo"),
+        }
     elif s in ('EPL', 'FOOTBALL'):
         try:
-            return await apisports_service.get_football_player_basic(player_id)
+            basic = await apisports_service.get_football_player_basic(player_id)
+            return {
+                **basic,
+                "height": basic.get("height"),
+                "weight": basic.get("weight"),
+                "age": basic.get("age"),
+                "nationality": basic.get("nationality") or basic.get("country"),
+                "college": basic.get("college") or basic.get("university"),
+                "logo_url": basic.get("logo_url") or basic.get("image") or basic.get("photo"),
+            }
         except Exception:
             row = get_player_by_id(s, int(player_id))
             if not row:
@@ -667,10 +694,25 @@ async def _get_player_info(sport: str, player_id: str) -> dict:
                 "name": name,
                 "position": None,
                 "team": {"id": None, "name": row.get("current_team"), "abbreviation": row.get("current_team")},
+                "height": None,
+                "weight": None,
+                "age": None,
+                "nationality": None,
+                "college": None,
+                "logo_url": None,
             }
     elif s == 'NFL':
         try:
-            return await apisports_service.get_nfl_player_basic(player_id)
+            basic = await apisports_service.get_nfl_player_basic(player_id)
+            return {
+                **basic,
+                "height": basic.get("height"),
+                "weight": basic.get("weight"),
+                "age": basic.get("age"),
+                "nationality": basic.get("nationality") or basic.get("country"),
+                "college": basic.get("college") or basic.get("university"),
+                "logo_url": basic.get("logo_url") or basic.get("image") or basic.get("photo"),
+            }
         except Exception:
             row = get_player_by_id(s, int(player_id))
             if not row:
@@ -684,13 +726,19 @@ async def _get_player_info(sport: str, player_id: str) -> dict:
                 "name": name,
                 "position": None,
                 "team": {"id": None, "name": row.get("current_team"), "abbreviation": row.get("current_team")},
+                "height": None,
+                "weight": None,
+                "age": None,
+                "nationality": None,
+                "college": None,
+                "logo_url": None,
             }
     else:
         raise HTTPException(status_code=501, detail=f"Player widget not implemented for sport {s}")
 
 
 async def _get_team_info(sport: str, team_id: str) -> dict:
-    """Get team info for widgets."""
+    """Get team info for widgets with enhanced fields."""
     s = sport.upper()
     if settings.LEAN_BACKEND:
         row = get_team_by_id(s, int(team_id))
@@ -703,12 +751,27 @@ async def _get_team_info(sport: str, team_id: str) -> dict:
             "city": None,
             "conference": None,
             "division": None,
+            "league": row.get("current_league"),
+            "stadium": None,
+            "logo_url": None,
         }
     elif s == 'NBA':
-        return await apisports_service.get_basketball_team_basic(team_id)
+        basic = await apisports_service.get_basketball_team_basic(team_id)
+        return {
+            **basic,
+            "league": basic.get("conference"),  # Use conference as league for NBA
+            "stadium": basic.get("stadium") or basic.get("venue") or basic.get("arena"),
+            "logo_url": basic.get("logo_url") or basic.get("image") or basic.get("logo"),
+        }
     elif s in ('EPL', 'FOOTBALL'):
         try:
-            return await apisports_service.get_football_team_basic(team_id)
+            basic = await apisports_service.get_football_team_basic(team_id)
+            return {
+                **basic,
+                "league": basic.get("league") or basic.get("conference"),
+                "stadium": basic.get("stadium") or basic.get("venue"),
+                "logo_url": basic.get("logo_url") or basic.get("image") or basic.get("logo"),
+            }
         except Exception:
             row = get_team_by_id(s, int(team_id))
             if not row:
@@ -720,10 +783,19 @@ async def _get_team_info(sport: str, team_id: str) -> dict:
                 "city": None,
                 "conference": None,
                 "division": None,
+                "league": row.get("current_league"),
+                "stadium": None,
+                "logo_url": None,
             }
     elif s == 'NFL':
         try:
-            return await apisports_service.get_nfl_team_basic(team_id)
+            basic = await apisports_service.get_nfl_team_basic(team_id)
+            return {
+                **basic,
+                "league": basic.get("conference"),  # Use conference as league for NFL
+                "stadium": basic.get("stadium") or basic.get("venue"),
+                "logo_url": basic.get("logo_url") or basic.get("image") or basic.get("logo"),
+            }
         except Exception:
             row = get_team_by_id(s, int(team_id))
             if not row:
@@ -735,6 +807,9 @@ async def _get_team_info(sport: str, team_id: str) -> dict:
                 "city": None,
                 "conference": None,
                 "division": None,
+                "league": None,
+                "stadium": None,
+                "logo_url": None,
             }
     else:
         raise HTTPException(status_code=501, detail=f"Team widget not implemented for sport {s}")

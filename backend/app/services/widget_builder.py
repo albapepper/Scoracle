@@ -7,27 +7,108 @@ from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
 
 
-def build_basic_widget(entity_type: str, entity_info: Dict[str, Any], sport: str) -> str:
-    """Build a basic widget template for the mentions page."""
-    name = ""
-    if entity_type == "player":
-        first = entity_info.get("first_name") or ""
-        last = entity_info.get("last_name") or ""
-        name = f"{first} {last}".strip() or entity_info.get("name", "Unknown Player")
-        position = entity_info.get("position", "")
-        team = entity_info.get("team", {})
-        team_name = team.get("name") or team.get("abbreviation") or ""
-    else:
-        name = entity_info.get("name") or "Unknown Team"
-        team_name = ""
-        position = ""
+def build_player_basic_widget(entity_info: Dict[str, Any], sport: str) -> str:
+    """Build a basic player widget for the mentions page.
+    
+    Displays: logo/image, name, nationality, college, age, height, weight, team, position
+    """
+    first = entity_info.get("first_name") or ""
+    last = entity_info.get("last_name") or ""
+    name = f"{first} {last}".strip() or entity_info.get("name", "Unknown Player")
+    
+    # Extract fields
+    logo_url = entity_info.get("logo_url") or entity_info.get("image") or entity_info.get("photo")
+    nationality = entity_info.get("nationality") or entity_info.get("country")
+    college = entity_info.get("college") or entity_info.get("university")
+    age = entity_info.get("age")
+    height = entity_info.get("height")
+    weight = entity_info.get("weight")
+    position = entity_info.get("position")
+    team = entity_info.get("team", {})
+    team_name = team.get("name") or team.get("abbreviation") or ""
+    
+    # Build logo/image HTML
+    logo_html = ""
+    if logo_url:
+        logo_html = f'<img src="{logo_url}" alt="{name}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin-bottom: 1rem;" />'
+    
+    # Build info rows
+    info_rows = []
+    if nationality:
+        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">Nationality</span><span style="font-weight: 500;">{nationality}</span></div>')
+    if college:
+        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">College</span><span style="font-weight: 500;">{college}</span></div>')
+    if age:
+        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">Age</span><span style="font-weight: 500;">{age}</span></div>')
+    if height:
+        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">Height</span><span style="font-weight: 500;">{height}</span></div>')
+    if weight:
+        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">Weight</span><span style="font-weight: 500;">{weight}</span></div>')
+    if position:
+        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">Position</span><span style="font-weight: 500;">{position}</span></div>')
+    if team_name:
+        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">Team</span><span style="font-weight: 500;">{team_name}</span></div>')
+    
+    info_html = "".join(info_rows) if info_rows else '<p style="color: #999; margin-top: 0.5rem;">No additional information available.</p>'
     
     html = f"""
-    <div class="widget-basic" style="padding: 1rem; border: 1px solid #e0e0e0; border-radius: 8px; background: #fff;">
-        <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 600;">{name}</h3>
-        {f'<p style="margin: 0.25rem 0; color: #666; font-size: 0.9rem;">{position}</p>' if position else ''}
-        {f'<p style="margin: 0.25rem 0; color: #666; font-size: 0.9rem;">{team_name}</p>' if team_name else ''}
-        <p style="margin: 0.5rem 0 0 0; color: #999; font-size: 0.8rem;">{sport}</p>
+    <div class="widget-basic-player" style="padding: 1.5rem; border: 1px solid #e0e0e0; border-radius: 8px; background: #fff;">
+        <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+            {logo_html}
+            <h3 style="margin: 0 0 1rem 0; font-size: 1.5rem; font-weight: 600; color: #333;">{name}</h3>
+        </div>
+        <div style="margin-top: 1rem;">
+            {info_html}
+        </div>
+        <p style="margin: 1rem 0 0 0; color: #999; font-size: 0.8rem; text-align: center;">{sport}</p>
+    </div>
+    """
+    return html
+
+
+def build_team_basic_widget(entity_info: Dict[str, Any], sport: str) -> str:
+    """Build a basic team widget for the mentions page.
+    
+    Displays: logo/image, name, location, league, stadium, division
+    """
+    name = entity_info.get("name") or "Unknown Team"
+    
+    # Extract fields
+    logo_url = entity_info.get("logo_url") or entity_info.get("image") or entity_info.get("logo")
+    city = entity_info.get("city")
+    location = city or entity_info.get("location")
+    league = entity_info.get("league") or entity_info.get("conference")
+    stadium = entity_info.get("stadium") or entity_info.get("venue") or entity_info.get("arena")
+    division = entity_info.get("division")
+    
+    # Build logo/image HTML
+    logo_html = ""
+    if logo_url:
+        logo_html = f'<img src="{logo_url}" alt="{name}" style="width: 100px; height: 100px; object-fit: contain; margin-bottom: 1rem;" />'
+    
+    # Build info rows
+    info_rows = []
+    if location:
+        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">Location</span><span style="font-weight: 500;">{location}</span></div>')
+    if league:
+        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">League</span><span style="font-weight: 500;">{league}</span></div>')
+    if stadium:
+        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">Stadium</span><span style="font-weight: 500;">{stadium}</span></div>')
+    if division:
+        info_rows.append(f'<div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid #f0f0f0;"><span style="color: #666;">Division</span><span style="font-weight: 500;">{division}</span></div>')
+    
+    info_html = "".join(info_rows) if info_rows else '<p style="color: #999; margin-top: 0.5rem;">No additional information available.</p>'
+    
+    html = f"""
+    <div class="widget-basic-team" style="padding: 1.5rem; border: 1px solid #e0e0e0; border-radius: 8px; background: #fff;">
+        <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+            {logo_html}
+            <h3 style="margin: 0 0 1rem 0; font-size: 1.5rem; font-weight: 600; color: #333;">{name}</h3>
+        </div>
+        <div style="margin-top: 1rem;">
+            {info_html}
+        </div>
+        <p style="margin: 1rem 0 0 0; color: #999; font-size: 0.8rem; text-align: center;">{sport}</p>
     </div>
     """
     return html
