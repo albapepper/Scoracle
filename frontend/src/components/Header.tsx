@@ -52,11 +52,25 @@ const Header: React.FC = () => {
         <Group style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', zIndex: 1 }}>
           <Select
             aria-label={t('header.language') || 'Select language'}
-            data={languages.map((l) => ({ value: l.id, label: l.display }))}
+            data={languages.map((l) => ({ value: l.id, label: l.id.toUpperCase() }))}
             value={language}
             onChange={(v) => v && changeLanguage(v || language)}
             size="xs"
-            styles={{ input: { background: 'transparent', color: colors.text.primary, borderColor: colors.ui.border } }}
+            styles={{ 
+              input: { 
+                background: 'transparent', 
+                color: colors.text.primary, 
+                borderColor: colors.ui.border,
+                width: '60px',
+                minWidth: '60px',
+                maxWidth: '60px'
+              },
+              wrapper: {
+                width: '60px',
+                minWidth: '60px',
+                maxWidth: '60px'
+              }
+            }}
           />
         </Group>
       </Box>

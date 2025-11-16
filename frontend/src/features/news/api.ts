@@ -48,7 +48,7 @@ export async function fetchFastNews(query: string, sport: string, opts?: { hours
   params.set('sport', sport);
   if (opts?.hours) params.set('hours', String(opts.hours));
   if (opts?.mode) params.set('mode', opts.mode);
-  return await http.get<FastNewsResponse>(`/news/fast?${params.toString()}`);
+  return await http.get<FastNewsResponse>(`news/fast?${params.toString()}`);
 }
 
 export async function fetchFastNewsByEntity(entityType: string, entityId: string, sport: string, opts?: { hours?: number; mode?: FastNewsMode }): Promise<FastNewsResponse> {
@@ -56,7 +56,7 @@ export async function fetchFastNewsByEntity(entityType: string, entityId: string
   params.set('sport', sport);
   if (opts?.hours) params.set('hours', String(opts.hours));
   if (opts?.mode) params.set('mode', opts.mode);
-  return await http.get<FastNewsResponse>(`/news/fast/${entityType}/${entityId}?${params.toString()}`);
+  return await http.get<FastNewsResponse>(`news/fast/${entityType}/${entityId}?${params.toString()}`);
 }
 // Placeholder news API aggregation facade
 export const api = {};
