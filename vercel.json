@@ -1,8 +1,16 @@
 {
   "version": 2,
-  "installCommand": "bash scripts/vercel-install.sh",
-  "buildCommand": "bash scripts/vercel-build.sh",
-  "outputDirectory": "frontend/build",
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build",
+        "installCommand": "cd frontend && npm install --legacy-peer-deps",
+        "buildCommand": "cd frontend && npm run build"
+      }
+    }
+  ],
   "routes": [
     {
       "src": "/api/(.*)",
