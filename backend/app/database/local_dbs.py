@@ -23,6 +23,8 @@ def _candidate_db_dirs() -> list[str]:
     1) LOCAL_DB_DIR env var (if set)
     2) <repo_root>/instance/localdb
     3) <backend_root>/instance/localdb (for older layouts)
+    4) /var/task/backend/instance/localdb (Vercel serverless)
+    5) /var/task/instance/localdb (Vercel serverless alternative)
     """
     dirs: list[str] = []
     override = os.getenv("LOCAL_DB_DIR")
@@ -35,6 +37,19 @@ def _candidate_db_dirs() -> list[str]:
     repo_root = backend_root.parent
     dirs.append(str(repo_root / "instance" / "localdb"))
     dirs.append(str(backend_root / "instance" / "localdb"))
+    # Vercel serverless paths (files are bundled at /var/task)
+    if os.getenv("VERCEL") == "1":
+        dirs.append("/var/task/backend/instance/localdb")
+        dirs.append("/var/task/instance/localdb")
+        # Also try relative to current file location in serverless
+        try:
+            # In serverless, files might be at /var/task/app/database/local_dbs.py
+            # So backend would be /var/task
+            serverless_backend = here.parents[2] if len(here.parts) > 3 else Path("/var/task")
+            dirs.append(str(serverless_backend / "backend" / "instance" / "localdb"))
+            dirs.append(str(serverless_backend / "instance" / "localdb"))
+        except Exception:
+            pass
     # Deduplicate preserving order
     out: list[str] = []
     seen = set()
