@@ -27,8 +27,8 @@ export interface ThemeTokens {
 const theme: ThemeTokens = {
   light: {
     colors: {
-      // Beige page background with ivory card backgrounds
-      background: { primary: '#E8E3D3', secondary: '#F0ECE0', tertiary: '#F5F5E8' },
+      // Beige page background with bone card backgrounds
+      background: { primary: '#E8E3D3', secondary: '#F0ECE0', tertiary: '#FAFAF5' },
       // High contrast text for readability
       text: { primary: '#1A1A1A', secondary: '#666666', accent: '#2D3748', muted: '#A0AEC0' },
       // Subtle, professional UI colors
@@ -90,8 +90,8 @@ const theme: ThemeTokens = {
 
 theme.header = {
   light: {
-    // Minimal header: same as cards (tertiary ivory)
-    gradientStart: '#F5F5E8', gradientEnd: '#F5F5E8',
+    // Minimal header: same as cards (tertiary bone)
+    gradientStart: '#FAFAF5', gradientEnd: '#FAFAF5',
     title: { color: '#1A1A1A', strokeWidth: '0px', strokeColor: 'transparent', textShadow: 'none' }
   },
   dark: {

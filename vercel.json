@@ -1,17 +1,16 @@
 {
   "version": 2,
-  "cleanUrls": true,
   "installCommand": "cd frontend && npm install --legacy-peer-deps",
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/build",
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/index.py"
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
     },
     {
-      "source": "/(.*)",
-      "destination": "/frontend/build/$1"
+      "src": "/(.*)",
+      "dest": "/frontend/build/$1"
     }
   ],
   "env": {
