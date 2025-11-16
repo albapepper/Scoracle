@@ -37,6 +37,46 @@ h1, h2, h3, h4, h5, h6 {
   color: #1A1A1A;
 }
 
+/* Hide SegmentedControl separators between controls */
+.mantine-SegmentedControl-control {
+  border-left: none !important;
+  border-right: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.mantine-SegmentedControl-control:not(:first-of-type) {
+  border-left: none !important;
+  margin-left: 0 !important;
+}
+
+.mantine-SegmentedControl-control:not(:last-of-type) {
+  border-right: none !important;
+  margin-right: 0 !important;
+}
+
+.mantine-SegmentedControl-control::before,
+.mantine-SegmentedControl-control::after {
+  display: none !important;
+  content: none !important;
+  border: none !important;
+}
+
+/* Remove any visual separators from the root */
+.mantine-SegmentedControl-root {
+  gap: 0 !important;
+}
+
+.mantine-SegmentedControl-root > * {
+  border-left: none !important;
+  border-right: none !important;
+}
+
+/* Make selected text ivory in light mode */
+body:not([data-mantine-color-scheme="dark"]) .mantine-SegmentedControl-label[data-active] {
+  color: #F5F5E8 !important;
+}
+
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   body {

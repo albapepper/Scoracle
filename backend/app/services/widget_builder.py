@@ -14,10 +14,27 @@ def build_player_basic_widget(profile_data: Dict[str, Any], sport: str) -> str:
     """
     import json
     
+    s = sport.upper()
+    is_nba = s == 'NBA'
+    is_nfl = s == 'NFL'
+    
     # Extract logo/image from various possible fields
-    logo_url = (profile_data.get("logo") or profile_data.get("logo_url") or 
-                profile_data.get("image") or profile_data.get("photo") or
-                profile_data.get("player", {}).get("photo") if isinstance(profile_data.get("player"), dict) else None)
+    # Check top-level fields first (explicitly check each to handle empty strings)
+    logo_url = None
+    for field in ["logo", "logo_url", "image", "photo"]:
+        val = profile_data.get(field)
+        if val and isinstance(val, str) and val.strip():
+            logo_url = val.strip()
+            break
+    
+    # If not found, check nested player object
+    if not logo_url and isinstance(profile_data.get("player"), dict):
+        player_obj = profile_data.get("player", {})
+        for field in ["photo", "image", "logo"]:
+            val = player_obj.get(field)
+            if val and isinstance(val, str) and val.strip():
+                logo_url = val.strip()
+                break
     
     # Build logo/image HTML
     logo_html = ""
@@ -40,6 +57,33 @@ def build_player_basic_widget(profile_data: Dict[str, Any], sport: str) -> str:
         # Remove "team." prefix if present
         if key.lower().startswith("team."):
             key = key[5:]  # Remove "team." prefix
+        
+        # NBA-specific label formatting
+        if is_nba:
+            if key.lower() == "leagues.standard.jersey":
+                return "Jersey Number"
+            if key.lower() == "height.feets":
+                return "Height, Feet"
+            if key.lower() == "height.inches":
+                return "Height, Inches"
+            if key.lower() == "height.meters":
+                return "Height, Meters"
+            if key.lower() == "leagues.standard.pos":
+                return "Position"
+            if key.lower() == "nba.pro":
+                return "Years Pro"
+            if key.lower() == "nba.start":
+                return "Draft Year"
+            if key.lower() == "weight.kilograms":
+                return "Weight, Kilograms"
+            if key.lower() == "weight.pounds":
+                return "Weight, Pounds"
+        
+        # NFL-specific label formatting
+        if is_nfl:
+            if key.lower() == "experience":
+                return "Years Pro"
+        
         # Special handling for birth fields
         if key.lower() == "birth.country":
             return "Birth Country"
@@ -58,14 +102,25 @@ def build_player_basic_widget(profile_data: Dict[str, Any], sport: str) -> str:
     skip_keys = {"id", "logo", "logo_url", "image", "photo", "firstname", "lastname", "name"}  # Skip these as they're handled separately
     
     # Flatten nested structures
-    def flatten_dict(d, prefix=""):
+    def flatten_dict(d, prefix="", nba_flag=False, nfl_flag=False):
         items = []
         for k, v in d.items():
             if k in skip_keys:
                 continue
+            # Skip NBA-specific fields during flattening
+            if nba_flag:
+                if k.lower() == "affiliation":
+                    continue
+                # Skip leagues.standard.active
+                if prefix.lower() == "leagues.standard" and k.lower() == "active":
+                    continue
+            # Skip NFL-specific fields during flattening
+            if nfl_flag:
+                if k.lower() == "group":
+                    continue
             key = f"{prefix}.{k}" if prefix else k
             if isinstance(v, dict):
-                items.extend(flatten_dict(v, key))
+                items.extend(flatten_dict(v, key, nba_flag, nfl_flag))
             elif isinstance(v, list) and len(v) > 0 and isinstance(v[0], dict):
                 # Handle list of objects
                 items.append((key, f"[{len(v)} items]"))
@@ -74,7 +129,7 @@ def build_player_basic_widget(profile_data: Dict[str, Any], sport: str) -> str:
         return items
     
     # Get all fields
-    all_fields = flatten_dict(profile_data)
+    all_fields = flatten_dict(profile_data, "", is_nba, is_nfl)
     
     # Sort fields for consistent display
     all_fields.sort(key=lambda x: x[0])

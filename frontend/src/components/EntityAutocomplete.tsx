@@ -45,7 +45,16 @@ export default function EntityAutocomplete({ entityType, onSelect, placeholder }
         onChange={handleChange}
         placeholder={placeholder || t('search.searchEntity', { entity: t(`common.entity.${entityType}`) })}
         leftSection={loading ? <Loader size="xs" /> : <IconSearch size={16} />}
-        styles={{ input: { backgroundColor: colors.background.secondary } }}
+        styles={{ 
+          input: { 
+            backgroundColor: colors.background.secondary,
+            borderTopRightRadius: 0,
+            borderBottomRightRadius: 0,
+            border: 'none',
+            color: colors.text.primary,
+            caretColor: colorScheme === 'dark' ? '#FFFFFF' : '#1A1A1A'
+          } 
+        }}
         autoComplete="off"
       />
       {error && <Text size="xs" c="red" mt={4}>{String(error)}</Text>}

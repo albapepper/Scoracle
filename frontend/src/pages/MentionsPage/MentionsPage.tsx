@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
-import { Container, Title, Text, Card, Group, Button, Loader, Stack, Tabs, Box, Badge } from '@mantine/core';
+import { Container, Title, Text, Card, Group, Button, Loader, Stack, Tabs, Box } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { useThemeMode, getThemeColors } from '../../theme';
 import { useSportContext } from '../../context/SportContext';
@@ -80,7 +80,7 @@ function MentionsPage() {
               size="md"
               fullWidth
             >
-              {t('mentions.statisticalProfile')}
+              {t('mentions.profile', 'Profile')}
             </Button>
           </Stack>
         </Card>

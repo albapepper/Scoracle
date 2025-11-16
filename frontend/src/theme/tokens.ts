@@ -27,8 +27,8 @@ export interface ThemeTokens {
 const theme: ThemeTokens = {
   light: {
     colors: {
-      // Bone color palette: Warm, soft backgrounds for comfortable viewing
-      background: { primary: '#F5F1E8', secondary: '#F0ECE0', tertiary: '#EBE6D8' },
+      // Beige page background with ivory card backgrounds
+      background: { primary: '#E8E3D3', secondary: '#F0ECE0', tertiary: '#F5F5E8' },
       // High contrast text for readability
       text: { primary: '#1A1A1A', secondary: '#666666', accent: '#2D3748', muted: '#A0AEC0' },
       // Subtle, professional UI colors
@@ -43,12 +43,12 @@ const theme: ThemeTokens = {
   },
   dark: {
     colors: {
-      // Soft dark gray backgrounds (comfortable, not too dark)
-      background: { primary: '#2D2D2D', secondary: '#353535', tertiary: '#3D3D3D' },
-      // Soft whites for text
-      text: { primary: '#F5F5F5', secondary: '#B8B8B8', accent: '#E2E8F0', muted: '#718096' },
-      // Muted UI colors for dark mode
-      ui: { primary: '#A0AEC0', secondary: '#C97D60', accent: '#63B3ED', border: '#2D3748' },
+      // Claude.ai inspired dark gray backgrounds (slightly lighter for warmth and readability)
+      background: { primary: '#252525', secondary: '#2E2E2E', tertiary: '#363636' },
+      // Soft beige text (warmer and softer than ivory)
+      text: { primary: '#E8E3D3', secondary: '#D8D3C8', accent: '#E8E3D3', muted: '#9CA3AF' },
+      // Burnt ember orange for buttons (Claude.ai style)
+      ui: { primary: '#A85A39', secondary: '#B8674A', accent: '#C97A56', border: '#3A3A3A' },
       // Dark mode optimized visualization palette
       visualization: {
         primary: '#63B3ED', secondary: '#68D391', tertiary: '#F6AD55', quaternary: '#B794F4', quintary: '#4FD1C7',
@@ -90,14 +90,14 @@ const theme: ThemeTokens = {
 
 theme.header = {
   light: {
-    // Minimal header: same as cards (tertiary bone)
-    gradientStart: '#EBE6D8', gradientEnd: '#EBE6D8',
+    // Minimal header: same as cards (tertiary ivory)
+    gradientStart: '#F5F5E8', gradientEnd: '#F5F5E8',
     title: { color: '#1A1A1A', strokeWidth: '0px', strokeColor: 'transparent', textShadow: 'none' }
   },
   dark: {
     // Dark mode header: same as cards (tertiary dark gray)
-    gradientStart: '#3D3D3D', gradientEnd: '#3D3D3D',
-    title: { color: '#F5F5F5', strokeWidth: '0px', strokeColor: 'transparent', textShadow: 'none' }
+    gradientStart: '#363636', gradientEnd: '#363636',
+    title: { color: '#E8E3D3', strokeWidth: '0px', strokeColor: 'transparent', textShadow: 'none' }
   }
 };
 

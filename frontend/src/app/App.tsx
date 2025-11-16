@@ -9,7 +9,6 @@ import MentionsPage from '../pages/MentionsPage/MentionsPage';
 import EntityPage from '../pages/EntityPage/EntityPage';
 import NotFoundPage from '../pages/NotFoundPage';
 import Header from '../components/Header';
-import Footer from '../components/Footer';
 import ErrorToaster from '../components/dev/ErrorToaster';
 
 function AppContent(): JSX.Element {
@@ -18,7 +17,6 @@ function AppContent(): JSX.Element {
   return (
     <AppShell
       header={{ height: 60 }}
-      footer={{ height: 60 }}
       padding="md"
       styles={{ main: { backgroundColor: colors.background.primary } }}
     >
@@ -38,9 +36,6 @@ function AppContent(): JSX.Element {
         </div>
         <ErrorToaster />
       </AppShell.Main>
-      <AppShell.Footer>
-        <Footer />
-      </AppShell.Footer>
     </AppShell>
   );
 }

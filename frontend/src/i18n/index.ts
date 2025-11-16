@@ -15,6 +15,7 @@ interface BaseTranslation {
     title: string;
     selectSport: string;
     findLatest: string; // interpolation {{sport}}
+    nextSelect: string;
   };
   // Search
   search: {
@@ -47,6 +48,7 @@ interface BaseTranslation {
     failedLoad: string;
     loading: string;
     statisticalProfile: string;
+    profile: string;
     articlesTab: string;
     rankingsTab: string;
     tweetsTab: string;
@@ -99,10 +101,11 @@ const resources: ResourcesShape & Record<string, any> = {
         title: 'Welcome to Scoracle',
         selectSport: 'Select a sport to get started',
         findLatest: 'Find the latest mentions for {{sport}}',
+        nextSelect: 'Next, select a player or team',
       },
       search: {
         title: 'Search {{sport}} {{entity}}',
-        placeholder: 'Search for a {{entity}}...',
+        placeholder: 'Search...',
         enterTerm: 'Please enter a search term',
         noneFound: 'No {{entity}} found matching "{{query}}"',
         errorGeneric: 'An error occurred while searching',
@@ -127,6 +130,7 @@ const resources: ResourcesShape & Record<string, any> = {
         failedLoad: 'Failed to load mentions',
         loading: 'Loading mentions...',
         statisticalProfile: 'Statistical Profile',
+        profile: 'Profile',
         articlesTab: 'Articles',
         rankingsTab: 'Rankings',
         tweetsTab: 'Tweets',
@@ -168,10 +172,11 @@ const resources: ResourcesShape & Record<string, any> = {
         title: 'Bienvenido a Scoracle',
         selectSport: 'Selecciona un deporte para comenzar',
         findLatest: 'Encuentra las últimas menciones para {{sport}}',
+        nextSelect: 'Luego, selecciona un jugador o equipo',
       },
       search: {
         title: 'Buscar {{sport}} {{entity}}',
-        placeholder: 'Buscar un {{entity}}...',
+        placeholder: 'Buscar...',
         enterTerm: 'Por favor ingresa un término de búsqueda',
         noneFound: 'No se encontró {{entity}} que coincida con "{{query}}"',
         errorGeneric: 'Ocurrió un error al buscar',
@@ -196,6 +201,7 @@ const resources: ResourcesShape & Record<string, any> = {
         failedLoad: 'Error al cargar menciones',
         loading: 'Cargando menciones...',
         statisticalProfile: 'Perfil Estadístico',
+        profile: 'Perfil',
         articlesTab: 'Artículos',
         rankingsTab: 'Rankings',
         tweetsTab: 'Tweets',
@@ -237,10 +243,11 @@ const resources: ResourcesShape & Record<string, any> = {
         title: 'Willkommen bei Scoracle',
         selectSport: 'Wählen Sie eine Sportart aus, um zu beginnen',
         findLatest: 'Finden Sie die neuesten Erwähnungen für {{sport}}',
+        nextSelect: 'Als Nächstes wählen Sie einen Spieler oder ein Team aus',
       },
       search: {
         title: '{{sport}} {{entity}} suchen',
-        placeholder: 'Nach einem {{entity}} suchen...',
+        placeholder: 'Suchen...',
         enterTerm: 'Bitte geben Sie einen Suchbegriff ein',
         noneFound: 'Kein {{entity}} gefunden, der mit "{{query}}" übereinstimmt',
         errorGeneric: 'Beim Suchen ist ein Fehler aufgetreten',
@@ -265,6 +272,7 @@ const resources: ResourcesShape & Record<string, any> = {
         failedLoad: 'Erwähnungen konnten nicht geladen werden',
         loading: 'Erwähnungen werden geladen...',
         statisticalProfile: 'Statistisches Profil',
+        profile: 'Profil',
         articlesTab: 'Artikel',
         rankingsTab: 'Ranglisten',
         tweetsTab: 'Tweets',
@@ -306,10 +314,11 @@ const resources: ResourcesShape & Record<string, any> = {
         title: 'Bem-vindo ao Scoracle',
         selectSport: 'Selecione um esporte para começar',
         findLatest: 'Encontre as menções mais recentes para {{sport}}',
+        nextSelect: 'Em seguida, selecione um jogador ou time',
       },
       search: {
         title: 'Pesquisar {{sport}} {{entity}}',
-        placeholder: 'Pesquisar por um {{entity}}...',
+        placeholder: 'Pesquisar...',
         enterTerm: 'Por favor, insira um termo de pesquisa',
         noneFound: 'Nenhum {{entity}} encontrado correspondendo a "{{query}}"',
         errorGeneric: 'Ocorreu um erro ao pesquisar',
@@ -334,6 +343,7 @@ const resources: ResourcesShape & Record<string, any> = {
         failedLoad: 'Falha ao carregar menções',
         loading: 'Carregando menções...',
         statisticalProfile: 'Perfil Estatístico',
+        profile: 'Perfil',
         articlesTab: 'Artigos',
         rankingsTab: 'Classificações',
         tweetsTab: 'Tweets',
@@ -375,10 +385,11 @@ const resources: ResourcesShape & Record<string, any> = {
         title: 'Benvenuto su Scoracle',
         selectSport: 'Seleziona uno sport per iniziare',
         findLatest: 'Trova le ultime menzioni per {{sport}}',
+        nextSelect: 'Successivamente, seleziona un giocatore o una squadra',
       },
       search: {
         title: 'Cerca {{sport}} {{entity}}',
-        placeholder: 'Cerca un {{entity}}...',
+        placeholder: 'Cerca...',
         enterTerm: 'Inserisci un termine di ricerca',
         noneFound: 'Nessun {{entity}} trovato corrispondente a "{{query}}"',
         errorGeneric: 'Si è verificato un errore durante la ricerca',
@@ -403,6 +414,7 @@ const resources: ResourcesShape & Record<string, any> = {
         failedLoad: 'Impossibile caricare le menzioni',
         loading: 'Caricamento menzioni...',
         statisticalProfile: 'Profilo Statistico',
+        profile: 'Profilo',
         articlesTab: 'Articoli',
         rankingsTab: 'Classifiche',
         tweetsTab: 'Tweet',

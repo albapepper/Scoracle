@@ -33,8 +33,8 @@ const createDarkMantineTheme = () => {
   const darkColors = theme.dark.colors;
   return createTheme({
     colors: {
-      // Dark mode optimized color scale
-      primary: ['#171923','#1A202C','#2D3748','#4A5568','#718096','#A0AEC0','#CBD5E0','#E2E8F0','#EDF2F7','#F7FAFC'],
+      // Burnt ember orange color scale for buttons (Claude.ai style)
+      primary: ['#6B3F2A','#7D4A33','#8F563D','#A15E46','#A85A39','#B8674A','#C97A56','#D98C64','#E99D73','#F9AE82'],
       accent: ['#153450','#1A365D','#2A4365','#2C5282','#3182CE','#4299E1','#63B3ED','#90CDF4','#BEE3F8','#EBF8FF']
     },
     primaryColor: 'primary',

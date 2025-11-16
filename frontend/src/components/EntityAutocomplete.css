@@ -1,10 +1,11 @@
 /* Styles for EntityAutocomplete */
 .entity-autocomplete-root {
   position: relative;
+  overflow: visible;
 }
 .entity-autocomplete-menu {
   position: absolute;
-  z-index: 20;
+  z-index: 1000;
   width: 100%;
   top: 100%;
   margin-top: 4px;

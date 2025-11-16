@@ -11,7 +11,7 @@ const Footer: React.FC = () => {
   const colors = getThemeColors(colorScheme);
 
   return (
-    <Paper component="footer" withBorder radius={0} p="md" style={{ backgroundColor: colors.background.primary }}>
+    <Paper component="footer" radius={0} p="md" withBorder={false} style={{ backgroundColor: colors.background.primary, borderTop: `1px solid ${colors.ui.border}` }}>
       <Container>
         <Group justify="space-between" align="center">
           <Text size="sm" c="dimmed">
