@@ -7,7 +7,20 @@ import time
 import unicodedata
 import re
 import feedparser  # faster and robust RSS parser
-import ahocorasick
+try:
+    import ahocorasick
+    AHOCORASICK_AVAILABLE = True
+except ImportError:
+    AHOCORASICK_AVAILABLE = False
+    # Create dummy types for when ahocorasick is unavailable
+    class DummyAutomaton:
+        def add_word(self, *args, **kwargs): pass
+        def make_automaton(self, *args, **kwargs): pass
+        def iter(self, text): return iter([])
+    class DummyModule:
+        Automaton = DummyAutomaton
+    ahocorasick = DummyModule()
+
 from app.database.local_dbs import list_all_players, list_all_teams, get_player_by_id as local_get_player_by_id, get_team_by_id as local_get_team_by_id
 from app.services.cache import widget_cache
 from app.services.apisports import apisports_service
