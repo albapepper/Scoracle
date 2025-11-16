@@ -260,8 +260,33 @@ async def sport_autocomplete_proxy(sport: str, entity_type: str, q: str = Query(
         raise HTTPException(status_code=400, detail="entity_type must be 'player' or 'team'")
     if len((q or "").strip()) < 2:
         return {"query": q, "entity_type": entity, "sport": sport, "results": [], "_elapsed_ms": int((time.perf_counter()-_t0)*1000)}
-    results = await suggestions_from_local_or_upstream(entity, sport, q, limit)
-    return {"query": q, "entity_type": entity, "sport": sport, "results": results[:limit], "_elapsed_ms": int((time.perf_counter()-_t0)*1000), "_provider": "local-sqlite"}
+    try:
+        results = await suggestions_from_local_or_upstream(entity, sport, q, limit)
+        return {"query": q, "entity_type": entity, "sport": sport, "results": results[:limit], "_elapsed_ms": int((time.perf_counter()-_t0)*1000), "_provider": "local-sqlite"}
+    except Exception as e:
+        import traceback
+        import sys
+        import os
+        from app.database.local_dbs import _candidate_db_dirs, _db_path_for_sport
+        # Diagnostic info
+        s_upper = sport.upper()
+        candidates = _candidate_db_dirs()
+        db_path = _db_path_for_sport(s_upper)
+        db_exists = os.path.exists(db_path) if db_path else False
+        vercel_env = os.getenv("VERCEL", "0")
+        error_detail = {
+            "error": str(e),
+            "sport": s_upper,
+            "entity_type": entity,
+            "query": q,
+            "db_path": db_path,
+            "db_exists": db_exists,
+            "candidate_dirs": candidates,
+            "vercel_env": vercel_env,
+            "traceback": traceback.format_exc() if os.getenv("VERCEL_ENV") == "development" else None
+        }
+        print(f"[autocomplete] Error: {error_detail}", file=sys.stderr)
+        raise HTTPException(status_code=500, detail=f"Autocomplete failed: {str(e)}")
 
 
 @router.get("/{sport}/teams/{team_id}/mentions")
