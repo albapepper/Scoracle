@@ -4,6 +4,8 @@ import sqlite3
 import threading
 import time
 import unicodedata
+import errno
+import logging
 from typing import List, Dict, Tuple, Optional
 from pathlib import Path
 
@@ -11,6 +13,7 @@ from pathlib import Path
 
 _INIT_LOCK = threading.Lock()
 _INITIALIZED: set[str] = set()
+logger = logging.getLogger(__name__)
 
 
 def _candidate_db_dirs() -> list[str]:
@@ -61,22 +64,40 @@ def _db_path_for_sport(sport: str) -> str:
 
 
 def _connect(path: str) -> sqlite3.Connection:
-    # In read-only environments (e.g., Vercel serverless) avoid filesystem writes
-    if os.getenv("VERCEL") == "1" or os.getenv("READ_ONLY_SQLITE") == "1":
+    """Return a SQLite connection, auto-detecting read-only environments."""
+
+    readonly_env = os.getenv("VERCEL") == "1" or os.getenv("READ_ONLY_SQLITE") == "1"
+
+    def _connect_readonly() -> sqlite3.Connection:
         uri = f"file:{path}?mode=ro"
-        conn = sqlite3.connect(uri, uri=True, check_same_thread=False)
+        conn_ro = sqlite3.connect(uri, uri=True, check_same_thread=False)
         try:
-            conn.execute("PRAGMA query_only=ON;")
+            conn_ro.execute("PRAGMA query_only=ON;")
         except Exception:
             # Best-effort; some sqlite builds may not support this pragma
             pass
-        return conn
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    conn = sqlite3.connect(path, isolation_level=None, check_same_thread=False)
-    conn.execute("PRAGMA journal_mode=WAL;")
-    conn.execute("PRAGMA synchronous=NORMAL;")
-    conn.execute("PRAGMA temp_store=MEMORY;")
-    return conn
+        return conn_ro
+
+    if not readonly_env:
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            conn = sqlite3.connect(path, isolation_level=None, check_same_thread=False)
+            conn.execute("PRAGMA journal_mode=WAL;")
+            conn.execute("PRAGMA synchronous=NORMAL;")
+            conn.execute("PRAGMA temp_store=MEMORY;")
+            return conn
+        except (OSError, sqlite3.OperationalError) as exc:
+            # Detect read-only filesystems automatically and fall back to RO mode.
+            message = str(exc).lower()
+            errno_code = getattr(exc, "errno", None)
+            ro_errnos = {errno.EROFS, errno.EACCES}
+            is_readonly = (errno_code in ro_errnos) or ("readonly" in message) or ("read-only" in message)
+            if not is_readonly:
+                raise
+            readonly_env = True
+            logger.warning("Switching to read-only SQLite for %s (%s)", path, exc)
+
+    return _connect_readonly()
 
 
 def _ensure_schema(conn: sqlite3.Connection):
