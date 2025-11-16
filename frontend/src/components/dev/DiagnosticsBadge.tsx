@@ -3,7 +3,7 @@ import { Badge, Group } from '@mantine/core';
 import useCorrelationId from '../../hooks/useCorrelationId';
 import { http } from '../../app/http';
 
-export default function DiagnosticsBadge(): JSX.Element | null {
+export default function DiagnosticsBadge(): React.ReactElement | null {
   const cid = useCorrelationId() as any;
   if (process.env.NODE_ENV === 'production') return null;
   const rl = http.getRateLimitEvents();

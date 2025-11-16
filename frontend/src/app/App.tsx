@@ -11,7 +11,7 @@ import NotFoundPage from '../pages/NotFoundPage';
 import Header from '../components/Header';
 import ErrorToaster from '../components/dev/ErrorToaster';
 
-function AppContent(): JSX.Element {
+function AppContent(): React.ReactElement {
   const { colorScheme } = useThemeMode();
   const colors = getThemeColors(colorScheme);
   return (
@@ -40,7 +40,7 @@ function AppContent(): JSX.Element {
   );
 }
 
-function App(): JSX.Element {
+function App(): React.ReactElement {
   return (
     <ThemeProvider>
       <LanguageProvider>

@@ -11,7 +11,7 @@ interface ErrorItem {
   ts: number;
 }
 
-export default function ErrorToaster(): JSX.Element | null {
+export default function ErrorToaster(): React.ReactElement | null {
   const [items, setItems] = useState<ErrorItem[]>([]);
 
   useEffect(() => {
