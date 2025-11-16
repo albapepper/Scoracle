@@ -69,6 +69,15 @@ const Header: React.FC = () => {
                 width: '60px',
                 minWidth: '60px',
                 maxWidth: '60px'
+              },
+              dropdown: {
+                backgroundColor: colors.background.secondary,
+              },
+              option: {
+                backgroundColor: colors.background.secondary,
+                '&:hover': {
+                  backgroundColor: colors.background.tertiary,
+                }
               }
             }}
           />
@@ -76,17 +85,29 @@ const Header: React.FC = () => {
       </Box>
 
       {/* Settings Drawer - light/dark only for now */}
-      <Drawer opened={settingsOpen} onClose={() => setSettingsOpen(false)} title={t('header.settings')} position="left">
+      <Drawer 
+        opened={settingsOpen} 
+        onClose={() => setSettingsOpen(false)} 
+        title={t('header.settings')} 
+        position="left"
+        styles={{
+          content: {
+            backgroundColor: colors.background.secondary,
+          },
+          body: {
+            backgroundColor: colors.background.secondary,
+          },
+          header: {
+            backgroundColor: colors.background.secondary,
+          },
+          title: {
+            color: colors.text.primary,
+          }
+        }}
+      >
         <Stack>
           <Text fw={600}>{t('header.appearance')}</Text>
           <Switch checked={isDark} onChange={toggleColorScheme} label={t('header.darkMode')} />
-          <Text fw={600} mt="md">{t('header.language')}</Text>
-          <Select
-            aria-label={t('header.language') || 'Select language'}
-            data={languages.map((l) => ({ value: l.id, label: `${l.display} — ${l.label}` }))}
-            value={language}
-            onChange={(v) => v && changeLanguage(v || language)}
-          />
         </Stack>
       </Drawer>
     </Paper>
