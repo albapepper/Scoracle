@@ -31,7 +31,7 @@ from app.services.widget_builder import (
 from app.config import settings
 from datetime import datetime, timezone
 import hashlib, json
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -410,7 +410,16 @@ async def sport_bootstrap(sport: str, request: Request, since: str | None = Quer
         teams_raw = list_all_teams(s)
     except Exception as e:
         logger.exception("[bootstrap] Failed to read local DB for sport=%s db_path=%s", s, db_path)
-        raise HTTPException(status_code=500, detail=f"Failed bootstrap: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "Failed to read local DB",
+                "sport": s,
+                "db_path": db_path,
+                "exists": db_exists,
+                "detail": str(e),
+            },
+        )
 
     players_items = []
     for pid, name in players_raw:
