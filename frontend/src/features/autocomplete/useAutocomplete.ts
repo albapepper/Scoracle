@@ -1,17 +1,15 @@
 /**
- * Autocomplete hook - currently uses backend API calls.
+ * Autocomplete hook - uses IndexedDB for fast local searches.
  * 
- * To switch back to IndexedDB (frontend local DB) for faster local searches:
- * 1. Import IndexedDB search functions from '../../services/indexedDB'
- * 2. Import mapSportToBackendCode and mapResults helpers
- * 3. Replace backend API calls with IndexedDB searches
- * 4. Re-enable useIndexedDBSync in SportContext.tsx
- * 
- * See README.md in this directory for detailed instructions.
+ * IndexedDB is seeded from bundled JSON files (frontend/public/data/*.json)
+ * exported from backend SQLite. This avoids serverless SQLite issues while keeping
+ * fast local autocomplete. See backend/scripts/export_sqlite_to_json.py
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import type { AutocompleteResult } from './types';
-import { http } from '../../app/http';
+import { searchPlayers as searchPlayersDB, searchTeams as searchTeamsDB } from '../../services/indexedDB';
+import { mapSportToBackendCode } from '../../utils/sportMapping';
+import { mapResults } from './worker/map';
 
 export interface UseAutocompleteOptions {
 	sport: string;
@@ -34,6 +32,9 @@ export function useAutocomplete({ sport, entityType = 'both', debounceMs = 200, 
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState('');
 	const reqIdRef = useRef(0);
+	
+	// Map frontend sport ID to backend sport code for IndexedDB search
+	const backendSportCode = useMemo(() => mapSportToBackendCode(sport), [sport]);
 
 	useEffect(() => {
 		if (!query || query.trim().length < 2) {
@@ -51,23 +52,33 @@ export function useAutocomplete({ sport, entityType = 'both', debounceMs = 200, 
 			
 			try {
 				if (entityType === 'both') {
-					// Search both players and teams, then combine
-					const [playersRes, teamsRes] = await Promise.all([
-						http.get<{ results: AutocompleteResult[] }>(`${sport.toLowerCase()}/autocomplete/player`, { params: { q: query, limit: Math.ceil(limit / 2) } }),
-						http.get<{ results: AutocompleteResult[] }>(`${sport.toLowerCase()}/autocomplete/team`, { params: { q: query, limit: Math.ceil(limit / 2) } })
+					// Search both players and teams, then combine and sort
+					const [players, teams] = await Promise.all([
+						searchPlayersDB(backendSportCode, query, Math.ceil(limit / 2)),
+						searchTeamsDB(backendSportCode, query, Math.ceil(limit / 2))
 					]);
 					
 					if (currentReqId !== reqIdRef.current) return; // Stale request
 					
-					const combined = [...(playersRes.results || []), ...(teamsRes.results || [])].slice(0, limit);
+					const mappedPlayers = mapResults(players as any, 'player', backendSportCode);
+					const mappedTeams = mapResults(teams as any, 'team', backendSportCode);
+					
+					// Combine and sort by relevance (simple: players first, then teams)
+					const combined = [...mappedPlayers, ...mappedTeams].slice(0, limit);
+					
 					setResults(combined);
+					setError('');
 					setLoading(false);
 				} else {
-					const res = await http.get<{ results: AutocompleteResult[] }>(`${sport.toLowerCase()}/autocomplete/${entityType}`, { params: { q: query, limit } });
+					const raw = entityType === 'team'
+						? await searchTeamsDB(backendSportCode, query, limit)
+						: await searchPlayersDB(backendSportCode, query, limit);
 					
 					if (currentReqId !== reqIdRef.current) return; // Stale request
 					
-					setResults(res.results || []);
+					const mapped = mapResults(raw as any, entityType, backendSportCode);
+					setResults(mapped);
+					setError('');
 					setLoading(false);
 				}
 			} catch (err: any) {
@@ -80,7 +91,7 @@ export function useAutocomplete({ sport, entityType = 'both', debounceMs = 200, 
 		}, debounceMs);
 		
 		return () => clearTimeout(id);
-	}, [query, sport, entityType, limit, debounceMs]);
+	}, [query, backendSportCode, entityType, limit, debounceMs]);
 
 	return { query, setQuery, results, loading, error };
 }

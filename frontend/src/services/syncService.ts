@@ -141,11 +141,32 @@ export async function syncSport(sport: SportCode, force: boolean = false): Promi
       }
     }
 
-    // Fetch bootstrap data from backend
-    const bootstrap = await http.get<BootstrapResponse>(`${sportUpper.toLowerCase()}/bootstrap`);
+    // Load bootstrap data from bundled JSON file (exported from backend SQLite)
+    // This avoids serverless SQLite issues and provides fast local loading
+    const sportLower = sportUpper.toLowerCase();
+    let bootstrap: BootstrapResponse;
     
-    if (!bootstrap || !bootstrap.players || !bootstrap.teams) {
-      throw new Error('Invalid bootstrap response format');
+    try {
+      const response = await fetch(`/data/${sportLower}.json`);
+      if (!response.ok) {
+        throw new Error(`Failed to load ${sportLower}.json: ${response.statusText}`);
+      }
+      bootstrap = await response.json();
+      
+      if (!bootstrap || !bootstrap.players || !bootstrap.teams) {
+        throw new Error('Invalid bootstrap JSON format');
+      }
+    } catch (error: any) {
+      // Fallback: try bootstrap endpoint if JSON file not found (for development)
+      console.warn(`Failed to load JSON, falling back to bootstrap endpoint:`, error);
+      try {
+        bootstrap = await http.get<BootstrapResponse>(`${sportLower}/bootstrap`);
+        if (!bootstrap || !bootstrap.players || !bootstrap.teams) {
+          throw new Error('Invalid bootstrap response format');
+        }
+      } catch (fallbackError: any) {
+        throw new Error(`Failed to load bootstrap data: ${error.message}. Fallback also failed: ${fallbackError.message}`);
+      }
     }
 
     // Transform and upsert players

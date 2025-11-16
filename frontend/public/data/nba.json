@@ -1,0 +1,3931 @@
+{
+  "sport": "NBA",
+  "datasetVersion": "nba-626p-32t-2025-11-16",
+  "generatedAt": "2025-11-16T23:09:54.794502+00:00",
+  "players": {
+    "count": 626,
+    "items": [
+      {
+        "id": 4210,
+        "firstName": "A",
+        "lastName": "Estrada",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 4084,
+        "firstName": "A",
+        "lastName": "Flagler",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 4206,
+        "firstName": "A",
+        "lastName": "Reese",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 3443,
+        "firstName": "AJ",
+        "lastName": "Green",
+        "currentTeam": "MIL"
+      },
+      {
+        "id": 4140,
+        "firstName": "AJ",
+        "lastName": "Johnson",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 2890,
+        "firstName": "AJ",
+        "lastName": "Lawson",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 195,
+        "firstName": "Aaron",
+        "lastName": "Gordon",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 979,
+        "firstName": "Aaron",
+        "lastName": "Holiday",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 2626,
+        "firstName": "Aaron",
+        "lastName": "Nesmith",
+        "currentTeam": "IND"
+      },
+      {
+        "id": 2863,
+        "firstName": "Aaron",
+        "lastName": "Wiggins",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 3955,
+        "firstName": "Adama",
+        "lastName": "Sanogo",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 4156,
+        "firstName": "Adem",
+        "lastName": "Bona",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 4153,
+        "firstName": "Ajay",
+        "lastName": "Mitchell",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 248,
+        "firstName": "Al",
+        "lastName": "Horford",
+        "currentTeam": "BOS"
+      },
+      {
+        "id": 84,
+        "firstName": "Alec",
+        "lastName": "Burks",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 631,
+        "firstName": "Alex",
+        "lastName": "Caruso",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 4151,
+        "firstName": "Alex",
+        "lastName": "Ducas",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 313,
+        "firstName": "Alex",
+        "lastName": "Len",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 4184,
+        "firstName": "Alex",
+        "lastName": "Sarr",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 3503,
+        "firstName": "Alondes",
+        "lastName": "Williams",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 2847,
+        "firstName": "Alperen",
+        "lastName": "Sengun",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 3947,
+        "firstName": "Amari",
+        "lastName": "Bailey",
+        "currentTeam": "BKN"
+      },
+      {
+        "id": 3977,
+        "firstName": "Amen",
+        "lastName": "Thompson",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 2115,
+        "firstName": "Amir",
+        "lastName": "Coffey",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 147,
+        "firstName": "Andre",
+        "lastName": "Drummond",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 4047,
+        "firstName": "Andre",
+        "lastName": "Jackson",
+        "currentTeam": "MIL"
+      },
+      {
+        "id": 3964,
+        "firstName": "Andrew",
+        "lastName": "Funk",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 3476,
+        "firstName": "Andrew",
+        "lastName": "Nembhard",
+        "currentTeam": "IND"
+      },
+      {
+        "id": 548,
+        "firstName": "Andrew",
+        "lastName": "Wiggins",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 1023,
+        "firstName": "Anfernee",
+        "lastName": "Simons",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 4010,
+        "firstName": "Anthony",
+        "lastName": "Black",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 126,
+        "firstName": "Anthony",
+        "lastName": "Davis",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 2584,
+        "firstName": "Anthony",
+        "lastName": "Edwards",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 2590,
+        "firstName": "Anthony",
+        "lastName": "Gill",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 4093,
+        "firstName": "Anton",
+        "lastName": "Watson",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 4146,
+        "firstName": "Antonio",
+        "lastName": "Reeves",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 2204,
+        "firstName": "Anzejs",
+        "lastName": "Pasecniks",
+        "currentTeam": "MIL"
+      },
+      {
+        "id": 4148,
+        "firstName": "Ariel",
+        "lastName": "Hukporti",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 4129,
+        "firstName": "Armando",
+        "lastName": "Bacot",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 4128,
+        "firstName": "Armel",
+        "lastName": "Traore",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 3971,
+        "firstName": "Ausar",
+        "lastName": "Thompson",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 2845,
+        "firstName": "Austin",
+        "lastName": "Reaves",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 2802,
+        "firstName": "Ayo",
+        "lastName": "Dosunmu",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 4209,
+        "firstName": "B",
+        "lastName": "Hinson",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 724,
+        "firstName": "Bam",
+        "lastName": "Adebayo",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 4092,
+        "firstName": "Baylor",
+        "lastName": "Scheierman",
+        "currentTeam": "BOS"
+      },
+      {
+        "id": 3979,
+        "firstName": "Ben",
+        "lastName": "Sheppard",
+        "currentTeam": "IND"
+      },
+      {
+        "id": 481,
+        "firstName": "Ben",
+        "lastName": "Simmons",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 3466,
+        "firstName": "Bennedict",
+        "lastName": "Mathurin",
+        "currentTeam": "IND"
+      },
+      {
+        "id": 4036,
+        "firstName": "Bilal",
+        "lastName": "Coulibaly",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 54,
+        "firstName": "Bismack",
+        "lastName": "Biyombo",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 3499,
+        "firstName": "Blake",
+        "lastName": "Wesley",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 431,
+        "firstName": "Bobby",
+        "lastName": "Portis",
+        "currentTeam": "MIL"
+      },
+      {
+        "id": 4113,
+        "firstName": "Bobi",
+        "lastName": "Klintman",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 743,
+        "firstName": "Bogdan",
+        "lastName": "Bogdanovic",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 1849,
+        "firstName": "Bol",
+        "lastName": "Bol",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 2816,
+        "firstName": "Bones",
+        "lastName": "Hyland",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 4167,
+        "firstName": "Boogie",
+        "lastName": "Ellis",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 45,
+        "firstName": "Bradley",
+        "lastName": "Beal",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 4173,
+        "firstName": "Branden",
+        "lastName": "Carlson",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 3975,
+        "firstName": "Brandin",
+        "lastName": "Podziemski",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 2792,
+        "firstName": "Brandon",
+        "lastName": "Boston",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 1853,
+        "firstName": "Brandon",
+        "lastName": "Clarke",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 63,
+        "firstName": "Brandon",
+        "lastName": "Ingram",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 3950,
+        "firstName": "Brandon",
+        "lastName": "Miller",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 3398,
+        "firstName": "Brandon",
+        "lastName": "Williams",
+        "currentTeam": "DAL"
+      },
+      {
+        "id": 3091,
+        "firstName": "Braxton",
+        "lastName": "Key",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 4034,
+        "firstName": "Brice",
+        "lastName": "Sensabaugh",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 2654,
+        "firstName": "Brodric",
+        "lastName": "Thomas",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 4125,
+        "firstName": "Bronny",
+        "lastName": "James",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 323,
+        "firstName": "Brook",
+        "lastName": "Lopez",
+        "currentTeam": "MIL"
+      },
+      {
+        "id": 944,
+        "firstName": "Bruce",
+        "lastName": "Brown",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 1858,
+        "firstName": "Bruno",
+        "lastName": "Fernando",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 3469,
+        "firstName": "Bryce",
+        "lastName": "McGowens",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 4182,
+        "firstName": "Bub",
+        "lastName": "Carrington",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 236,
+        "firstName": "Buddy",
+        "lastName": "Hield",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 347,
+        "firstName": "CJ",
+        "lastName": "McCollum",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 2801,
+        "firstName": "Cade",
+        "lastName": "Cunningham",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 4213,
+        "firstName": "Caleb",
+        "lastName": "Daniels",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 3449,
+        "firstName": "Caleb",
+        "lastName": "Houstan",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 2242,
+        "firstName": "Caleb",
+        "lastName": "Martin",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 4121,
+        "firstName": "Cam",
+        "lastName": "Christie",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 1889,
+        "firstName": "Cam",
+        "lastName": "Reddish",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 4132,
+        "firstName": "Cam",
+        "lastName": "Spencer",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 2855,
+        "firstName": "Cam",
+        "lastName": "Thomas",
+        "currentTeam": "BKN"
+      },
+      {
+        "id": 3978,
+        "firstName": "Cam",
+        "lastName": "Whitmore",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 1871,
+        "firstName": "Cameron",
+        "lastName": "Johnson",
+        "currentTeam": "BKN"
+      },
+      {
+        "id": 417,
+        "firstName": "Cameron",
+        "lastName": "Payne",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 317,
+        "firstName": "Caris",
+        "lastName": "LeVert",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 4009,
+        "firstName": "Cason",
+        "lastName": "Wallace",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 2790,
+        "firstName": "Charles",
+        "lastName": "Bassey",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 4023,
+        "firstName": "Charles",
+        "lastName": "Bediako",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 2111,
+        "firstName": "Charlie",
+        "lastName": "Brown",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 3448,
+        "firstName": "Chet",
+        "lastName": "Holmgren",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 745,
+        "firstName": "Chris",
+        "lastName": "Boucher",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 2803,
+        "firstName": "Chris",
+        "lastName": "Duarte",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 3997,
+        "firstName": "Chris",
+        "lastName": "Livingston",
+        "currentTeam": "MIL"
+      },
+      {
+        "id": 415,
+        "firstName": "Chris",
+        "lastName": "Paul",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 3420,
+        "firstName": "Christian",
+        "lastName": "Braun",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 3458,
+        "firstName": "Christian",
+        "lastName": "Koloko",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 1883,
+        "firstName": "Chuma",
+        "lastName": "Okeke",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 92,
+        "firstName": "Clint",
+        "lastName": "Capela",
+        "currentTeam": "ATL"
+      },
+      {
+        "id": 1900,
+        "firstName": "Coby",
+        "lastName": "White",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 1879,
+        "firstName": "Cody",
+        "lastName": "Martin",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 4181,
+        "firstName": "Cody",
+        "lastName": "Williams",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 4020,
+        "firstName": "Colby",
+        "lastName": "Jones",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 2563,
+        "firstName": "Cole",
+        "lastName": "Anthony",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 3493,
+        "firstName": "Cole",
+        "lastName": "Swider",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 3987,
+        "firstName": "Colin",
+        "lastName": "Castleton",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 3441,
+        "firstName": "Collin",
+        "lastName": "Gillespie",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 1021,
+        "firstName": "Collin",
+        "lastName": "Sexton",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 2825,
+        "firstName": "Corey",
+        "lastName": "Kispert",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 4216,
+        "firstName": "Cormac",
+        "lastName": "Ryan",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 287,
+        "firstName": "Cory",
+        "lastName": "Joseph",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 4043,
+        "firstName": "Craig",
+        "lastName": "Porter",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 4083,
+        "firstName": "D",
+        "lastName": "Skapintsev",
+        "currentTeam": "BOS"
+      },
+      {
+        "id": 462,
+        "firstName": "DAngelo",
+        "lastName": "Russell",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 2797,
+        "firstName": "DJ",
+        "lastName": "Carton",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 2921,
+        "firstName": "DJ",
+        "lastName": "Steward",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 1948,
+        "firstName": "DaQuan",
+        "lastName": "Jeffries",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 3478,
+        "firstName": "Daeqwon",
+        "lastName": "Plowden",
+        "currentTeam": "ATL"
+      },
+      {
+        "id": 3154,
+        "firstName": "Daishen",
+        "lastName": "Nix",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 2788,
+        "firstName": "Dalano",
+        "lastName": "Banton",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 3494,
+        "firstName": "Dalen",
+        "lastName": "Terry",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 4126,
+        "firstName": "Dalton",
+        "lastName": "Knecht",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 79,
+        "firstName": "Damian",
+        "lastName": "Lillard",
+        "currentTeam": "MIL"
+      },
+      {
+        "id": 3986,
+        "firstName": "Damion",
+        "lastName": "Baugh",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 599,
+        "firstName": "Damion",
+        "lastName": "Lee",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 1859,
+        "firstName": "Daniel",
+        "lastName": "Gafford",
+        "currentTeam": "DAL"
+      },
+      {
+        "id": 886,
+        "firstName": "Daniel",
+        "lastName": "Theis",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 4112,
+        "firstName": "Daniss",
+        "lastName": "Jenkins",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 164,
+        "firstName": "Dante",
+        "lastName": "Exum",
+        "currentTeam": "DAL"
+      },
+      {
+        "id": 468,
+        "firstName": "Dario",
+        "lastName": "Saric",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 3945,
+        "firstName": "Dariq",
+        "lastName": "Whitehead",
+        "currentTeam": "BKN"
+      },
+      {
+        "id": 1860,
+        "firstName": "Darius",
+        "lastName": "Garland",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 2804,
+        "firstName": "David",
+        "lastName": "Duke",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 3483,
+        "firstName": "David",
+        "lastName": "Roddy",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 2834,
+        "firstName": "Davion",
+        "lastName": "Mitchell",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 2848,
+        "firstName": "DayRon",
+        "lastName": "Sharpe",
+        "currentTeam": "BKN"
+      },
+      {
+        "id": 776,
+        "firstName": "DeAaron",
+        "lastName": "Fox",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 1868,
+        "firstName": "DeAndre",
+        "lastName": "Hunter",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 286,
+        "firstName": "DeAndre",
+        "lastName": "Jordan",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 998,
+        "firstName": "DeAnthony",
+        "lastName": "Melton",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 136,
+        "firstName": "DeMar",
+        "lastName": "DeRozan",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 2392,
+        "firstName": "Dean",
+        "lastName": "Wade",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 930,
+        "firstName": "Deandre",
+        "lastName": "Ayton",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 382,
+        "firstName": "Dejounte",
+        "lastName": "Murray",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 564,
+        "firstName": "Delon",
+        "lastName": "Wright",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 2564,
+        "firstName": "Deni",
+        "lastName": "Avdija",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 472,
+        "firstName": "Dennis",
+        "lastName": "Schroder",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 876,
+        "firstName": "Dennis",
+        "lastName": "Smith",
+        "currentTeam": "BKN"
+      },
+      {
+        "id": 4044,
+        "firstName": "Dereck",
+        "lastName": "Lively",
+        "currentTeam": "DAL"
+      },
+      {
+        "id": 3486,
+        "firstName": "Dereon",
+        "lastName": "Seabron",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 283,
+        "firstName": "Derrick",
+        "lastName": "Jones",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 897,
+        "firstName": "Derrick",
+        "lastName": "White",
+        "currentTeam": "BOS"
+      },
+      {
+        "id": 2568,
+        "firstName": "Desmond",
+        "lastName": "Bane",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 64,
+        "firstName": "Devin",
+        "lastName": "Booker",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 4165,
+        "firstName": "Devin",
+        "lastName": "Carter",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 2661,
+        "firstName": "Devin",
+        "lastName": "Vassell",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 973,
+        "firstName": "Devonte",
+        "lastName": "Graham",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 749,
+        "firstName": "Dillon",
+        "lastName": "Brooks",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 4152,
+        "firstName": "Dillon",
+        "lastName": "Jones",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 463,
+        "firstName": "Domantas",
+        "lastName": "Sabonis",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 3415,
+        "firstName": "Dominick",
+        "lastName": "Barlow",
+        "currentTeam": "ATL"
+      },
+      {
+        "id": 4164,
+        "firstName": "Donovan",
+        "lastName": "Clingan",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 333,
+        "firstName": "Donovan",
+        "lastName": "Mitchell",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 962,
+        "firstName": "Donte",
+        "lastName": "DiVincenzo",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 175,
+        "firstName": "Dorian",
+        "lastName": "FinneySmith",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 351,
+        "firstName": "Doug",
+        "lastName": "McDermott",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 204,
+        "firstName": "Draymond",
+        "lastName": "Green",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 966,
+        "firstName": "Drew",
+        "lastName": "Eubanks",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 3995,
+        "firstName": "Drew",
+        "lastName": "Peterson",
+        "currentTeam": "BOS"
+      },
+      {
+        "id": 3999,
+        "firstName": "Drew",
+        "lastName": "Timme",
+        "currentTeam": "BKN"
+      },
+      {
+        "id": 3360,
+        "firstName": "Dru",
+        "lastName": "Smith",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 2860,
+        "firstName": "Duane",
+        "lastName": "Washington",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 1018,
+        "firstName": "Duncan",
+        "lastName": "Robinson",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 4018,
+        "firstName": "Duop",
+        "lastName": "Reath",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 433,
+        "firstName": "Dwight",
+        "lastName": "Powell",
+        "currentTeam": "DAL"
+      },
+      {
+        "id": 3406,
+        "firstName": "Dyson",
+        "lastName": "Daniels",
+        "currentTeam": "ATL"
+      },
+      {
+        "id": 4238,
+        "firstName": "E",
+        "lastName": "Harkless",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 4124,
+        "firstName": "EJ",
+        "lastName": "Harkless",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 3462,
+        "firstName": "EJ",
+        "lastName": "Liddell",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 418,
+        "firstName": "Elfrid",
+        "lastName": "Payton",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 4103,
+        "firstName": "Emanuel",
+        "lastName": "Miller",
+        "currentTeam": "DAL"
+      },
+      {
+        "id": 3956,
+        "firstName": "Emoni",
+        "lastName": "Bates",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 4118,
+        "firstName": "Enrique",
+        "lastName": "Freeman",
+        "currentTeam": "IND"
+      },
+      {
+        "id": 196,
+        "firstName": "Eric",
+        "lastName": "Gordon",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 3237,
+        "firstName": "Ethan",
+        "lastName": "Thompson",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 2838,
+        "firstName": "Eugene",
+        "lastName": "Omoruyi",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 2835,
+        "firstName": "Evan",
+        "lastName": "Mobley",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 290,
+        "firstName": "Frank",
+        "lastName": "Kaminsky",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 2858,
+        "firstName": "Franz",
+        "lastName": "Wagner",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 527,
+        "firstName": "Fred",
+        "lastName": "VanVleet",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 3994,
+        "firstName": "GG",
+        "lastName": "Jackson",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 4109,
+        "firstName": "Gabe",
+        "lastName": "McGlothan",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 1775,
+        "firstName": "Gabe",
+        "lastName": "Vincent",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 507,
+        "firstName": "Garrett",
+        "lastName": "Temple",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 2327,
+        "firstName": "Garrison",
+        "lastName": "Mathews",
+        "currentTeam": "ATL"
+      },
+      {
+        "id": 220,
+        "firstName": "Gary",
+        "lastName": "Harris",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 593,
+        "firstName": "Gary",
+        "lastName": "Payton",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 1058,
+        "firstName": "Gary",
+        "lastName": "Trent",
+        "currentTeam": "MIL"
+      },
+      {
+        "id": 391,
+        "firstName": "Georges",
+        "lastName": "Niang",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 20,
+        "firstName": "Giannis",
+        "lastName": "Antetokounmpo",
+        "currentTeam": "MIL"
+      },
+      {
+        "id": 1848,
+        "firstName": "Goga",
+        "lastName": "Bitadze",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 4027,
+        "firstName": "Gradey",
+        "lastName": "Dick",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 1901,
+        "firstName": "Grant",
+        "lastName": "Williams",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 926,
+        "firstName": "Grayson",
+        "lastName": "Allen",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 904,
+        "firstName": "Guerschon",
+        "lastName": "Yabusele",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 3485,
+        "firstName": "Gui",
+        "lastName": "Santos",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 36,
+        "firstName": "Harrison",
+        "lastName": "Barnes",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 4170,
+        "firstName": "Harrison",
+        "lastName": "Ingram",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 4041,
+        "firstName": "Harry",
+        "lastName": "Giles",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 1815,
+        "firstName": "Haywood",
+        "lastName": "Highsmith",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 2822,
+        "firstName": "Herbert",
+        "lastName": "Jones",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 3967,
+        "firstName": "Hunter",
+        "lastName": "Tyson",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 2636,
+        "firstName": "Immanuel",
+        "lastName": "Quickley",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 4168,
+        "firstName": "Isaac",
+        "lastName": "Jones",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 2630,
+        "firstName": "Isaac",
+        "lastName": "Okoro",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 4178,
+        "firstName": "Isaiah",
+        "lastName": "Collier",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 4166,
+        "firstName": "Isaiah",
+        "lastName": "Crawford",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 978,
+        "firstName": "Isaiah",
+        "lastName": "Hartenstein",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 2817,
+        "firstName": "Isaiah",
+        "lastName": "Jackson",
+        "currentTeam": "IND"
+      },
+      {
+        "id": 2604,
+        "firstName": "Isaiah",
+        "lastName": "Joe",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 3472,
+        "firstName": "Isaiah",
+        "lastName": "Mobley",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 4137,
+        "firstName": "Isaiah",
+        "lastName": "Stevens",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 2648,
+        "firstName": "Isaiah",
+        "lastName": "Stewart",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 3982,
+        "firstName": "Isaiah",
+        "lastName": "Wong",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 575,
+        "firstName": "Ivica",
+        "lastName": "Zubac",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 4203,
+        "firstName": "J",
+        "lastName": "Oduro",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 3429,
+        "firstName": "JD",
+        "lastName": "Davison",
+        "currentTeam": "BOS"
+      },
+      {
+        "id": 2856,
+        "firstName": "JT",
+        "lastName": "Thor",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 1881,
+        "firstName": "Ja",
+        "lastName": "Morant",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 4177,
+        "firstName": "JaKobe",
+        "lastName": "Walter",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 3489,
+        "firstName": "Jabari",
+        "lastName": "Smith",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 3496,
+        "firstName": "Jabari",
+        "lastName": "Walker",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 1060,
+        "firstName": "Jack",
+        "lastName": "McVeigh",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 4115,
+        "firstName": "Jackson",
+        "lastName": "Rowe",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 3892,
+        "firstName": "Jacob",
+        "lastName": "Gilyard",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 4007,
+        "firstName": "Jacob",
+        "lastName": "Toppin",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 3407,
+        "firstName": "Jaden",
+        "lastName": "Hardy",
+        "currentTeam": "DAL"
+      },
+      {
+        "id": 3451,
+        "firstName": "Jaden",
+        "lastName": "Ivey",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 2621,
+        "firstName": "Jaden",
+        "lastName": "McDaniels",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 2851,
+        "firstName": "Jaden",
+        "lastName": "Springer",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 121,
+        "firstName": "Jae",
+        "lastName": "Crowder",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 2650,
+        "firstName": "JaeSean",
+        "lastName": "Tate",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 4110,
+        "firstName": "Jahmir",
+        "lastName": "Young",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 2637,
+        "firstName": "Jahmius",
+        "lastName": "Ramsey",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 3460,
+        "firstName": "Jake",
+        "lastName": "LaRavia",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 428,
+        "firstName": "Jakob",
+        "lastName": "Poeltl",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 4161,
+        "firstName": "Jalen",
+        "lastName": "Bridges",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 946,
+        "firstName": "Jalen",
+        "lastName": "Brunson",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 2990,
+        "firstName": "Jalen",
+        "lastName": "Crutcher",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 3433,
+        "firstName": "Jalen",
+        "lastName": "Duren",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 2810,
+        "firstName": "Jalen",
+        "lastName": "Green",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 3990,
+        "firstName": "Jalen",
+        "lastName": "HoodSchifino",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 2819,
+        "firstName": "Jalen",
+        "lastName": "Johnson",
+        "currentTeam": "ATL"
+      },
+      {
+        "id": 1880,
+        "firstName": "Jalen",
+        "lastName": "McDaniels",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 3965,
+        "firstName": "Jalen",
+        "lastName": "Pickett",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 4021,
+        "firstName": "Jalen",
+        "lastName": "Slawson",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 2644,
+        "firstName": "Jalen",
+        "lastName": "Smith",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 2852,
+        "firstName": "Jalen",
+        "lastName": "Suggs",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 3504,
+        "firstName": "Jalen",
+        "lastName": "Williams",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 3946,
+        "firstName": "Jalen",
+        "lastName": "Wilson",
+        "currentTeam": "BKN"
+      },
+      {
+        "id": 3424,
+        "firstName": "Jamal",
+        "lastName": "Cain",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 383,
+        "firstName": "Jamal",
+        "lastName": "Murray",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 4176,
+        "firstName": "Jamal",
+        "lastName": "Shead",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 3418,
+        "firstName": "Jamaree",
+        "lastName": "Bouyea",
+        "currentTeam": "MIL"
+      },
+      {
+        "id": 4104,
+        "firstName": "Jamarion",
+        "lastName": "Sharp",
+        "currentTeam": "DAL"
+      },
+      {
+        "id": 4139,
+        "firstName": "James",
+        "lastName": "Akinjo",
+        "currentTeam": "MIL"
+      },
+      {
+        "id": 216,
+        "firstName": "James",
+        "lastName": "Harden",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 274,
+        "firstName": "James",
+        "lastName": "Johnson",
+        "currentTeam": "IND"
+      },
+      {
+        "id": 2666,
+        "firstName": "James",
+        "lastName": "Wiseman",
+        "currentTeam": "IND"
+      },
+      {
+        "id": 4085,
+        "firstName": "Jamie",
+        "lastName": "Jaquez",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 4172,
+        "firstName": "Jamison",
+        "lastName": "Battle",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 3981,
+        "firstName": "Jarace",
+        "lastName": "Walker",
+        "currentTeam": "IND"
+      },
+      {
+        "id": 2796,
+        "firstName": "Jared",
+        "lastName": "Butler",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 4159,
+        "firstName": "Jared",
+        "lastName": "McCain",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 3481,
+        "firstName": "Jared",
+        "lastName": "Rhoden",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 982,
+        "firstName": "Jaren",
+        "lastName": "Jackson",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 1036,
+        "firstName": "Jarred",
+        "lastName": "Vanderbilt",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 727,
+        "firstName": "Jarrett",
+        "lastName": "Allen",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 1855,
+        "firstName": "Jarrett",
+        "lastName": "Culver",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 2842,
+        "firstName": "Jason",
+        "lastName": "Preston",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 3468,
+        "firstName": "Javante",
+        "lastName": "McCoy",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 2404,
+        "firstName": "Javonte",
+        "lastName": "Green",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 2917,
+        "firstName": "Javonte",
+        "lastName": "Smart",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 1864,
+        "firstName": "Jaxson",
+        "lastName": "Hayes",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 2814,
+        "firstName": "Jay",
+        "lastName": "Huff",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 75,
+        "firstName": "Jaylen",
+        "lastName": "Brown",
+        "currentTeam": "BOS"
+      },
+      {
+        "id": 4000,
+        "firstName": "Jaylen",
+        "lastName": "Clark",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 4006,
+        "firstName": "Jaylen",
+        "lastName": "Martin",
+        "currentTeam": "BKN"
+      },
+      {
+        "id": 1882,
+        "firstName": "Jaylen",
+        "lastName": "Nowell",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 4133,
+        "firstName": "Jaylen",
+        "lastName": "Wells",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 3505,
+        "firstName": "Jaylin",
+        "lastName": "Williams",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 4102,
+        "firstName": "Jaylon",
+        "lastName": "Tyson",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 666,
+        "firstName": "Jayson",
+        "lastName": "Tatum",
+        "currentTeam": "BOS"
+      },
+      {
+        "id": 3996,
+        "firstName": "Jazian",
+        "lastName": "Gortman",
+        "currentTeam": "DAL"
+      },
+      {
+        "id": 3931,
+        "firstName": "Jeenathan",
+        "lastName": "Williams",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 2878,
+        "firstName": "Jeff",
+        "lastName": "Dowtin",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 207,
+        "firstName": "Jeff",
+        "lastName": "Green",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 200,
+        "firstName": "Jerami",
+        "lastName": "Grant",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 2846,
+        "firstName": "Jeremiah",
+        "lastName": "RobinsonEarl",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 3490,
+        "firstName": "Jeremy",
+        "lastName": "Sochan",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 2849,
+        "firstName": "Jericho",
+        "lastName": "Sims",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 4143,
+        "firstName": "Jesse",
+        "lastName": "Edwards",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 4011,
+        "firstName": "Jett",
+        "lastName": "Howard",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 949,
+        "firstName": "Jevon",
+        "lastName": "Carter",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 86,
+        "firstName": "Jimmy",
+        "lastName": "Butler",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 1485,
+        "firstName": "Jock",
+        "lastName": "Landale",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 258,
+        "firstName": "Joe",
+        "lastName": "Ingles",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 60,
+        "firstName": "Joel",
+        "lastName": "Embiid",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 761,
+        "firstName": "John",
+        "lastName": "Collins",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 2177,
+        "firstName": "John",
+        "lastName": "Konchar",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 3428,
+        "firstName": "Johnny",
+        "lastName": "Davis",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 4119,
+        "firstName": "Johnny",
+        "lastName": "Furphy",
+        "currentTeam": "IND"
+      },
+      {
+        "id": 3454,
+        "firstName": "Johnny",
+        "lastName": "Juzang",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 525,
+        "firstName": "Jonas",
+        "lastName": "Valanciunas",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 801,
+        "firstName": "Jonathan",
+        "lastName": "Isaac",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 2827,
+        "firstName": "Jonathan",
+        "lastName": "Kuminga",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 4175,
+        "firstName": "Jonathan",
+        "lastName": "Mogbo",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 109,
+        "firstName": "Jordan",
+        "lastName": "Clarkson",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 3341,
+        "firstName": "Jordan",
+        "lastName": "Goodwin",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 4002,
+        "firstName": "Jordan",
+        "lastName": "Hawkins",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 997,
+        "firstName": "Jordan",
+        "lastName": "McLaughlin",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 3984,
+        "firstName": "Jordan",
+        "lastName": "Miller",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 1887,
+        "firstName": "Jordan",
+        "lastName": "Poole",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 4219,
+        "firstName": "Jordan",
+        "lastName": "Tucker",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 3943,
+        "firstName": "Jordan",
+        "lastName": "Walsh",
+        "currentTeam": "BOS"
+      },
+      {
+        "id": 2941,
+        "firstName": "Jose",
+        "lastName": "Alvarado",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 2799,
+        "firstName": "Josh",
+        "lastName": "Christopher",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 2808,
+        "firstName": "Josh",
+        "lastName": "Giddey",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 2593,
+        "firstName": "Josh",
+        "lastName": "Green",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 791,
+        "firstName": "Josh",
+        "lastName": "Hart",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 3470,
+        "firstName": "Josh",
+        "lastName": "Minott",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 1010,
+        "firstName": "Josh",
+        "lastName": "Okogie",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 446,
+        "firstName": "Josh",
+        "lastName": "Richardson",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 242,
+        "firstName": "Jrue",
+        "lastName": "Holiday",
+        "currentTeam": "BOS"
+      },
+      {
+        "id": 4160,
+        "firstName": "Judah",
+        "lastName": "Mintz",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 3576,
+        "firstName": "Jules",
+        "lastName": "Bernard",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 3425,
+        "firstName": "Julian",
+        "lastName": "Champagnie",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 3954,
+        "firstName": "Julian",
+        "lastName": "Phillips",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 3966,
+        "firstName": "Julian",
+        "lastName": "Strawther",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 441,
+        "firstName": "Julius",
+        "lastName": "Randle",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 2798,
+        "firstName": "Justin",
+        "lastName": "Champagnie",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 4217,
+        "firstName": "Justin",
+        "lastName": "Edwards",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 3714,
+        "firstName": "Justin",
+        "lastName": "Minaya",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 398,
+        "firstName": "Jusuf",
+        "lastName": "Nurkic",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 4204,
+        "firstName": "K",
+        "lastName": "Brooks",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 4096,
+        "firstName": "KJ",
+        "lastName": "Simpson",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 2823,
+        "firstName": "Kai",
+        "lastName": "Jones",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 519,
+        "firstName": "KarlAnthony",
+        "lastName": "Towns",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 3467,
+        "firstName": "Karlo",
+        "lastName": "Matkovic",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 314,
+        "firstName": "Kawhi",
+        "lastName": "Leonard",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 3259,
+        "firstName": "Keaton",
+        "lastName": "Wallace",
+        "currentTeam": "ATL"
+      },
+      {
+        "id": 3475,
+        "firstName": "Keegan",
+        "lastName": "Murray",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 934,
+        "firstName": "Keita",
+        "lastName": "BatesDiop",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 1872,
+        "firstName": "Keldon",
+        "lastName": "Johnson",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 4138,
+        "firstName": "Kelel",
+        "lastName": "Ware",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 404,
+        "firstName": "Kelly",
+        "lastName": "Olynyk",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 407,
+        "firstName": "Kelly",
+        "lastName": "Oubre",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 3423,
+        "firstName": "Kendall",
+        "lastName": "Brown",
+        "currentTeam": "IND"
+      },
+      {
+        "id": 3463,
+        "firstName": "Kenneth",
+        "lastName": "Lofton",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 1044,
+        "firstName": "Kenrich",
+        "lastName": "Williams",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 89,
+        "firstName": "Kentavious",
+        "lastName": "CaldwellPope",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 2617,
+        "firstName": "Kenyon",
+        "lastName": "Martin",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 3436,
+        "firstName": "Keon",
+        "lastName": "Ellis",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 2820,
+        "firstName": "Keon",
+        "lastName": "Johnson",
+        "currentTeam": "BKN"
+      },
+      {
+        "id": 4134,
+        "firstName": "Keshad",
+        "lastName": "Johnson",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 2805,
+        "firstName": "Kessler",
+        "lastName": "Edwards",
+        "currentTeam": "DAL"
+      },
+      {
+        "id": 140,
+        "firstName": "Kevin",
+        "lastName": "Durant",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 980,
+        "firstName": "Kevin",
+        "lastName": "Huerter",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 4150,
+        "firstName": "Kevin",
+        "lastName": "McCullar",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 987,
+        "firstName": "Kevin",
+        "lastName": "Knox",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 326,
+        "firstName": "Kevin",
+        "lastName": "Love",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 1888,
+        "firstName": "Kevin",
+        "lastName": "Porter",
+        "currentTeam": "MIL"
+      },
+      {
+        "id": 2677,
+        "firstName": "Kevon",
+        "lastName": "Harris",
+        "currentTeam": "ATL"
+      },
+      {
+        "id": 322,
+        "firstName": "Kevon",
+        "lastName": "Looney",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 4008,
+        "firstName": "Keyontae",
+        "lastName": "Johnson",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 4029,
+        "firstName": "Keyonte",
+        "lastName": "George",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 361,
+        "firstName": "Khris",
+        "lastName": "Middleton",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 2599,
+        "firstName": "Killian",
+        "lastName": "Hayes",
+        "currentTeam": "BKN"
+      },
+      {
+        "id": 2611,
+        "firstName": "Kira",
+        "lastName": "Lewis",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 514,
+        "firstName": "Klay",
+        "lastName": "Thompson",
+        "currentTeam": "DAL"
+      },
+      {
+        "id": 3983,
+        "firstName": "Kobe",
+        "lastName": "Brown",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 3938,
+        "firstName": "Kobe",
+        "lastName": "Bufkin",
+        "currentTeam": "ATL"
+      },
+      {
+        "id": 152,
+        "firstName": "Kris",
+        "lastName": "Dunn",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 4017,
+        "firstName": "Kris",
+        "lastName": "Murray",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 432,
+        "firstName": "Kristaps",
+        "lastName": "Porzingis",
+        "currentTeam": "BOS"
+      },
+      {
+        "id": 18,
+        "firstName": "Kyle",
+        "lastName": "Anderson",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 4179,
+        "firstName": "Kyle",
+        "lastName": "Filipowski",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 820,
+        "firstName": "Kyle",
+        "lastName": "Kuzma",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 327,
+        "firstName": "Kyle",
+        "lastName": "Lowry",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 2670,
+        "firstName": "Kylor",
+        "lastName": "Kelley",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 172,
+        "firstName": "Kyrie",
+        "lastName": "Irving",
+        "currentTeam": "DAL"
+      },
+      {
+        "id": 4183,
+        "firstName": "Kyshawn",
+        "lastName": "George",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 2566,
+        "firstName": "LaMelo",
+        "lastName": "Ball",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 2647,
+        "firstName": "Lamar",
+        "lastName": "Stevens",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 1022,
+        "firstName": "Landry",
+        "lastName": "Shamet",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 385,
+        "firstName": "Larry",
+        "lastName": "Nance",
+        "currentTeam": "ATL"
+      },
+      {
+        "id": 830,
+        "firstName": "Lauri",
+        "lastName": "Markkanen",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 237,
+        "firstName": "LeBron",
+        "lastName": "James",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 4001,
+        "firstName": "Leonard",
+        "lastName": "Miller",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 3480,
+        "firstName": "Lester",
+        "lastName": "Quinones",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 4005,
+        "firstName": "Liam",
+        "lastName": "Robbins",
+        "currentTeam": "MIL"
+      },
+      {
+        "id": 3404,
+        "firstName": "Lindy",
+        "lastName": "Waters",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 1038,
+        "firstName": "Lonnie",
+        "lastName": "Walker",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 735,
+        "firstName": "Lonzo",
+        "lastName": "Ball",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 2040,
+        "firstName": "Luguentz",
+        "lastName": "Dort",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 963,
+        "firstName": "Luka",
+        "lastName": "Doncic",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 2807,
+        "firstName": "Luka",
+        "lastName": "Garza",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 814,
+        "firstName": "Luke",
+        "lastName": "Kennard",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 819,
+        "firstName": "Luke",
+        "lastName": "Kornet",
+        "currentTeam": "BOS"
+      },
+      {
+        "id": 4101,
+        "firstName": "Luke",
+        "lastName": "Travers",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 4086,
+        "firstName": "M",
+        "lastName": "Pereira",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 4208,
+        "firstName": "M",
+        "lastName": "Wood",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 2833,
+        "firstName": "Mac",
+        "lastName": "McClung",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 2587,
+        "firstName": "Malachi",
+        "lastName": "Flynn",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 3419,
+        "firstName": "Malaki",
+        "lastName": "Branham",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 71,
+        "firstName": "Malcolm",
+        "lastName": "Brogdon",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 3380,
+        "firstName": "Malcolm",
+        "lastName": "Hill",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 4215,
+        "firstName": "Malevy",
+        "lastName": "Leons",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 46,
+        "firstName": "Malik",
+        "lastName": "Beasley",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 842,
+        "firstName": "Malik",
+        "lastName": "Monk",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 2580,
+        "firstName": "Mamadi",
+        "lastName": "Diakite",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 3405,
+        "firstName": "MarJon",
+        "lastName": "Beauchamp",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 2880,
+        "firstName": "Marcus",
+        "lastName": "Garrett",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 3970,
+        "firstName": "Marcus",
+        "lastName": "Sasser",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 486,
+        "firstName": "Marcus",
+        "lastName": "Smart",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 3506,
+        "firstName": "Mark",
+        "lastName": "Williams",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 779,
+        "firstName": "Markelle",
+        "lastName": "Fultz",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 374,
+        "firstName": "Markieff",
+        "lastName": "Morris",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 4028,
+        "firstName": "Markquis",
+        "lastName": "Nowell",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 931,
+        "firstName": "Marvin",
+        "lastName": "Bagley",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 2605,
+        "firstName": "Mason",
+        "lastName": "Jones",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 426,
+        "firstName": "Mason",
+        "lastName": "Plumlee",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 4098,
+        "firstName": "Matas",
+        "lastName": "Buzelis",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 1896,
+        "firstName": "Matisse",
+        "lastName": "Thybulle",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 3195,
+        "firstName": "Matt",
+        "lastName": "Ryan",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 3427,
+        "firstName": "Max",
+        "lastName": "Christie",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 4218,
+        "firstName": "Max",
+        "lastName": "Fiedler",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 2051,
+        "firstName": "Max",
+        "lastName": "Strus",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 817,
+        "firstName": "Maxi",
+        "lastName": "Kleber",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 3991,
+        "firstName": "Maxwell",
+        "lastName": "Lewis",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 3358,
+        "firstName": "Micah",
+        "lastName": "Potter",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 1014,
+        "firstName": "Michael",
+        "lastName": "Porter",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 940,
+        "firstName": "Mikal",
+        "lastName": "Bridges",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 114,
+        "firstName": "Mike",
+        "lastName": "Conley",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 941,
+        "firstName": "Miles",
+        "lastName": "Bridges",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 2832,
+        "firstName": "Miles",
+        "lastName": "McBride",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 3942,
+        "firstName": "Miles",
+        "lastName": "Norris",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 4214,
+        "firstName": "Miller",
+        "lastName": "Kopp",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 1020,
+        "firstName": "Mitchell",
+        "lastName": "Robinson",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 1885,
+        "firstName": "Miye",
+        "lastName": "Oni",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 932,
+        "firstName": "Mo",
+        "lastName": "Bamba",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 845,
+        "firstName": "Monte",
+        "lastName": "Morris",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 1037,
+        "firstName": "Moritz",
+        "lastName": "Wagner",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 2160,
+        "firstName": "Moses",
+        "lastName": "Brown",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 2836,
+        "firstName": "Moses",
+        "lastName": "Moody",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 3939,
+        "firstName": "Mouhamed",
+        "lastName": "Gueye",
+        "currentTeam": "ATL"
+      },
+      {
+        "id": 3431,
+        "firstName": "Moussa",
+        "lastName": "Diabate",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 522,
+        "firstName": "Myles",
+        "lastName": "Turner",
+        "currentTeam": "IND"
+      },
+      {
+        "id": 4116,
+        "firstName": "NFaly",
+        "lastName": "Dante",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 2668,
+        "firstName": "Naji",
+        "lastName": "Marshall",
+        "currentTeam": "DAL"
+      },
+      {
+        "id": 1875,
+        "firstName": "Nassir",
+        "lastName": "Little",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 2578,
+        "firstName": "Nate",
+        "lastName": "Darling",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 2672,
+        "firstName": "Nate",
+        "lastName": "Hinton",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 3949,
+        "firstName": "Nathan",
+        "lastName": "Mensah",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 2146,
+        "firstName": "Naz",
+        "lastName": "Reid",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 2844,
+        "firstName": "Neemias",
+        "lastName": "Queta",
+        "currentTeam": "BOS"
+      },
+      {
+        "id": 1854,
+        "firstName": "Nic",
+        "lastName": "Claxton",
+        "currentTeam": "BKN"
+      },
+      {
+        "id": 4042,
+        "firstName": "Nick",
+        "lastName": "Smith",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 2639,
+        "firstName": "Nick",
+        "lastName": "Richards",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 1845,
+        "firstName": "Nickeil",
+        "lastName": "AlexanderWalker",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 40,
+        "firstName": "Nicolas",
+        "lastName": "Batum",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 279,
+        "firstName": "Nikola",
+        "lastName": "Jokic",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 3453,
+        "firstName": "Nikola",
+        "lastName": "Jovic",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 534,
+        "firstName": "Nikola",
+        "lastName": "Vucevic",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 3944,
+        "firstName": "Noah",
+        "lastName": "Clowney",
+        "currentTeam": "BKN"
+      },
+      {
+        "id": 434,
+        "firstName": "Norman",
+        "lastName": "Powell",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 732,
+        "firstName": "OG",
+        "lastName": "Anunoby",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 2658,
+        "firstName": "Obi",
+        "lastName": "Toppin",
+        "currentTeam": "IND"
+      },
+      {
+        "id": 3411,
+        "firstName": "Ochai",
+        "lastName": "Agbaji",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 3960,
+        "firstName": "OlivierMaxence",
+        "lastName": "Prosper",
+        "currentTeam": "DAL"
+      },
+      {
+        "id": 3951,
+        "firstName": "Onuralp",
+        "lastName": "Bitim",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 2629,
+        "firstName": "Onyeka",
+        "lastName": "Okongwu",
+        "currentTeam": "ATL"
+      },
+      {
+        "id": 3482,
+        "firstName": "Orlando",
+        "lastName": "Robinson",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 3980,
+        "firstName": "Oscar",
+        "lastName": "Tshiebwe",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 2110,
+        "firstName": "Oshae",
+        "lastName": "Brissett",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 4163,
+        "firstName": "Oso",
+        "lastName": "Ighodaro",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 3432,
+        "firstName": "Ousmane",
+        "lastName": "Dieng",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 770,
+        "firstName": "PJ",
+        "lastName": "Dozier",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 4106,
+        "firstName": "PJ",
+        "lastName": "Hall",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 520,
+        "firstName": "PJ",
+        "lastName": "Tucker",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 1897,
+        "firstName": "PJ",
+        "lastName": "Washington",
+        "currentTeam": "DAL"
+      },
+      {
+        "id": 4147,
+        "firstName": "Pacome",
+        "lastName": "Dadiet",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 3414,
+        "firstName": "Paolo",
+        "lastName": "Banchero",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 479,
+        "firstName": "Pascal",
+        "lastName": "Siakam",
+        "currentTeam": "IND"
+      },
+      {
+        "id": 115,
+        "firstName": "Pat",
+        "lastName": "Connaughton",
+        "currentTeam": "MIL"
+      },
+      {
+        "id": 3492,
+        "firstName": "Pat",
+        "lastName": "Spencer",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 3413,
+        "firstName": "Patrick",
+        "lastName": "Baldwin",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 2664,
+        "firstName": "Patrick",
+        "lastName": "Williams",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 365,
+        "firstName": "Patty",
+        "lastName": "Mills",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 189,
+        "firstName": "Paul",
+        "lastName": "George",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 2638,
+        "firstName": "Paul",
+        "lastName": "Reed",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 2635,
+        "firstName": "Payton",
+        "lastName": "Pritchard",
+        "currentTeam": "BOS"
+      },
+      {
+        "id": 4135,
+        "firstName": "Pelle",
+        "lastName": "Larsson",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 3957,
+        "firstName": "Pete",
+        "lastName": "Nance",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 3498,
+        "firstName": "Peyton",
+        "lastName": "Watson",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 2561,
+        "firstName": "Precious",
+        "lastName": "Achiuwa",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 4207,
+        "firstName": "Q",
+        "lastName": "Post",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 2811,
+        "firstName": "Quentin",
+        "lastName": "Grimes",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 3452,
+        "firstName": "Quenton",
+        "lastName": "Jackson",
+        "currentTeam": "IND"
+      },
+      {
+        "id": 4127,
+        "firstName": "Quincy",
+        "lastName": "Olivari",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 4069,
+        "firstName": "R",
+        "lastName": "Rupert",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 1846,
+        "firstName": "RJ",
+        "lastName": "Barrett",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 4122,
+        "firstName": "RayJ",
+        "lastName": "Dennis",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 4114,
+        "firstName": "Reece",
+        "lastName": "Beekman",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 4117,
+        "firstName": "Reed",
+        "lastName": "Sheppard",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 264,
+        "firstName": "Reggie",
+        "lastName": "Jackson",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 246,
+        "firstName": "Richaun",
+        "lastName": "Holmes",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 4049,
+        "firstName": "Ricky",
+        "lastName": "Council",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 4171,
+        "firstName": "Riley",
+        "lastName": "Minix",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 4142,
+        "firstName": "Rob",
+        "lastName": "Dillingham",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 1045,
+        "firstName": "Robert",
+        "lastName": "Williams",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 3447,
+        "firstName": "Ron",
+        "lastName": "Harper",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 4111,
+        "firstName": "Ron",
+        "lastName": "Holland",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 851,
+        "firstName": "Royce",
+        "lastName": "ONeale",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 192,
+        "firstName": "Rudy",
+        "lastName": "Gobert",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 1862,
+        "firstName": "Rui",
+        "lastName": "Hachimura",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 544,
+        "firstName": "Russell",
+        "lastName": "Westbrook",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 4162,
+        "firstName": "Ryan",
+        "lastName": "Dunn",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 3484,
+        "firstName": "Ryan",
+        "lastName": "Rollins",
+        "currentTeam": "MIL"
+      },
+      {
+        "id": 2812,
+        "firstName": "Sam",
+        "lastName": "Hauser",
+        "currentTeam": "BOS"
+      },
+      {
+        "id": 2623,
+        "firstName": "Sam",
+        "lastName": "Merrill",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 869,
+        "firstName": "Samardo",
+        "lastName": "Samuels",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 2830,
+        "firstName": "Sandro",
+        "lastName": "Mamukelashvili",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 2786,
+        "firstName": "Santi",
+        "lastName": "Aldama",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 3408,
+        "firstName": "Scoot",
+        "lastName": "Henderson",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 2789,
+        "firstName": "Scottie",
+        "lastName": "Barnes",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 3477,
+        "firstName": "Scotty",
+        "lastName": "Pippen",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 123,
+        "firstName": "Seth",
+        "lastName": "Curry",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 3941,
+        "firstName": "Seth",
+        "lastName": "Lundy",
+        "currentTeam": "ATL"
+      },
+      {
+        "id": 3487,
+        "firstName": "Shaedon",
+        "lastName": "Sharpe",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 972,
+        "firstName": "Shai",
+        "lastName": "GilgeousAlexander",
+        "currentTeam": "OKC"
+      },
+      {
+        "id": 1001,
+        "firstName": "Shake",
+        "lastName": "Milton",
+        "currentTeam": "LAL"
+      },
+      {
+        "id": 4024,
+        "firstName": "Sidy",
+        "lastName": "Cissoko",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 3438,
+        "firstName": "Simone",
+        "lastName": "Fontecchio",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 302,
+        "firstName": "Skal",
+        "lastName": "Labissiere",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 142,
+        "firstName": "Spencer",
+        "lastName": "Dinwiddie",
+        "currentTeam": "DAL"
+      },
+      {
+        "id": 4108,
+        "firstName": "Spencer",
+        "lastName": "Jones",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 3790,
+        "firstName": "Stanley",
+        "lastName": "Umude",
+        "currentTeam": "MIL"
+      },
+      {
+        "id": 124,
+        "firstName": "Stephen",
+        "lastName": "Curry",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 4169,
+        "firstName": "Stephon",
+        "lastName": "Castle",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 4,
+        "firstName": "Steven",
+        "lastName": "Adams",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 1006,
+        "firstName": "Svi",
+        "lastName": "Mykhailiuk",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 4235,
+        "firstName": "T",
+        "lastName": "Funk",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 4088,
+        "firstName": "T",
+        "lastName": "Vukcevic",
+        "currentTeam": "WAS"
+      },
+      {
+        "id": 348,
+        "firstName": "TJ",
+        "lastName": "McConnell",
+        "currentTeam": "IND"
+      },
+      {
+        "id": 540,
+        "firstName": "TJ",
+        "lastName": "Warren",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 1867,
+        "firstName": "Talen",
+        "lastName": "HortonTucker",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 3435,
+        "firstName": "Tari",
+        "lastName": "Eason",
+        "currentTeam": "HOU"
+      },
+      {
+        "id": 437,
+        "firstName": "Taurean",
+        "lastName": "Prince",
+        "currentTeam": "MIL"
+      },
+      {
+        "id": 4031,
+        "firstName": "Taylor",
+        "lastName": "Hendricks",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 3724,
+        "firstName": "Taze",
+        "lastName": "Moore",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 1877,
+        "firstName": "Terance",
+        "lastName": "Mann",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 2168,
+        "firstName": "Terence",
+        "lastName": "Davis",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 4144,
+        "firstName": "Terrence",
+        "lastName": "Shannon",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 458,
+        "firstName": "Terry",
+        "lastName": "Rozier",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 2853,
+        "firstName": "Terry",
+        "lastName": "Taylor",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 753,
+        "firstName": "Thomas",
+        "lastName": "Bryant",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 4095,
+        "firstName": "Tidjane",
+        "lastName": "Salaun",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 215,
+        "firstName": "Tim",
+        "lastName": "Hardaway",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 222,
+        "firstName": "Tobias",
+        "lastName": "Harris",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 4211,
+        "firstName": "Tolu",
+        "lastName": "Smith",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 748,
+        "firstName": "Tony",
+        "lastName": "Bradley",
+        "currentTeam": "IND"
+      },
+      {
+        "id": 765,
+        "firstName": "Torrey",
+        "lastName": "Craig",
+        "currentTeam": "CHI"
+      },
+      {
+        "id": 3969,
+        "firstName": "Tosan",
+        "lastName": "Evbuomwan",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 4015,
+        "firstName": "Toumani",
+        "lastName": "Camara",
+        "currentTeam": "POR"
+      },
+      {
+        "id": 1046,
+        "firstName": "Trae",
+        "lastName": "Young",
+        "currentTeam": "ATL"
+      },
+      {
+        "id": 3973,
+        "firstName": "Trayce",
+        "lastName": "JacksonDavis",
+        "currentTeam": "GSW"
+      },
+      {
+        "id": 2606,
+        "firstName": "Tre",
+        "lastName": "Jones",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 2831,
+        "firstName": "Tre",
+        "lastName": "Mann",
+        "currentTeam": "CHA"
+      },
+      {
+        "id": 2861,
+        "firstName": "Trendon",
+        "lastName": "Watford",
+        "currentTeam": "BKN"
+      },
+      {
+        "id": 4123,
+        "firstName": "Trentyn",
+        "lastName": "Flowers",
+        "currentTeam": "LAC"
+      },
+      {
+        "id": 2671,
+        "firstName": "Trevelin",
+        "lastName": "Queen",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 4105,
+        "firstName": "Trey",
+        "lastName": "Alexander",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 4003,
+        "firstName": "Trey",
+        "lastName": "Jemison",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 331,
+        "firstName": "Trey",
+        "lastName": "Lyles",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 2837,
+        "firstName": "Trey",
+        "lastName": "Murphy",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 3717,
+        "firstName": "Trhae",
+        "lastName": "Mitchell",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 4155,
+        "firstName": "Tristan",
+        "lastName": "da",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 515,
+        "firstName": "Tristan",
+        "lastName": "Thompson",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 4120,
+        "firstName": "Tristen",
+        "lastName": "Newton",
+        "currentTeam": "MIN"
+      },
+      {
+        "id": 1870,
+        "firstName": "Ty",
+        "lastName": "Jerome",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 3497,
+        "firstName": "TyTy",
+        "lastName": "Washington",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 1866,
+        "firstName": "Tyler",
+        "lastName": "Herro",
+        "currentTeam": "MIA"
+      },
+      {
+        "id": 4149,
+        "firstName": "Tyler",
+        "lastName": "Kolek",
+        "currentTeam": "NYK"
+      },
+      {
+        "id": 4141,
+        "firstName": "Tyler",
+        "lastName": "Smith",
+        "currentTeam": "MIL"
+      },
+      {
+        "id": 2595,
+        "firstName": "Tyrese",
+        "lastName": "Haliburton",
+        "currentTeam": "IND"
+      },
+      {
+        "id": 3465,
+        "firstName": "Tyrese",
+        "lastName": "Martin",
+        "currentTeam": "BKN"
+      },
+      {
+        "id": 2619,
+        "firstName": "Tyrese",
+        "lastName": "Maxey",
+        "currentTeam": "PHI"
+      },
+      {
+        "id": 3437,
+        "firstName": "Tyson",
+        "lastName": "Etienne",
+        "currentTeam": "BKN"
+      },
+      {
+        "id": 285,
+        "firstName": "Tyus",
+        "lastName": "Jones",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 4174,
+        "firstName": "Ulrich",
+        "lastName": "Chomche",
+        "currentTeam": "TOR"
+      },
+      {
+        "id": 2739,
+        "firstName": "Vasilije",
+        "lastName": "Micic",
+        "currentTeam": "PHX"
+      },
+      {
+        "id": 4026,
+        "firstName": "Victor",
+        "lastName": "Wembanyama",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 3508,
+        "firstName": "Vince",
+        "lastName": "Williams",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 2608,
+        "firstName": "Vit",
+        "lastName": "Krejci",
+        "currentTeam": "ATL"
+      },
+      {
+        "id": 1312,
+        "firstName": "Vlatko",
+        "lastName": "Cancar",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 4205,
+        "firstName": "W",
+        "lastName": "Richardson",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 3457,
+        "firstName": "Walker",
+        "lastName": "Kessler",
+        "currentTeam": "UTA"
+      },
+      {
+        "id": 950,
+        "firstName": "Wendell",
+        "lastName": "Carter",
+        "currentTeam": "ORL"
+      },
+      {
+        "id": 3474,
+        "firstName": "Wendell",
+        "lastName": "Moore",
+        "currentTeam": "DET"
+      },
+      {
+        "id": 2656,
+        "firstName": "Xavier",
+        "lastName": "Tillman",
+        "currentTeam": "BOS"
+      },
+      {
+        "id": 4212,
+        "firstName": "Yongxi",
+        "lastName": "Cui",
+        "currentTeam": "BKN"
+      },
+      {
+        "id": 4131,
+        "firstName": "Yuki",
+        "lastName": "Kawamura",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 4145,
+        "firstName": "Yves",
+        "lastName": "Missi",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 4090,
+        "firstName": "Zaccharie",
+        "lastName": "Risacher",
+        "currentTeam": "ATL"
+      },
+      {
+        "id": 762,
+        "firstName": "Zach",
+        "lastName": "Collins",
+        "currentTeam": "SAS"
+      },
+      {
+        "id": 4130,
+        "firstName": "Zach",
+        "lastName": "Edey",
+        "currentTeam": "MEM"
+      },
+      {
+        "id": 308,
+        "firstName": "Zach",
+        "lastName": "LaVine",
+        "currentTeam": "SAC"
+      },
+      {
+        "id": 2627,
+        "firstName": "Zeke",
+        "lastName": "Nnaji",
+        "currentTeam": "DEN"
+      },
+      {
+        "id": 1025,
+        "firstName": "Zhaire",
+        "lastName": "Smith",
+        "currentTeam": "CLE"
+      },
+      {
+        "id": 2864,
+        "firstName": "Ziaire",
+        "lastName": "Williams",
+        "currentTeam": "BKN"
+      },
+      {
+        "id": 1902,
+        "firstName": "Zion",
+        "lastName": "Williamson",
+        "currentTeam": "NOP"
+      },
+      {
+        "id": 4136,
+        "firstName": "Zyon",
+        "lastName": "Pullin",
+        "currentTeam": "MIA"
+      }
+    ]
+  },
+  "teams": {
+    "count": 32,
+    "items": [
+      {
+        "id": 1,
+        "name": "Atlanta Hawks",
+        "league": "NBA"
+      },
+      {
+        "id": 2,
+        "name": "Boston Celtics",
+        "league": "NBA"
+      },
+      {
+        "id": 3,
+        "name": "Brooklyn Nets",
+        "league": "NBA"
+      },
+      {
+        "id": 4,
+        "name": "Brooklyn Nets",
+        "league": "NBA"
+      },
+      {
+        "id": 5,
+        "name": "Charlotte Hornets",
+        "league": "NBA"
+      },
+      {
+        "id": 6,
+        "name": "Chicago Bulls",
+        "league": "NBA"
+      },
+      {
+        "id": 7,
+        "name": "Cleveland Cavaliers",
+        "league": "NBA"
+      },
+      {
+        "id": 8,
+        "name": "Dallas Mavericks",
+        "league": "NBA"
+      },
+      {
+        "id": 9,
+        "name": "Denver Nuggets",
+        "league": "NBA"
+      },
+      {
+        "id": 10,
+        "name": "Detroit Pistons",
+        "league": "NBA"
+      },
+      {
+        "id": 11,
+        "name": "Golden State Warriors",
+        "league": "NBA"
+      },
+      {
+        "id": 37,
+        "name": "Home Team Stephen A",
+        "league": "NBA"
+      },
+      {
+        "id": 14,
+        "name": "Houston Rockets",
+        "league": "NBA"
+      },
+      {
+        "id": 15,
+        "name": "Indiana Pacers",
+        "league": "NBA"
+      },
+      {
+        "id": 16,
+        "name": "LA Clippers",
+        "league": "NBA"
+      },
+      {
+        "id": 17,
+        "name": "Los Angeles Lakers",
+        "league": "NBA"
+      },
+      {
+        "id": 19,
+        "name": "Memphis Grizzlies",
+        "league": "NBA"
+      },
+      {
+        "id": 20,
+        "name": "Miami Heat",
+        "league": "NBA"
+      },
+      {
+        "id": 21,
+        "name": "Milwaukee Bucks",
+        "league": "NBA"
+      },
+      {
+        "id": 22,
+        "name": "Minnesota Timberwolves",
+        "league": "NBA"
+      },
+      {
+        "id": 23,
+        "name": "New Orleans Pelicans",
+        "league": "NBA"
+      },
+      {
+        "id": 24,
+        "name": "New York Knicks",
+        "league": "NBA"
+      },
+      {
+        "id": 25,
+        "name": "Oklahoma City Thunder",
+        "league": "NBA"
+      },
+      {
+        "id": 26,
+        "name": "Orlando Magic",
+        "league": "NBA"
+      },
+      {
+        "id": 27,
+        "name": "Philadelphia 76ers",
+        "league": "NBA"
+      },
+      {
+        "id": 28,
+        "name": "Phoenix Suns",
+        "league": "NBA"
+      },
+      {
+        "id": 29,
+        "name": "Portland Trail Blazers",
+        "league": "NBA"
+      },
+      {
+        "id": 30,
+        "name": "Sacramento Kings",
+        "league": "NBA"
+      },
+      {
+        "id": 31,
+        "name": "San Antonio Spurs",
+        "league": "NBA"
+      },
+      {
+        "id": 38,
+        "name": "Toronto Raptors",
+        "league": "NBA"
+      },
+      {
+        "id": 40,
+        "name": "Utah Jazz",
+        "league": "NBA"
+      },
+      {
+        "id": 41,
+        "name": "Washington Wizards",
+        "league": "NBA"
+      }
+    ]
+  }
+}
