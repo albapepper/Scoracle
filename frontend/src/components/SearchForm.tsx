@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Title, Text, Stack, Group, Flex } from '@mantine/core';
+import { Button, Card, Text, Stack, Group, Flex } from '@mantine/core';
 import { IconArrowRight } from '@tabler/icons-react';
 import { useSportContext } from '../context/SportContext';
 import apiSearch from '../features/search/api';
@@ -22,7 +22,6 @@ export default function SearchForm({ inline = false }: SearchFormProps) {
   const [selected, setSelected] = useState<AutocompleteResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const activeSportDisplay = sports.find((s) => s.id === activeSport)?.display || activeSport;
   const { colorScheme } = useThemeMode();
   const colors = getThemeColors(colorScheme);
   
