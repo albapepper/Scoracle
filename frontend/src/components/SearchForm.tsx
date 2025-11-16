@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Title, Text, SegmentedControl, Stack, Group, Flex } from '@mantine/core';
+import { Button, Card, Title, Text, Stack, Group, Flex } from '@mantine/core';
 import { IconArrowRight } from '@tabler/icons-react';
 import { useSportContext } from '../context/SportContext';
 import apiSearch from '../features/search/api';
@@ -20,7 +20,6 @@ export default function SearchForm({ inline = false }: SearchFormProps) {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<AutocompleteResult | null>(null);
-  const [entityType, setEntityType] = useState<'player' | 'team'>('player');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const activeSportDisplay = sports.find((s) => s.id === activeSport)?.display || activeSport;
@@ -37,20 +36,28 @@ export default function SearchForm({ inline = false }: SearchFormProps) {
       }
       if (selected) {
         const plainName = (selected.name || selected.label || '').trim();
+        const entityType = selected.entity_type || 'player';
         navigate(`/mentions/${entityType}/${selected.id}?sport=${activeSport}&name=${encodeURIComponent(plainName)}`);
         return;
       }
-      const results = await (apiSearch as any).searchEntities(query, entityType, activeSport);
-      if (results.results && results.results.length === 1) {
-        const only = results.results[0];
+      // Fallback: if no selection, try searching both types
+      // Note: This should rarely happen since autocomplete should provide results
+      const playerResults = await (apiSearch as any).searchEntities(query, 'player', activeSport);
+      const teamResults = await (apiSearch as any).searchEntities(query, 'team', activeSport);
+      const allResults = [...(playerResults.results || []), ...(teamResults.results || [])];
+      
+      if (allResults.length === 1) {
+        const only = allResults[0];
         const plainName = (only.name || only.label || query).trim();
+        const entityType = only.entity_type || 'player';
         navigate(`/mentions/${entityType}/${only.id}?sport=${activeSport}&name=${encodeURIComponent(plainName)}`);
-      } else if (results.results && results.results.length > 1) {
-        const first = results.results[0];
+      } else if (allResults.length > 1) {
+        const first = allResults[0];
         const plainName = (first.name || first.label || query).trim();
+        const entityType = first.entity_type || 'player';
         navigate(`/mentions/${entityType}/${first.id}?sport=${activeSport}&name=${encodeURIComponent(plainName)}`);
       } else {
-        setError(t('search.noneFound', { entity: t(`common.entity.${entityType}`), query }));
+        setError(t('search.noneFound', { entity: t('common.entity.all'), query }));
       }
     } catch (err: any) {
       setError(err?.message || t('search.errorGeneric'));
@@ -62,48 +69,12 @@ export default function SearchForm({ inline = false }: SearchFormProps) {
   const formContent = (
     <form onSubmit={handleSubmit}>
       <Stack style={{ overflow: 'visible' }}>
-          <SegmentedControl
-            value={entityType}
-            onChange={(v) => setEntityType(v as 'player' | 'team')}
-            data={[
-              { label: t('common.entity.player'), value: 'player' },
-              { label: t('common.entity.team'), value: 'team' },
-            ]}
-            styles={{
-              root: {
-                backgroundColor: colors.background.tertiary,
-                border: 'none'
-              },
-              control: {
-                borderLeft: 'none !important',
-                borderRight: 'none !important',
-                '&:not(:first-of-type)': { borderLeft: 'none !important' },
-                '&:not(:last-of-type)': { borderRight: 'none !important' },
-                '&[data-active]': colorScheme === 'light' 
-                  ? { 
-                      '& .mantine-SegmentedControl-label': { color: '#F5F5E8 !important' }
-                    } 
-                  : {},
-              },
-              label: {
-                color: colors.text.primary,
-                '&[data-active]': colorScheme === 'light' 
-                  ? { color: '#F5F5E8 !important' } 
-                  : {},
-              },
-              indicator: { border: 'none' },
-            }}
-            color={colors.ui.primary}
-            fullWidth
-          />
-        
         <Group gap={0} wrap="nowrap" align="stretch">
           <Flex style={{ flex: 1 }} direction="column">
             <div className="search-form-input-wrapper">
               <div className="search-form-input-container">
                 <EntityAutocomplete
-                  entityType={entityType}
-                  placeholder={t('search.placeholder')}
+                  placeholder="Search for player or team..."
                   onSelect={(item) => { setSelected(item); setQuery(item.label); }}
                 />
               </div>

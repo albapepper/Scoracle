@@ -9,17 +9,36 @@ import { useTranslation } from 'react-i18next';
 import { useAutocomplete } from '../features/autocomplete/useAutocomplete';
 
 export interface EntityAutocompleteProps {
-  entityType: 'player' | 'team';
+  entityType?: 'player' | 'team' | 'both';
   onSelect: (item: any) => void;
   placeholder?: string;
 }
 
-export default function EntityAutocomplete({ entityType, onSelect, placeholder }: EntityAutocompleteProps) {
+export default function EntityAutocomplete({ entityType = 'both', onSelect, placeholder }: EntityAutocompleteProps) {
   const { activeSport } = useSportContext();
   const { t } = useTranslation();
   const { colorScheme } = useThemeMode();
   const colors = getThemeColors(colorScheme);
   const { query, setQuery, results, loading, error } = useAutocomplete({ sport: activeSport, entityType, debounceMs: 300, limit: 15 });
+  const [showNoMatches, setShowNoMatches] = React.useState(false);
+  
+  // Delay showing "No matches found" to prevent flash during search
+  React.useEffect(() => {
+    if (loading || query.length < 2 || results.length > 0 || error) {
+      setShowNoMatches(false);
+      return;
+    }
+    
+    // Only show "No matches" after a short delay to avoid flash
+    const timer = setTimeout(() => {
+      setShowNoMatches(true);
+    }, 200);
+    
+    return () => clearTimeout(timer);
+  }, [loading, query.length, results.length, error]);
+  
+  // Show dropdown when there are results OR when showing "no matches"
+  const showDropdown = query.length >= 2 && (results.length > 0 || showNoMatches) && !error;
   
   // Debug logging
   React.useEffect(() => {
@@ -43,7 +62,7 @@ export default function EntityAutocomplete({ entityType, onSelect, placeholder }
       <TextInput
         value={query}
         onChange={handleChange}
-        placeholder={placeholder || t('search.searchEntity', { entity: t(`common.entity.${entityType}`) })}
+        placeholder={placeholder || (entityType === 'both' ? t('search.searchEntity', { entity: t('common.entity.all') }) : t('search.searchEntity', { entity: t(`common.entity.${entityType}`) }))}
         leftSection={loading ? <Loader size="xs" /> : <IconSearch size={16} />}
         styles={{ 
           input: { 
@@ -58,24 +77,27 @@ export default function EntityAutocomplete({ entityType, onSelect, placeholder }
         autoComplete="off"
       />
       {error && <Text size="xs" c="red" mt={4}>{String(error)}</Text>}
-      {results.length > 0 && (
-  <Paper withBorder shadow="sm" p={0} className="entity-autocomplete-menu">
-          <ScrollArea.Autosize mah={250}>
-            {results.map((r: any) => (
-              <div
-                key={`${r.entity_type}-${r.id}`}
-                onClick={() => handleSelect(r)}
-                onMouseEnter={() => { /* no-op: prefetch removed */ }}
-                className="entity-autocomplete-item"
-              >
-                <Text size="sm">{r.label}</Text>
-              </div>
-            ))}
-          </ScrollArea.Autosize>
+      {showDropdown && (
+        <Paper withBorder shadow="sm" p={0} className="entity-autocomplete-menu">
+          {results.length > 0 ? (
+            <ScrollArea.Autosize mah={250}>
+              {results.map((r: any) => (
+                <div
+                  key={`${r.entity_type}-${r.id}`}
+                  onClick={() => handleSelect(r)}
+                  onMouseEnter={() => { /* no-op: prefetch removed */ }}
+                  className="entity-autocomplete-item"
+                >
+                  <Text size="sm">{r.label}</Text>
+                </div>
+              ))}
+            </ScrollArea.Autosize>
+          ) : (
+            <div style={{ padding: '12px 16px' }}>
+              <Text size="xs" c="dimmed" ta="center">{t('search.noMatches')}</Text>
+            </div>
+          )}
         </Paper>
-      )}
-      {!loading && query.length >= 2 && results.length === 0 && !error && (
-        <Text size="xs" mt={4} c="dimmed">{t('search.noMatches')}</Text>
       )}
     </div>
   );

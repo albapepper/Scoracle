@@ -1,5 +1,5 @@
 /* TypeScript Web Worker for autocomplete searches.
- * Message in: { type: 'search', sport: string, entityType: 'player' | 'team', query: string, limit?: number, requestId: string }
+ * Message in: { type: 'search', sport: string, entityType: 'player' | 'team' | 'both', query: string, limit?: number, requestId: string }
  * Message out: { type: 'results', requestId: string, results: AutocompleteResult[], error?: string }
  */
 
@@ -9,7 +9,7 @@ import { mapResults } from './map';
 interface SearchMessage {
 	type: 'search';
 	sport: string;
-	entityType: 'player' | 'team';
+	entityType: 'player' | 'team' | 'both';
 	query: string;
 	limit?: number;
 	requestId: string;
@@ -240,13 +240,26 @@ if (typeof self !== 'undefined') (self as any).onmessage = async (e: MessageEven
 			return;
 		}
 		try {
-			console.log(`[Autocomplete Worker] Searching ${entityType} for "${query}" in sport "${sport}"`);
-			const raw = entityType === 'team'
-				? await searchTeams(sport, query, limit)
-				: await searchPlayers(sport, query, limit);
-			console.log(`[Autocomplete Worker] Found ${raw.length} ${entityType} results`);
-			const mapped = mapResults(raw as any, entityType, sport);
-			postMessage({ type: 'results', requestId, results: mapped } as ResultsMessage);
+			if (entityType === 'both') {
+				console.log(`[Autocomplete Worker] Searching both players and teams for "${query}" in sport "${sport}"`);
+				const [players, teams] = await Promise.all([
+					searchPlayers(sport, query, Math.ceil(limit / 2)),
+					searchTeams(sport, query, Math.ceil(limit / 2))
+				]);
+				const mappedPlayers = mapResults(players as any, 'player', sport);
+				const mappedTeams = mapResults(teams as any, 'team', sport);
+				const combined = [...mappedPlayers, ...mappedTeams].slice(0, limit);
+				console.log(`[Autocomplete Worker] Found ${combined.length} results (${mappedPlayers.length} players, ${mappedTeams.length} teams)`);
+				postMessage({ type: 'results', requestId, results: combined } as ResultsMessage);
+			} else {
+				console.log(`[Autocomplete Worker] Searching ${entityType} for "${query}" in sport "${sport}"`);
+				const raw = entityType === 'team'
+					? await searchTeams(sport, query, limit)
+					: await searchPlayers(sport, query, limit);
+				console.log(`[Autocomplete Worker] Found ${raw.length} ${entityType} results`);
+				const mapped = mapResults(raw as any, entityType, sport);
+				postMessage({ type: 'results', requestId, results: mapped } as ResultsMessage);
+			}
 		} catch (err: any) {
 			console.error('[Autocomplete Worker] Search error:', err);
 			postMessage({ type: 'results', requestId, results: [], error: err?.message || 'search failed' } as ResultsMessage);

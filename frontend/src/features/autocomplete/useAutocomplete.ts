@@ -6,7 +6,7 @@ import { mapResults } from './worker/map';
 
 export interface UseAutocompleteOptions {
 	sport: string;
-	entityType: 'player' | 'team';
+	entityType?: 'player' | 'team' | 'both';
 	debounceMs?: number;
 	limit?: number;
 }
@@ -19,7 +19,7 @@ export interface UseAutocompleteState {
 	error: string;
 }
 
-export function useAutocomplete({ sport, entityType, debounceMs = 200, limit = 15 }: UseAutocompleteOptions): UseAutocompleteState {
+export function useAutocomplete({ sport, entityType = 'both', debounceMs = 200, limit = 15 }: UseAutocompleteOptions): UseAutocompleteState {
 	const [query, setQuery] = useState('');
 	const [results, setResults] = useState<AutocompleteResult[]>([]);
 	const [loading, setLoading] = useState(false);
@@ -107,19 +107,42 @@ export function useAutocomplete({ sport, entityType, debounceMs = 200, limit = 1
 					worker.postMessage({ type: 'search', sport: backendSportCode, entityType, query, limit, requestId: currentReqId });
 				} else {
 					// Fallback: search IndexedDB directly
-					const raw = entityType === 'team'
-						? await searchTeamsDB(backendSportCode, query, limit)
-						: await searchPlayersDB(backendSportCode, query, limit);
-					
-					if (currentReqId !== reqIdRef.current) return; // Stale request
-					
-					const mapped = mapResults(raw as any, entityType, backendSportCode);
-					if (process.env.NODE_ENV !== 'production') {
-						console.log('[useAutocomplete] Direct search results:', mapped.length);
+					if (entityType === 'both') {
+						// Search both players and teams, then combine and sort
+						const [players, teams] = await Promise.all([
+							searchPlayersDB(backendSportCode, query, Math.ceil(limit / 2)),
+							searchTeamsDB(backendSportCode, query, Math.ceil(limit / 2))
+						]);
+						
+						if (currentReqId !== reqIdRef.current) return; // Stale request
+						
+						const mappedPlayers = mapResults(players as any, 'player', backendSportCode);
+						const mappedTeams = mapResults(teams as any, 'team', backendSportCode);
+						
+						// Combine and sort by relevance (simple: players first, then teams)
+						const combined = [...mappedPlayers, ...mappedTeams].slice(0, limit);
+						
+						if (process.env.NODE_ENV !== 'production') {
+							console.log('[useAutocomplete] Direct search results:', combined.length, `(${mappedPlayers.length} players, ${mappedTeams.length} teams)`);
+						}
+						setResults(combined);
+						setError('');
+						setLoading(false);
+					} else {
+						const raw = entityType === 'team'
+							? await searchTeamsDB(backendSportCode, query, limit)
+							: await searchPlayersDB(backendSportCode, query, limit);
+						
+						if (currentReqId !== reqIdRef.current) return; // Stale request
+						
+						const mapped = mapResults(raw as any, entityType, backendSportCode);
+						if (process.env.NODE_ENV !== 'production') {
+							console.log('[useAutocomplete] Direct search results:', mapped.length);
+						}
+						setResults(mapped);
+						setError('');
+						setLoading(false);
 					}
-					setResults(mapped);
-					setError('');
-					setLoading(false);
 				}
 			} catch (err: any) {
 				if (currentReqId !== reqIdRef.current) return; // Stale request

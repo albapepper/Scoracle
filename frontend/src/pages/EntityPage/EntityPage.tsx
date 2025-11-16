@@ -36,10 +36,11 @@ export default function EntityPage() {
 
 	// Determine card titles based on sport
 	const isFootball = activeSport?.toUpperCase() === 'FOOTBALL' || activeSport?.toUpperCase() === 'EPL';
+	const isNFL = activeSport?.toLowerCase() === 'nfl';
 	const cardTitles = {
 		topLeft: isFootball ? 'Attacking' : 'Offense',
 		topRight: 'Defensive',
-		bottomLeft: isFootball ? 'Set Pieces/Dead Ball' : 'Special Teams',
+		bottomLeft: isNFL ? 'Special Teams' : 'Dead Ball',
 		bottomRight: 'Discipline',
 	};
 
@@ -71,25 +72,25 @@ export default function EntityPage() {
 				<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
 					<Card shadow="sm" p="lg" radius="md" withBorder>
 						<Stack gap="xs" align="center">
-							<Title order={4}>{cardTitles.topLeft}</Title>
+							<Title order={4} style={{ color: colorScheme === 'dark' ? colors.text.accent : undefined }}>{cardTitles.topLeft}</Title>
 							<Text size="sm" c="dimmed">{t('entityPage.comingSoon', 'Coming soon')}</Text>
 						</Stack>
 					</Card>
 					<Card shadow="sm" p="lg" radius="md" withBorder>
 						<Stack gap="xs" align="center">
-							<Title order={4}>{cardTitles.topRight}</Title>
+							<Title order={4} style={{ color: colorScheme === 'dark' ? colors.text.accent : undefined }}>{cardTitles.topRight}</Title>
 							<Text size="sm" c="dimmed">{t('entityPage.comingSoon', 'Coming soon')}</Text>
 						</Stack>
 					</Card>
 					<Card shadow="sm" p="lg" radius="md" withBorder>
 						<Stack gap="xs" align="center">
-							<Title order={4}>{cardTitles.bottomLeft}</Title>
+							<Title order={4} style={{ color: colorScheme === 'dark' ? colors.text.accent : undefined }}>{cardTitles.bottomLeft}</Title>
 							<Text size="sm" c="dimmed">{t('entityPage.comingSoon', 'Coming soon')}</Text>
 						</Stack>
 					</Card>
 					<Card shadow="sm" p="lg" radius="md" withBorder>
 						<Stack gap="xs" align="center">
-							<Title order={4}>{cardTitles.bottomRight}</Title>
+							<Title order={4} style={{ color: colorScheme === 'dark' ? colors.text.accent : undefined }}>{cardTitles.bottomRight}</Title>
 							<Text size="sm" c="dimmed">{t('entityPage.comingSoon', 'Coming soon')}</Text>
 						</Stack>
 					</Card>

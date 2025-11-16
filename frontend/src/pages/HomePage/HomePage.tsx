@@ -65,9 +65,6 @@ const HomePage: React.FC = () => {
 								indicator: { border: 'none' },
 							}}
 						/>
-						<Text ta="center" size="md" mb="lg" c="dimmed">
-							{t('home.nextSelect')}
-						</Text>
 						<SearchForm inline />
 					</Paper>
 			</Stack>
