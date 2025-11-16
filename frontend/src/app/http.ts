@@ -16,7 +16,7 @@ if (typeof window !== 'undefined') {
 }
 
 const api: AxiosInstance = axios.create({
-  baseURL: '/api/v1',
+  baseURL: '/api/v1/',
   headers: { 'Content-Type': 'application/json' },
   // Accept 304 as a valid status for conditional requests
   validateStatus: (status) => (status >= 200 && status < 300) || status === 304 || status === 429,
