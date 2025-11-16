@@ -18,7 +18,7 @@
   },
   "functions": {
     "api/index.py": {
-      "includeFiles": "{backend,instance}/**"
+      "includeFiles": "backend/**"
     }
   }
 }
