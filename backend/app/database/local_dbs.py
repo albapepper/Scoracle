@@ -84,6 +84,9 @@ def _connect(path: str) -> sqlite3.Connection:
     readonly_env = os.getenv("VERCEL") == "1" or os.getenv("READ_ONLY_SQLITE") == "1"
 
     def _connect_readonly() -> sqlite3.Connection:
+        # Check if file exists before trying to connect in read-only mode
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"SQLite database not found at {path}. Checked candidates: {_candidate_db_dirs()}")
         uri = f"file:{path}?mode=ro"
         conn_ro = sqlite3.connect(uri, uri=True, check_same_thread=False)
         try:
@@ -432,6 +435,9 @@ async def suggestions_from_local_or_upstream(entity_type: str, sport: str, q: st
     No external API calls are performed here. If no local matches are found,
     an empty list is returned. This function keeps the historical name so
     existing routers don't need to change their imports.
+    
+    In Vercel/serverless environments, if the SQLite file is not found,
+    this will raise a FileNotFoundError with diagnostic information.
     """
     et = (entity_type or "").strip().lower()
     s = (sport or "").strip().upper()
