@@ -3,6 +3,7 @@
 All endpoints preserve previous behavior; no implicit default sport.
 """
 from fastapi import APIRouter, Path, Query, HTTPException, Request
+from pathlib import Path as PathLib
 import time
 import os
 import logging
@@ -274,6 +275,16 @@ async def sport_autocomplete_proxy(sport: str, entity_type: str, q: str = Query(
         db_path = _db_path_for_sport(s_upper)
         db_exists = os.path.exists(db_path) if db_path else False
         vercel_env = os.getenv("VERCEL", "0")
+        
+        # Check if candidate directories exist
+        candidate_status = {}
+        for cand_dir in candidates[:5]:  # Limit to first 5 to avoid huge response
+            candidate_status[cand_dir] = {
+                "exists": os.path.exists(cand_dir),
+                "is_dir": os.path.isdir(cand_dir) if os.path.exists(cand_dir) else False,
+                "files": os.listdir(cand_dir)[:5] if os.path.exists(cand_dir) and os.path.isdir(cand_dir) else []
+            }
+        
         error_detail = {
             "error": str(e),
             "sport": s_upper,
@@ -282,11 +293,14 @@ async def sport_autocomplete_proxy(sport: str, entity_type: str, q: str = Query(
             "db_path": db_path,
             "db_exists": db_exists,
             "candidate_dirs": candidates,
+            "candidate_status": candidate_status,
             "vercel_env": vercel_env,
-            "traceback": traceback.format_exc() if os.getenv("VERCEL_ENV") == "development" else None
+            "current_file": str(PathLib(__file__).resolve()) if '__file__' in globals() else None
         }
         print(f"[autocomplete] Error: {error_detail}", file=sys.stderr)
-        raise HTTPException(status_code=500, detail=f"Autocomplete failed: {str(e)}")
+        print(f"[autocomplete] Traceback: {traceback.format_exc()}", file=sys.stderr)
+        # Return diagnostic info in error response so it's visible
+        raise HTTPException(status_code=500, detail=error_detail)
 
 
 @router.get("/{sport}/teams/{team_id}/mentions")
