@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, Text, Stack, Group, Flex } from '@mantine/core';
-import { IconArrowRight } from '@tabler/icons-react';
+import { IconArrowUp } from '@tabler/icons-react';
 import { useSportContext } from '../context/SportContext';
 import apiSearch from '../features/search/api';
 import EntityAutocomplete from './EntityAutocomplete';
@@ -81,16 +81,22 @@ export default function SearchForm({ inline = false }: SearchFormProps) {
                 type="submit" 
                 loading={isLoading}
                 size="md"
-                px="md"
+                px={0}
                 style={{ 
                   backgroundColor: colors.ui.primary,
                   color: 'white',
                   flexShrink: 0,
-                  borderTopLeftRadius: 0,
-                  borderBottomLeftRadius: 0
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginLeft: '4px'
                 }}
               >
-                <IconArrowRight size={18} />
+                <IconArrowUp size={18} />
               </Button>
             </div>
             {error && <Text c="red" ta="center" size="sm" mt={4}>{error}</Text>}

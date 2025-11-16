@@ -22,11 +22,13 @@
 .search-form-input-wrapper button {
   height: 36px !important;
   min-height: 36px !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
+  width: 36px !important;
+  min-width: 36px !important;
+  padding: 0 !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  border-radius: 50% !important;
 }
 

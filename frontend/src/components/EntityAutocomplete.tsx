@@ -1,7 +1,6 @@
 import React from 'react';
 import './EntityAutocomplete.css';
 import { TextInput, Paper, Loader, ScrollArea, Text } from '@mantine/core';
-import { IconSearch } from '@tabler/icons-react';
 import { useSportContext } from '../context/SportContext';
 // React Query prefetch removed to decouple from react-query
 import { useThemeMode, getThemeColors } from '../theme';
@@ -63,15 +62,15 @@ export default function EntityAutocomplete({ entityType = 'both', onSelect, plac
         value={query}
         onChange={handleChange}
         placeholder={placeholder || (entityType === 'both' ? t('search.searchEntity', { entity: t('common.entity.all') }) : t('search.searchEntity', { entity: t(`common.entity.${entityType}`) }))}
-        leftSection={loading ? <Loader size="xs" /> : <IconSearch size={16} />}
+        leftSection={loading ? <Loader size="xs" /> : null}
         styles={{ 
           input: { 
-            backgroundColor: colors.background.secondary,
+            backgroundColor: colors.background.tertiary,
             borderTopRightRadius: 0,
             borderBottomRightRadius: 0,
             border: 'none',
             color: colors.text.primary,
-            caretColor: colorScheme === 'dark' ? '#FFFFFF' : '#1A1A1A'
+            caretColor: colors.text.primary
           } 
         }}
         autoComplete="off"

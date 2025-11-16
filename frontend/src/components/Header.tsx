@@ -60,7 +60,7 @@ const Header: React.FC = () => {
               input: { 
                 background: 'transparent', 
                 color: colors.text.primary, 
-                borderColor: colors.ui.border,
+                borderColor: colorScheme === 'light' ? '#D0D5DC' : colors.ui.border,
                 width: '60px',
                 minWidth: '60px',
                 maxWidth: '60px'

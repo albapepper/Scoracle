@@ -14,3 +14,13 @@
   padding: 6px 10px;
   cursor: pointer;
 }
+
+/* Ensure blinking cursor is visible */
+.entity-autocomplete-root input {
+  caret-color: currentColor;
+}
+
+.entity-autocomplete-root input:focus {
+  caret-color: currentColor;
+  outline: none;
+}

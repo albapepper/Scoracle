@@ -4,6 +4,8 @@ All endpoints preserve previous behavior; no implicit default sport.
 """
 from fastapi import APIRouter, Path, Query, HTTPException, Request
 import time
+import os
+import logging
 from typing import Optional
 
 from app.services import news_fast
@@ -15,6 +17,7 @@ from app.database.local_dbs import (
     suggestions_from_local_or_upstream,
     get_player_by_id,
     get_team_by_id,
+    _db_path_for_sport,
 )
 from app.services.apisports import apisports_service
 from app.services.widget_builder import (
@@ -31,6 +34,7 @@ import hashlib, json
 from fastapi.responses import HTMLResponse
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/{sport}/players/{player_id}")
@@ -397,11 +401,15 @@ async def sport_bootstrap(sport: str, request: Request, since: str | None = Quer
     whether to perform a full refresh. Intended to supersede /sync/players & /sync/teams.
     """
     s = sport.upper()
+    db_path = _db_path_for_sport(s)
+    db_exists = os.path.exists(db_path)
+    logger.info("[bootstrap] sport=%s db_path=%s exists=%s", s, db_path, db_exists)
     try:
         from app.database.local_dbs import list_all_players, list_all_teams, get_player_by_id as _lp
         players_raw = list_all_players(s)
         teams_raw = list_all_teams(s)
     except Exception as e:
+        logger.exception("[bootstrap] Failed to read local DB for sport=%s db_path=%s", s, db_path)
         raise HTTPException(status_code=500, detail=f"Failed bootstrap: {str(e)}")
 
     players_items = []
