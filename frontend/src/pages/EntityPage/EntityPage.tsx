@@ -24,15 +24,8 @@ export default function EntityPage() {
 		if (name) setEntityName(name);
 	}, [search]);
 
-	// Build widget URLs
+	// Build widget URL
 	const basicWidgetUrl = `/api/v1/${activeSport}/${type}s/${entityId}/widget/basic`;
-	const baseUrl = `/api/v1/${activeSport}/${type}s/${entityId}/widget`;
-	const widgetUrls = {
-		offense: `${baseUrl}/offense${season ? `?season=${season}` : ''}`,
-		defensive: `${baseUrl}/defensive${season ? `?season=${season}` : ''}`,
-		specialTeams: `${baseUrl}/special-teams${season ? `?season=${season}` : ''}`,
-		discipline: `${baseUrl}/discipline${season ? `?season=${season}` : ''}`,
-	};
 
 	// Determine card titles based on sport
 	const isFootball = activeSport?.toUpperCase() === 'FOOTBALL' || activeSport?.toUpperCase() === 'EPL';

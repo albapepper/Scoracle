@@ -11,7 +11,6 @@ const HomePage: React.FC = () => {
 	const { colorScheme } = useThemeMode();
 	const colors = getThemeColors(colorScheme);
 	const { t } = useTranslation();
-	const activeSportDisplay = sports.find((s) => s.id === activeSport)?.display || activeSport;
 
 	return (
 		<Container size="lg" py="xl" style={{ 

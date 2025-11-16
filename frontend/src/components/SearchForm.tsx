@@ -16,7 +16,7 @@ interface SearchFormProps {
 
 export default function SearchForm({ inline = false }: SearchFormProps) {
   const navigate = useNavigate();
-  const { activeSport, sports } = useSportContext();
+  const { activeSport } = useSportContext();
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<AutocompleteResult | null>(null);
