@@ -112,6 +112,8 @@ def _load_aliases_for_sport(sport: str) -> Tuple[Dict[str, List[str]], Dict[str,
 
 
 def _get_automatons(sport: str) -> Tuple[ahocorasick.Automaton, ahocorasick.Automaton]:
+    if not AHOCORASICK_AVAILABLE:
+        raise RuntimeError("ahocorasick (pyahocorasick) is not available. Entity extraction from news requires this package.")
     s = (sport or "NBA").upper()
     cache_key = f"news_fast:automata:{s}"
     cached = widget_cache.get(cache_key)
