@@ -22,7 +22,8 @@ export function SportContextProvider({ children }: { children: React.ReactNode }
   const backendSportCode = mapSportToBackendCode(activeSport);
   
   // Auto-sync IndexedDB when sport changes (loads from bundled JSON files)
-  const { isSyncing, syncError, hasData, playersCount, teamsCount } = useIndexedDBSync({
+  // Sync happens automatically in the background - no need to track status here
+  useIndexedDBSync({
     sport: backendSportCode,
     autoSync: true,
   });
