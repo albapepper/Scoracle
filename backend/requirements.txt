@@ -6,5 +6,4 @@ pydantic-settings>=2.0.3
 python-dotenv>=1.0.0
 aiosqlite>=0.19.0
 rapidfuzz>=3.9.7
-ahocorasick>=2.1.0
 feedparser>=6.0.10

@@ -7,7 +7,18 @@ import time
 import unicodedata
 import re
 import feedparser  # faster and robust RSS parser
-import ahocorasick
+try:
+    import ahocorasick
+    AHOCORASICK_AVAILABLE = True
+except ImportError:
+    AHOCORASICK_AVAILABLE = False
+    # Create a dummy Automaton class for type hints when unavailable
+    class DummyAutomaton:
+        def add_word(self, *args, **kwargs): pass
+        def make_automaton(self, *args, **kwargs): pass
+    class DummyModule:
+        Automaton = DummyAutomaton
+    ahocorasick = DummyModule()
 from app.database.local_dbs import list_all_players, list_all_teams, get_player_by_id as local_get_player_by_id, get_team_by_id as local_get_team_by_id
 from app.services.cache import widget_cache
 from app.services.apisports import apisports_service
@@ -52,6 +63,8 @@ def _add_aliases(aliases: Dict[str, List[str]], replacements: List[Tuple[str, st
 
 
 def _build_automaton(aliases: Dict[str, List[str]]) -> ahocorasick.Automaton:
+    if not AHOCORASICK_AVAILABLE:
+        raise RuntimeError("ahocorasick (pyahocorasick) is not available. Entity extraction from news requires this package.")
     A = ahocorasick.Automaton()
     for norm_alias, name_list in aliases.items():
         # Store canonical display name and alias length for boundary checks
