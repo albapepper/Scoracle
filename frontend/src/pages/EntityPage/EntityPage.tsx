@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { Container, Title, Card, Button, Text, Stack, Box } from '@mantine/core';
 import Widget from '../../components/Widget';
@@ -15,7 +15,6 @@ export default function EntityPage() {
 	const { activeSport } = useSportContext();
 	const { colorScheme } = useThemeMode();
 	const colors = getThemeColors(colorScheme);
-	const season = useMemo(() => String(new Date().getFullYear()), []);
 
 	const [entityName, setEntityName] = useState<string>('');
 
