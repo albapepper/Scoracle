@@ -1,7 +1,3 @@
-"""Simple widget builder service for generating HTML widgets.
-
-Keep it simple - widgets are just HTML strings returned from the backend.
-"""
 from typing import Dict, Any, Optional
 from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
