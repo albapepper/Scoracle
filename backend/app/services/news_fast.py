@@ -324,6 +324,15 @@ def fast_mentions(query: str, sport: str, hours: int = 48, mode: str = "auto") -
       - team: treat query as a team, rank players appearing with team
       - auto: decide by presence in automata (prefer player match > team match)
     """
+    if not AHOCORASICK_AVAILABLE:
+        return {
+            "error": "ahocorasick (pyahocorasick) is not available",
+            "mode": mode,
+            "query": query,
+            "articles": [],
+            "linked_teams": [],
+            "linked_players": []
+        }
     P, C = _get_automatons(sport)
     q_norm = _normalize_name(query)
     # Auto-detect with confidence based on longest alias proportion of normalized query
