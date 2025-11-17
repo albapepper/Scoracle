@@ -257,6 +257,8 @@ def _cascading_entries(resolved_query: str, hours: int) -> List[Any]:
 
 def _detect_longest_match(norm_query: str, A: ahocorasick.Automaton) -> Tuple[Optional[str], int]:
     """Return (canonical, longest_alias_len) matched in normalized query using automaton."""
+    if not AHOCORASICK_AVAILABLE:
+        return None, 0
     best_canon: Optional[str] = None
     best_len = 0
     for _end_idx, (canon, alias_len) in A.iter(norm_query):
