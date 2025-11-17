@@ -152,6 +152,8 @@ def fetch_recent_articles(query: str, hours: int = 48) -> List[Any]:
 
 
 def _find_entities(text: str, A: ahocorasick.Automaton) -> Set[str]:
+    if not AHOCORASICK_AVAILABLE:
+        return set()
     norm_text = _normalize_name(text)
     raw: List[Tuple[int, int, str, int]] = []  # (start, end, canon, length)
     for end_idx, (canon, alias_len) in A.iter(norm_text):
