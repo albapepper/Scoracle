@@ -75,6 +75,7 @@ const Header: React.FC = () => {
               },
               option: {
                 backgroundColor: colors.background.secondary,
+                color: colors.text.primary,
                 '&:hover': {
                   backgroundColor: colors.background.tertiary,
                 }
