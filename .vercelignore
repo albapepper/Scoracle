@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+.git/
+.github/
+poetry.lock
+render.yaml
+generate*.py
+*.pyc
+backend/venv/
+instance/
+

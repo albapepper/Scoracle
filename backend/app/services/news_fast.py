@@ -65,6 +65,8 @@ def _add_aliases(aliases: Dict[str, List[str]], replacements: List[Tuple[str, st
 
 
 def _build_automaton(aliases: Dict[str, List[str]]) -> ahocorasick.Automaton:
+    if not AHOCORASICK_AVAILABLE:
+        raise RuntimeError("ahocorasick (pyahocorasick) is not available. Cannot build automaton.")
     A = ahocorasick.Automaton()
     for norm_alias, name_list in aliases.items():
         # Store canonical display name and alias length for boundary checks
@@ -112,6 +114,8 @@ def _load_aliases_for_sport(sport: str) -> Tuple[Dict[str, List[str]], Dict[str,
 
 
 def _get_automatons(sport: str) -> Tuple[ahocorasick.Automaton, ahocorasick.Automaton]:
+    if not AHOCORASICK_AVAILABLE:
+        raise RuntimeError("ahocorasick (pyahocorasick) is not available. Cannot get automatons.")
     s = (sport or "NBA").upper()
     cache_key = f"news_fast:automata:{s}"
     cached = widget_cache.get(cache_key)
