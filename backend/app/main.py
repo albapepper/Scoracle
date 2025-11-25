@@ -16,6 +16,9 @@ from app.routers import widgets, sport, news, twitter, reddit
 from app.utils.middleware import CorrelationIdMiddleware, RateLimitMiddleware
 from app.utils.errors import build_error_payload, map_status_to_code
 
+# Logger must be defined BEFORE the try/except block that uses it
+logger = logging.getLogger(__name__)
+
 # Import news_fast defensively - it may fail if pyahocorasick isn't available
 try:
     from app.services import news_fast
@@ -25,8 +28,6 @@ except ImportError as e:
 except Exception as e:
     logger.warning(f"Error importing news_fast: {e}")
     news_fast = None
-
-logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager

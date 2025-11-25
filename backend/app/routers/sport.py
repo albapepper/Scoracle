@@ -9,7 +9,17 @@ import os
 import logging
 from typing import Optional
 
-from app.services import news_fast
+# Import news_fast defensively - it may fail if pyahocorasick isn't available
+try:
+    from app.services import news_fast
+    NEWS_FAST_AVAILABLE = True
+except ImportError:
+    news_fast = None
+    NEWS_FAST_AVAILABLE = False
+except Exception:
+    news_fast = None
+    NEWS_FAST_AVAILABLE = False
+
 from app.database.local_dbs import (
     get_player_by_id as local_get_player_by_id,
     get_team_by_id as local_get_team_by_id,
@@ -159,6 +169,11 @@ async def sport_player_stats(sport: str, player_id: str, season: str | None = Qu
 @router.get("/{sport}/players/{player_id}/mentions")
 async def sport_player_mentions(sport: str, player_id: str):
     s = sport.upper()
+    
+    # Check if news_fast is available
+    if not NEWS_FAST_AVAILABLE or news_fast is None:
+        raise HTTPException(status_code=503, detail="News mentions service unavailable (pyahocorasick not installed)")
+    
     resolved_name = await news_fast.resolve_entity_name("player", player_id, s)
     result = news_fast.fast_mentions(query=resolved_name.strip(), sport=s, hours=48, mode="player")
     mentions = result.get("articles", [])
@@ -188,7 +203,7 @@ async def sport_player_mentions(sport: str, player_id: str):
         mentions_sorted = sorted(mentions, key=lambda m: (m.get("pub_ts") or 0), reverse=True)
     except Exception:
         mentions_sorted = mentions
-    return {"player_id": player_id, "sport": s, "entity_info": entity_info, "mentions": mentions_sorted, "alongside_entities": alongside, "_debug": md.get("debug", {}), "_echo": {"player_id": player_id}}
+    return {"player_id": player_id, "sport": s, "entity_info": entity_info, "mentions": mentions_sorted, "alongside_entities": alongside, "_debug": {}, "_echo": {"player_id": player_id}}
 
 
 @router.get("/{sport}/teams/{team_id}")
@@ -306,6 +321,11 @@ async def sport_autocomplete_proxy(sport: str, entity_type: str, q: str = Query(
 @router.get("/{sport}/teams/{team_id}/mentions")
 async def sport_team_mentions(sport: str, team_id: str):
     s = sport.upper()
+    
+    # Check if news_fast is available
+    if not NEWS_FAST_AVAILABLE or news_fast is None:
+        raise HTTPException(status_code=503, detail="News mentions service unavailable (pyahocorasick not installed)")
+    
     resolved_name = await news_fast.resolve_entity_name("team", team_id, s)
     result = news_fast.fast_mentions(query=resolved_name.strip(), sport=s, hours=48, mode="team")
     mentions = result.get("articles", [])
@@ -336,7 +356,7 @@ async def sport_team_mentions(sport: str, team_id: str):
         mentions_sorted = sorted(mentions, key=lambda m: (m.get("pub_ts") or 0), reverse=True)
     except Exception:
         mentions_sorted = mentions
-    return {"team_id": team_id, "sport": s, "entity_info": entity_info, "mentions": mentions_sorted, "alongside_entities": alongside, "_debug": md.get("debug", {}), "_echo": {"team_id": team_id}}
+    return {"team_id": team_id, "sport": s, "entity_info": entity_info, "mentions": mentions_sorted, "alongside_entities": alongside, "_debug": {}, "_echo": {"team_id": team_id}}
 
 
 @router.get("/{sport}/entities")
