@@ -16,38 +16,14 @@ from app.routers import widgets, sport, news, twitter, reddit
 from app.utils.middleware import CorrelationIdMiddleware, RateLimitMiddleware
 from app.utils.errors import build_error_payload, map_status_to_code
 
-# Logger must be defined BEFORE the try/except block that uses it
 logger = logging.getLogger(__name__)
-
-# Import news_fast defensively - it may fail if pyahocorasick isn't available
-try:
-    from app.services import news_fast
-except ImportError as e:
-    logger.warning(f"Failed to import news_fast (ahocorasick may be unavailable): {e}")
-    news_fast = None
-except Exception as e:
-    logger.warning(f"Error importing news_fast: {e}")
-    news_fast = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting application lifespan")
-    try:
-        # Optional cache warming: build automatons for active sports
-        if news_fast:
-            try:
-                active_sports = {"NBA", "EPL", "FOOTBALL"}
-                for s in active_sports:
-                    news_fast._get_automatons(s)
-                logger.info("Warmed news_fast automatons: %s", ", ".join(sorted(active_sports)))
-            except Exception:
-                logger.warning("Automaton warmup skipped due to error", exc_info=True)
-        else:
-            logger.info("news_fast unavailable - skipping automaton warmup")
-        yield
-    finally:
-        logger.info("Stopping application lifespan")
+    logger.info("Starting application")
+    yield
+    logger.info("Stopping application")
 
 
 app = FastAPI(

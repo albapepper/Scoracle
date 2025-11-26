@@ -7,5 +7,3 @@ render.yaml
 generate*.py
 *.pyc
 backend/venv/
-instance/
-

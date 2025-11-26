@@ -30,7 +30,7 @@
   },
   "functions": {
     "api/index.py": {
-      "includeFiles": "backend/**"
+      "includeFiles": ["backend/**", "instance/**"]
     }
   }
 }
