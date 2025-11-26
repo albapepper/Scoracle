@@ -70,7 +70,7 @@ API docs: [http://localhost:8000/api/docs](http://localhost:8000/api/docs)
 ./local.ps1 frontend
 ```
  
-React dev server proxies to `http://localhost:8000` (see `package.json` `proxy`).
+React dev server proxies to `http://localhost:8000` (see `frontend/package.json` `proxy`).
 
 ### Local Tooling
 
