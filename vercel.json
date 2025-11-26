@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "api/index.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "includeFiles": ["backend/**", "instance/**"]
+      }
     },
     {
       "src": "frontend/package.json",
@@ -28,9 +31,5 @@
   "env": {
     "PYTHONPATH": "backend"
   },
-  "functions": {
-    "api/index.py": {
-      "includeFiles": ["backend/**", "instance/**"]
-    }
-  }
+  
 }
