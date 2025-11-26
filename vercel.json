@@ -30,6 +30,5 @@
   ],
   "env": {
     "PYTHONPATH": "backend"
-  },
-  
+  }
 }
