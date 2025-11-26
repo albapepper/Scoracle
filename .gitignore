@@ -27,6 +27,7 @@ ENV/
 # Node.js / React
 node_modules/
 /frontend/build
+/frontend/dist
 .DS_Store
 .env.local
 .env.development.local

@@ -12,8 +12,8 @@
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "build",
-        "installCommand": "npm --prefix frontend ci --legacy-peer-deps",
+        "distDir": "dist",
+        "installCommand": "npm --prefix frontend ci",
         "buildCommand": "npm --prefix frontend run build"
       }
     }
@@ -25,7 +25,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/frontend/build/$1"
+      "dest": "/frontend/dist/$1"
     }
   ],
   "env": {
