@@ -1,5 +1,6 @@
 {
   "name": "scoracle-frontend",
+  "type": "module",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -38,7 +39,7 @@
     "preview": "vite preview",
     
     "api:types": "openapi-typescript http://localhost:8000/api/openapi.json --output src/types/api.ts",
-    "api:types:check": "node -e \"require('fs').accessSync('src/types/api.ts');console.log('types present');\""
+    "api:types:check": "node ./scripts/checkApiTypes.mjs"
   },
   "eslintConfig": {
     "extends": [
