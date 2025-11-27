@@ -7,27 +7,24 @@ import time
 import unicodedata
 import re
 import feedparser  # faster and robust RSS parser
-try:
-    import ahocorasick
-    AHOCORASICK_AVAILABLE = True
-except ImportError:
-    AHOCORASICK_AVAILABLE = False
-    # Create dummy types for when ahocorasick is unavailable
-    class DummyAutomaton:
-        def add_word(self, *args, **kwargs): pass
-        def make_automaton(self, *args, **kwargs): pass
-        def iter(self, text): return iter([])
-    class DummyModule:
-        Automaton = DummyAutomaton
-    ahocorasick = DummyModule()
 
 from app.database.local_dbs import list_all_players, list_all_teams, get_player_by_id as local_get_player_by_id, get_team_by_id as local_get_team_by_id
 from app.services.cache import widget_cache
 from app.services.apisports import apisports_service
 
 
-_PLAYER_AUTOMATA: dict[str, ahocorasick.Automaton] = {}
-_CLUB_AUTOMATA: dict[str, ahocorasick.Automaton] = {}
+@dataclass(frozen=True)
+class AliasMatcher:
+    alias_map: Dict[str, str]
+    alias_entries: List[Tuple[str, str, int]]  # (alias, canonical, length)
+
+    @property
+    def empty(self) -> bool:
+        return not self.alias_entries
+
+
+_PLAYER_MATCHERS: dict[str, AliasMatcher] = {}
+_CLUB_MATCHERS: dict[str, AliasMatcher] = {}
 
 _NON_ALNUM = re.compile(r"[^a-z0-9 ]+")
 
@@ -64,15 +61,17 @@ def _add_aliases(aliases: Dict[str, List[str]], replacements: List[Tuple[str, st
     return aliases
 
 
-def _build_automaton(aliases: Dict[str, List[str]]) -> ahocorasick.Automaton:
-    if not AHOCORASICK_AVAILABLE:
-        raise RuntimeError("ahocorasick (pyahocorasick) is not available. Cannot build automaton.")
-    A = ahocorasick.Automaton()
+def _build_matcher(aliases: Dict[str, List[str]]) -> AliasMatcher:
+    alias_map: Dict[str, str] = {}
+    alias_entries: List[Tuple[str, str, int]] = []
     for norm_alias, name_list in aliases.items():
-        # Store canonical display name and alias length for boundary checks
-        A.add_word(norm_alias, (name_list[0], len(norm_alias)))
-    A.make_automaton()
-    return A
+        if not norm_alias or not name_list:
+            continue
+        canonical = name_list[0]
+        alias_map[norm_alias] = canonical
+        alias_entries.append((norm_alias, canonical, len(norm_alias)))
+    alias_entries.sort(key=lambda item: item[2], reverse=True)
+    return AliasMatcher(alias_map=alias_map, alias_entries=alias_entries)
 
 
 def _load_aliases_for_sport(sport: str) -> Tuple[Dict[str, List[str]], Dict[str, List[str]]]:
@@ -113,9 +112,7 @@ def _load_aliases_for_sport(sport: str) -> Tuple[Dict[str, List[str]], Dict[str,
     return p_aliases, c_aliases
 
 
-def _get_automatons(sport: str) -> Tuple[ahocorasick.Automaton, ahocorasick.Automaton]:
-    if not AHOCORASICK_AVAILABLE:
-        raise RuntimeError("ahocorasick (pyahocorasick) is not available. Cannot get automatons.")
+def _get_matchers(sport: str) -> Tuple[AliasMatcher, AliasMatcher]:
     s = (sport or "NBA").upper()
     cache_key = f"news_fast:automata:{s}"
     cached = widget_cache.get(cache_key)
@@ -123,11 +120,11 @@ def _get_automatons(sport: str) -> Tuple[ahocorasick.Automaton, ahocorasick.Auto
         return cached[0], cached[1]
 
     p_aliases, c_aliases = _load_aliases_for_sport(s)
-    P = _build_automaton(p_aliases)
-    C = _build_automaton(c_aliases)
+    P = _build_matcher(p_aliases)
+    C = _build_matcher(c_aliases)
     widget_cache.set(cache_key, (P, C), ttl=3600)
-    _PLAYER_AUTOMATA[s] = P
-    _CLUB_AUTOMATA[s] = C
+    _PLAYER_MATCHERS[s] = P
+    _CLUB_MATCHERS[s] = C
     return P, C
 
 
@@ -151,18 +148,23 @@ def fetch_recent_articles(query: str, hours: int = 48) -> List[Any]:
     return _filter_recent(getattr(feed, "entries", []) or [], hours=hours)
 
 
-def _find_entities(text: str, A: ahocorasick.Automaton) -> Set[str]:
-    if not AHOCORASICK_AVAILABLE:
+def _find_entities(text: str, matcher: AliasMatcher) -> Set[str]:
+    if matcher.empty:
         return set()
     norm_text = _normalize_name(text)
     raw: List[Tuple[int, int, str, int]] = []  # (start, end, canon, length)
-    for end_idx, (canon, alias_len) in A.iter(norm_text):
-        start_idx = end_idx - alias_len + 1
-        is_start_boundary = start_idx == 0 or not norm_text[start_idx - 1].isalnum()
-        is_end_boundary = end_idx == len(norm_text) - 1 or not norm_text[end_idx + 1].isalnum()
-        if not (is_start_boundary and is_end_boundary):
-            continue
-        raw.append((start_idx, end_idx, canon, alias_len))
+    for alias, canon, alias_len in matcher.alias_entries:
+        start_idx = 0
+        while True:
+            found_at = norm_text.find(alias, start_idx)
+            if found_at == -1:
+                break
+            end_idx = found_at + alias_len - 1
+            is_start_boundary = found_at == 0 or not norm_text[found_at - 1].isalnum()
+            is_end_boundary = end_idx == len(norm_text) - 1 or not norm_text[end_idx + 1].isalnum()
+            if is_start_boundary and is_end_boundary:
+                raw.append((found_at, end_idx, canon, alias_len))
+            start_idx = found_at + 1
     if not raw:
         return set()
     raw.sort(key=lambda x: (x[0], -x[3]))
@@ -178,7 +180,7 @@ def _find_entities(text: str, A: ahocorasick.Automaton) -> Set[str]:
     return {canon for _, _, canon, _ in accepted}
 
 
-def extract_entities_from_entry(entry: Any, P: ahocorasick.Automaton, C: ahocorasick.Automaton) -> Tuple[Set[str], Set[str]]:
+def extract_entities_from_entry(entry: Any, P: AliasMatcher, C: AliasMatcher) -> Tuple[Set[str], Set[str]]:
     title = getattr(entry, "title", "") or ""
     desc = getattr(entry, "summary", None) or getattr(entry, "description", "") or ""
     text = f"{title} {desc}"
@@ -187,7 +189,7 @@ def extract_entities_from_entry(entry: Any, P: ahocorasick.Automaton, C: ahocora
     return found_players, found_teams
 
 
-def rank_mentions_for_team(articles: List[Any], team: str, P: ahocorasick.Automaton, C: ahocorasick.Automaton) -> List[Tuple[str, int, List[str]]]:
+def rank_mentions_for_team(articles: List[Any], team: str, P: AliasMatcher, C: AliasMatcher) -> List[Tuple[str, int, List[str]]]:
     links_by_player: Dict[str, Set[str]] = {}
     for e in articles:
         players, teams = extract_entities_from_entry(e, P, C)
@@ -200,7 +202,7 @@ def rank_mentions_for_team(articles: List[Any], team: str, P: ahocorasick.Automa
     return ranked
 
 
-def rank_mentions_for_player(articles: List[Any], player: str, P: ahocorasick.Automaton, C: ahocorasick.Automaton, exclude_team: Optional[str] = None) -> List[Tuple[str, int, List[str]]]:
+def rank_mentions_for_player(articles: List[Any], player: str, P: AliasMatcher, C: AliasMatcher, exclude_team: Optional[str] = None) -> List[Tuple[str, int, List[str]]]:
     links_by_team: Dict[str, Set[str]] = {}
     for e in articles:
         players, teams = extract_entities_from_entry(e, P, C)
@@ -255,14 +257,16 @@ def _cascading_entries(resolved_query: str, hours: int) -> List[Any]:
     return entries
 
 
-def _detect_longest_match(norm_query: str, A: ahocorasick.Automaton) -> Tuple[Optional[str], int]:
-    """Return (canonical, longest_alias_len) matched in normalized query using automaton."""
-    if not AHOCORASICK_AVAILABLE:
+def _detect_longest_match(norm_query: str, matcher: AliasMatcher) -> Tuple[Optional[str], int]:
+    """Return (canonical, longest_alias_len) matched in normalized query using matcher."""
+    if matcher.empty or not norm_query:
         return None, 0
     best_canon: Optional[str] = None
     best_len = 0
-    for _end_idx, (canon, alias_len) in A.iter(norm_query):
-        if alias_len > best_len:
+    for alias, canon, alias_len in matcher.alias_entries:
+        if alias_len < best_len:
+            break
+        if norm_query.find(alias) != -1:
             best_len = alias_len
             best_canon = canon
     return best_canon, best_len
@@ -332,16 +336,7 @@ def fast_mentions(query: str, sport: str, hours: int = 48, mode: str = "auto") -
       - team: treat query as a team, rank players appearing with team
       - auto: decide by presence in automata (prefer player match > team match)
     """
-    if not AHOCORASICK_AVAILABLE:
-        return {
-            "error": "ahocorasick (pyahocorasick) is not available",
-            "mode": mode,
-            "query": query,
-            "articles": [],
-            "linked_teams": [],
-            "linked_players": []
-        }
-    P, C = _get_automatons(sport)
+    P, C = _get_matchers(sport)
     q_norm = _normalize_name(query)
     # Auto-detect with confidence based on longest alias proportion of normalized query
     detected_player, player_match_len = _detect_longest_match(q_norm, P)

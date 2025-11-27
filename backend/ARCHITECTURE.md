@@ -15,18 +15,19 @@ backend/app/
     twitter.py         # Stub social router
     reddit.py          # Stub social router
   services/            # Business logic & integration boundaries
-    widget_service.py  # Payload assembly for player widgets
-    news_service.py    # RSS + News API aggregation & caching
+    widget_service.py  # Widget payload assembly + cache lookups
+    widget_builder.py  # Helper for widget envelope shaping
+    news_fast.py       # Google News RSS aggregation (no News API dependency)
     apisports.py       # API-Sports provider abstraction
     cache.py           # In-memory caches (widget_cache, basic_cache)
+    reddit_service.py  # Placeholder social integration
+    twitter_service.py # Placeholder social integration
   database/            # Local SQLite helpers & seeding utilities
     local_dbs.py       # Per-sport player/team storage & search
     seed_local_dbs.py  # Seeding script (API or static fallback)
     inspect_local_db.py# Inspection utilities
-    provider_ingestion.py # Unified provider ingestion (replaces legacy registry)
   models/              # Pydantic schemas & envelopes
-  utils/               # Cross-cutting utilities (constants, http_client)
-  adapters/            # Currently empty (previous transitional re-exports removed)
+  utils/               # Cross-cutting utilities (constants, errors, middleware)
 ```text
 
 ## Layer Responsibilities
@@ -65,7 +66,7 @@ Use `/api/health` for a basic liveness probe. Future work: add a `tests/` direct
 
 ## Recent Improvements
 
-- Legacy `registry.py` removed; unified ingestion via `services/provider_ingestion.py`.
+- Legacy registry and News API helpers removed; backend now relies on bundled SQLite + Google RSS only.
 - Structured error codes & correlation IDs implemented (`utils/errors.py`, middleware).
 - Rate limiting middleware added (configurable via `RATE_LIMIT_*` settings).
 

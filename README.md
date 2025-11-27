@@ -9,43 +9,37 @@ Scoracle is a modern web application that aggregates near‑real‑time sports n
 | Multi‑Sport | Pluggable sport context (currently NBA focus; NFL/EPL scaffolding) |
 | Lean Endpoints | Sport-first endpoints return summaries; rich stats via client widgets |
 | Smart Caching | Tiered in‑memory TTL caches for summaries and stats (invalidate naturally via TTL) |
-| Mentions & Links | Configurable News API (fallback to refined Google RSS) |
+| Mentions & Links | Google News RSS pipeline (no external news dependency) |
 | Lightweight Data Layer | Typed hooks replace prior React Query usage; local caching and ETag/304 support via axios wrapper |
 | Entity Preload Cache | Client context seeds detail pages to eliminate blank loading states |
 | Error Envelope | Consistent JSON error contract for all unhandled exceptions |
 | Sport‑First Paths | Canonical `/api/v1/{sport}/...` routes for multi‑sport expansion |
-| Architecture Migration | Transitional layering toward `api/`, `domain/`, `adapters/`, `repositories/` |
+| Architecture Focus | Lean FastAPI stack + local SQLite seeds (no registry/services bloat) |
 
 ## 🧱 Evolving Backend Architecture (Phase 1 ➜ Phase 2)
 
 Current state is a lean backend exposing sport‑first endpoints with minimal aggregation. Most rich visualizations are handled on the frontend via provider widgets. Backend modules under `services/` will continue to be slimmed.
 
-## 🗂 Project Structure (Transitional)
-```
+## 🗂 Project Structure (Current)
+
+```text
 scoracle/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py                # FastAPI app factory & router mounting
-│   │   ├── core/                  # Settings, config
-│   │   ├── models/                # Pydantic schemas (PlayerFullResponse, ErrorEnvelope, etc.)
-│   │   ├── api/                   # Sport-first routes
-│   │   ├── adapters/              # (New) Re-export wrappers for external services (RSS)
-│   │   ├── services/              # (Legacy) External integration logic (to be relocated)
-│   │   ├── repositories/          # Entity registry abstraction (SQLite)
-│   │   └── domain/                # (Future) Core domain logic (stats transforms)
+│   │   ├── main.py          # FastAPI app + router mounting
+│   │   ├── config.py        # Pydantic settings
+│   │   ├── database/        # local SQLite helpers + seeds
+│   │   ├── models/          # Widget envelope schemas
+│   │   ├── routers/         # sport, widgets, news, reddit, twitter
+│   │   ├── services/        # apisports, cache, news_fast, widgets, social stubs
+│   │   └── utils/           # constants, errors, middleware
 │   ├── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── pages/                 # PlayerPage, TeamPage consume `/full` endpoints
-│   │   ├── context/               # SportContext, EntityCacheContext
-│   │   ├── services/              # `api.js` (axios + typed helper methods)
-│   │   └── visualizations/        # D3 components (radar, bar charts)
 ├── api/
-│   └── index.py                   # Vercel serverless entrypoint mounting FastAPI app
-├── instance/
-│   └── localdb/                   # Read-only SQLite seeds bundled for serverless
-├── vercel.json                    # Vercel config (builds, routes, functions)
-└── README.md
+│   └── index.py             # Vercel serverless entry mounting backend/app
+├── frontend/                # React app (Vite)
+├── instance/localdb/        # bundled SQLite snapshots
+├── scripts/                 # misc helper scripts
+└── vercel.json
 ```
 
 ## 🚀 Getting Started
@@ -136,7 +130,7 @@ GET /api/v1/{sport}/entities?entity_type=player|team   # lean dump for client-si
 
 ## 🧮 Percentile Calculation
 
-Percentiles are computed lazily per unique (entity, sport, season) from fetched stat distributions (service: `stats_percentile_service`). Missing stats yield `null` percentiles. Cached separately with a longer TTL to amortize CPU.
+Percentile math has been removed from the backend to keep the deployment lightweight. Historical references to `stats_percentile_service` or percentile caches can be ignored—the current API only returns raw stats from API‑Sports.
 
 ## 🗂 Frontend Data Layer
 
@@ -146,15 +140,13 @@ Percentiles are computed lazily per unique (entity, sport, season) from fetched 
 ## 🔄 Navigation Flow
 
 1. User selects sport and entity type (player or team) and searches.
-2. Mentions page loads basic summary entity info (API provided) + news (configured News API when available, otherwise Google RSS fallback).
+2. Mentions page loads basic summary entity info (API provided) plus news fetched from Google News RSS via the lean `news_fast` pipeline.
 3. Clicking "View Stats" preloads summary into `EntityCacheContext`.
 4. Player/Team page mounts: seeds state from cache immediately, then React Query fetch resolves full payload.
 
 ## 🔑 API Keys
 
 Provider: API‑Sports. Set your key via environment variable `API_SPORTS_KEY`.
-
-Optional provider: News API. Supply `NEWS_API_KEY` (default placeholder `YOUR_NEWS_API_KEY`). When configured, the backend queries the News API first for entity mentions and transparently falls back to Google RSS when no results are returned or if the key is missing. You can also override `NEWS_API_ENDPOINT` if you are proxying another compatible service.
 
 Frontend widgets (optional): to enable API‑Sports client-side widgets, add a React environment variable in `frontend/.env`:
 
@@ -179,7 +171,6 @@ Steps:
 2. No framework selection needed; `vercel.json` handles builds and routes.
 3. Environment variables (Project → Settings → Environment Variables):
    * `API_SPORTS_KEY`
-   * Optional: `NEWS_API_KEY`, `NEWS_API_ENDPOINT`
 4. Deploy. After deploy:
    * App UI: `https://<your-domain>/`
    * API docs: `https://<your-domain>/api/docs`

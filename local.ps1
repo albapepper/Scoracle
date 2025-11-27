@@ -78,9 +78,6 @@ function Import-DotEnv {
 function New-InstanceDirIfMissing {
   $instanceDir = Join-Path $RepoRoot 'instance'
   if (-not (Test-Path $instanceDir)) { New-Item -ItemType Directory -Path $instanceDir | Out-Null }
-  if (-not $env:REGISTRY_DB_PATH) {
-    $env:REGISTRY_DB_PATH = 'instance/registry.db'
-  }
 }
 
 function Start-Backend {
