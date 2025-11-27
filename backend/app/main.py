@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
 
 from app.config import settings
-from app.routers import widgets, sport, news, twitter, reddit
+from app.routers import widgets, sports, players, teams, catalog, news, twitter, reddit
 from app.utils.middleware import CorrelationIdMiddleware, RateLimitMiddleware
 from app.utils.errors import build_error_payload, map_status_to_code
 
@@ -57,7 +57,10 @@ app.state.rate_limit = (
 
 # Routers
 app.include_router(widgets.router, prefix=settings.API_V1_STR)
-app.include_router(sport.router, prefix=settings.API_V1_STR)
+app.include_router(sports.router, prefix=settings.API_V1_STR)
+app.include_router(players.router, prefix=settings.API_V1_STR)
+app.include_router(teams.router, prefix=settings.API_V1_STR)
+app.include_router(catalog.router, prefix=settings.API_V1_STR)
 app.include_router(news.router, prefix=settings.API_V1_STR)
 app.include_router(twitter.router, prefix=settings.API_V1_STR)
 app.include_router(reddit.router, prefix=settings.API_V1_STR)
@@ -74,7 +77,16 @@ async def root_index():
     return {
         "name": settings.PROJECT_NAME,
         "version": settings.PROJECT_VERSION,
-        "routers": ["widgets", "sport", "news", "twitter", "reddit"],
+        "routers": [
+            "widgets",
+            "sports",
+            "players",
+            "teams",
+            "catalog",
+            "news",
+            "twitter",
+            "reddit",
+        ],
         "api_base": settings.API_V1_STR,
         "docs": "/api/docs",
         "openapi": "/api/openapi.json",

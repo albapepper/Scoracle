@@ -6,7 +6,7 @@ Scoracle is a modern web application that aggregates near‑real‑time sports n
 
 | Area | Highlights |
 |------|-----------|
-| Multi‑Sport | Pluggable sport context (currently NBA focus; NFL/EPL scaffolding) |
+| Multi‑Sport | Pluggable sport context (NBA focus; NFL + FOOTBALL (soccer) parity) |
 | Lean Endpoints | Sport-first endpoints return summaries; rich stats via client widgets |
 | Smart Caching | Tiered in‑memory TTL caches for summaries and stats (invalidate naturally via TTL) |
 | Mentions & Links | Google News RSS pipeline (no external news dependency) |
@@ -30,7 +30,7 @@ scoracle/
 │   │   ├── config.py        # Pydantic settings
 │   │   ├── database/        # local SQLite helpers + seeds
 │   │   ├── models/          # Widget envelope schemas
-│   │   ├── routers/         # sport, widgets, news, reddit, twitter
+│   │   ├── routers/         # sports, players, teams, catalog, widgets, news, reddit, twitter
 │   │   ├── services/        # apisports, cache, news_fast, widgets, social stubs
 │   │   └── utils/           # constants, errors, middleware
 │   ├── requirements.txt
@@ -42,12 +42,22 @@ scoracle/
 └── vercel.json
 ```
 
+> **2025-11 update:** the legacy `sport` router has been decomposed into dedicated `sports.py`, `players.py`, `teams.py`, and `catalog.py` routers. The backend autocomplete endpoint was removed—autocomplete now runs entirely in the frontend using IndexedDB bootstrap data.
+
+### Router layout
+
+- `sports.py` – sport metadata and `/api/v1/{sport}/search`
+- `players.py` – player summaries, stats, mentions, widget HTML
+- `teams.py` – team summaries, stats, mentions, widget HTML
+- `catalog.py` – `/entities`, `/sync/*`, and `/bootstrap` dataset exports
+- `widgets.py`, `news.py`, `twitter.py`, `reddit.py` – unchanged specialized routers
+
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-* Python 3.11+ (tested)
-* Node.js 18+
+- Python 3.11+ (tested)
+- Node.js 18+
 
 ### Backend Local Dev (Windows PowerShell)
 
@@ -68,7 +78,7 @@ React dev server proxies to `http://localhost:8000` (see `frontend/package.json`
 
 ### Local Tooling
 
-* Use `local.ps1` instead of Makefile:
+- Use `local.ps1` instead of Makefile:
 
 ```powershell
 ./local.ps1 backend   # start FastAPI on :8000
@@ -83,9 +93,9 @@ TypeScript is fully enabled in the frontend and JS/JSX sources were migrated. Th
 
 Layered in-memory TTL caches (`app/services/cache.py`):
 
-* `basic_cache` – Player/team summaries (180–300s TTL)
-* `stats_cache` – Season stats (300s TTL)
-* Percentile cache removed – app now presents raw metrics only
+- `basic_cache` – Player/team summaries (180–300s TTL)
+- `stats_cache` – Season stats (300s TTL)
+- Percentile cache removed – app now presents raw metrics only
 
 Cache keys are sport + entity + season namespaced. No manual invalidation yet; rely on TTL + ephemeral process restarts. Future: pluggable Redis backend.
 
@@ -113,13 +123,23 @@ Base prefix: `/api/v1`
 ### Sport‑First API
 
 ```text
+GET /api/v1/{sport}                               # router metadata
+GET /api/v1/{sport}/search?query=...&entity_type=player|team
+
 GET /api/v1/{sport}/players/{player_id}
 GET /api/v1/{sport}/players/{player_id}/stats
 GET /api/v1/{sport}/players/{player_id}/mentions
+GET /api/v1/{sport}/players/{player_id}/widget/*   # HTML widgets for embeds
+
 GET /api/v1/{sport}/teams/{team_id}
 GET /api/v1/{sport}/teams/{team_id}/stats
 GET /api/v1/{sport}/teams/{team_id}/mentions
-GET /api/v1/{sport}/entities?entity_type=player|team   # lean dump for client-side indexing
+GET /api/v1/{sport}/teams/{team_id}/widget/*
+
+GET /api/v1/{sport}/entities?entity_type=player|team   # catalog router
+GET /api/v1/{sport}/sync/players
+GET /api/v1/{sport}/sync/teams
+GET /api/v1/{sport}/bootstrap
 ```
 
 ### Health & Maintenance
@@ -134,8 +154,12 @@ Percentile math has been removed from the backend to keep the deployment lightwe
 
 ## 🗂 Frontend Data Layer
 
-* React Query caches lean summaries keyed by `[entity, id, sport]`.
-* `EntityCacheContext` stores lightweight summaries (player/team) seeded from Mentions → Stats navigation to eliminate initial spinner.
+- React Query caches lean summaries keyed by `[entity, id, sport]`.
+- `EntityCacheContext` stores lightweight summaries (player/team) seeded from Mentions → Stats navigation to eliminate initial spinner.
+
+## 🔍 Autocomplete (Frontend)
+
+Autocomplete now runs entirely in the browser using IndexedDB data seeded from `/api/v1/{sport}/bootstrap` (or the bundled JSON files inside `frontend/public/data`). The deprecated `/api/v1/{sport}/autocomplete/{entity_type}` endpoint has been removed. If you need to refresh the bundled data, regenerate the JSON snapshots and redeploy; the frontend will automatically sync IndexedDB on first load for each sport.
 
 ## 🔄 Navigation Flow
 
@@ -161,25 +185,25 @@ Alternatively, you can set `REACT_APP_APISPORTS_WIDGET_KEY` for compatibility. A
 
 This repo is configured for Vercel:
 
-* Frontend: React app under `frontend/` is built with `@vercel/static-build` and served as a static site.
-* Backend: FastAPI app is exposed as a Python Serverless Function at `/api` via `api/index.py`.
-* Local SQLite seeds under `instance/localdb/` are bundled read‑only and used by sync endpoints to seed the client’s IndexedDB.
+- Frontend: React app under `frontend/` is built with `@vercel/static-build` and served as a static site.
+- Backend: FastAPI app is exposed as a Python Serverless Function at `/api` via `api/index.py`.
+- Local SQLite seeds under `instance/localdb/` are bundled read‑only and used by sync endpoints to seed the client’s IndexedDB.
 
 Steps:
 
 1. Connect the repository to Vercel.
 2. No framework selection needed; `vercel.json` handles builds and routes.
 3. Environment variables (Project → Settings → Environment Variables):
-   * `API_SPORTS_KEY`
+   - `API_SPORTS_KEY`
 4. Deploy. After deploy:
-   * App UI: `https://<your-domain>/`
-   * API docs: `https://<your-domain>/api/docs`
-   * Health: `https://<your-domain>/api/health`
+   - App UI: `https://<your-domain>/`
+   - API docs: `https://<your-domain>/api/docs`
+   - Health: `https://<your-domain>/api/health`
 
 Notes:
 
-* The serverless filesystem is read‑only; the app opens SQLite in read‑only mode automatically on Vercel.
-* If bundle size grows, consider splitting sport DBs or moving them to an external object store/CDN.
+- The serverless filesystem is read‑only; the app opens SQLite in read‑only mode automatically on Vercel.
+- If bundle size grows, consider splitting sport DBs or moving them to an external object store/CDN.
 
 ## 📄 License
 

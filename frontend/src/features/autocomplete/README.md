@@ -1,39 +1,24 @@
 # Autocomplete Implementation
 
-## Current Setup: Backend API Calls
+Autocomplete now runs entirely on the frontend using the bundled bootstrap JSON + IndexedDB. The legacy backend endpoint `/api/v1/{sport}/autocomplete/{entity_type}` was removed, so all suggestions are generated locally.
 
-The autocomplete currently queries the backend API directly via `/api/v1/{sport}/autocomplete/{entity_type}` endpoints. This provides real-time results from the backend SQLite database.
+## Current Setup: IndexedDB-first
 
-## Switching Back to IndexedDB (Frontend Local DB)
+1. `useIndexedDBSync` keeps the browser database in sync with `/api/v1/{sport}/bootstrap` (or the bundled JSON in `frontend/public/data`).
+2. `useAutocomplete.ts` calls `searchPlayers`/`searchTeams` from `src/services/indexedDB.ts` and maps the results into UI-friendly labels.
+3. No network calls are required for keystrokes, so the UX stays responsive even on flaky connections.
 
-To revert to the IndexedDB-based autocomplete for faster local searches:
+## Regenerating Data
 
-1. **Update `useAutocomplete.ts`:**
-   - Import IndexedDB search functions: `searchPlayers`, `searchTeams` from `../../services/indexedDB`
-   - Import `mapSportToBackendCode` from `../../utils/sportMapping`
-   - Import `mapResults` from `./worker/map`
-   - Replace the backend API calls with IndexedDB searches (see git history for previous implementation)
+When backend SQLite files change, run `python backend/scripts/export_sqlite_to_json.py` to refresh the JSON snapshots under `frontend/public/data`. Commit the updated JSON and redeploy; the frontend will ship the new dataset and automatically re-seed IndexedDB on first load.
 
-2. **Re-enable IndexedDB sync in `SportContext.tsx`:**
-   - Import `useIndexedDBSync` hook
-   - Add the sync hook back to `SportContextProvider`
-   - This will automatically sync bootstrap data when sport changes
+## Optional Backend Fallback (Not Recommended)
 
-3. **Ensure bootstrap endpoint works:**
-   - The backend `/api/v1/{sport}/bootstrap` endpoint must be functional
-   - This endpoint seeds IndexedDB with player/team data
+If you ever reintroduce a server-driven autocomplete, you would need to:
 
-## Benefits of Each Approach
+1. Restore the FastAPI route and helper utilities that were previously located in `backend/app/routers/sport.py`.
+2. Update `useAutocomplete.ts` to send requests to the new endpoint and handle latency/loading states.
+3. Keep the IndexedDB logic as a graceful fallback in case the serverless environment cannot open SQLite files.
 
-**Backend API (Current):**
-- Always up-to-date data
-- No sync complexity
-- Works immediately without bootstrap
-- Slightly slower (network latency)
-
-**IndexedDB (Previous):**
-- Instant local searches (no network calls)
-- Works offline after initial sync
-- Requires bootstrap sync on sport change
-- More complex setup
+For now the fully local approach is the supported path, optimized for the Vercel/serverless deployment model.
 

@@ -27,7 +27,7 @@ export default function EntityPage() {
 	const basicWidgetUrl = `/api/v1/${activeSport}/${type}s/${entityId}/widget/basic`;
 
 	// Determine card titles based on sport
-	const isFootball = activeSport?.toUpperCase() === 'FOOTBALL' || activeSport?.toUpperCase() === 'EPL';
+	const isFootball = activeSport?.toUpperCase() === 'FOOTBALL';
 	const isNFL = activeSport?.toLowerCase() === 'nfl';
 	const cardTitles = {
 		topLeft: isFootball ? 'Attacking' : 'Offense',

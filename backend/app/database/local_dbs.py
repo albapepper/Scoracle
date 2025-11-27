@@ -66,7 +66,6 @@ def _db_path_for_sport(sport: str) -> str:
         "NBA": "nba.sqlite",
         "NFL": "nfl.sqlite",
         "FOOTBALL": "football.sqlite",
-        "EPL": "football.sqlite",  # alias for backward compatibility
     }.get(s, f"{s.lower()}.sqlite")
     candidates = _candidate_db_dirs()
     # Prefer a directory that already has the file
@@ -425,55 +424,6 @@ def search_teams(sport: str, q: str, limit: int) -> List[Dict[str, Optional[str]
             return [{"id": r[0], "name": r[1], "current_league": r[2]} for r in candidates[:limit]]
     finally:
         conn.close()
-
-
-async def suggestions_from_local_or_upstream(entity_type: str, sport: str, q: str, limit: int):
-    """
-    LOCAL-ONLY autocomplete.
-
-    Returns suggestions strictly from the local SQLite DB for the given sport.
-    No external API calls are performed here. If no local matches are found,
-    an empty list is returned. This function keeps the historical name so
-    existing routers don't need to change their imports.
-    
-    In Vercel/serverless environments, if the SQLite file is not found,
-    this will raise a FileNotFoundError with diagnostic information.
-    """
-    et = (entity_type or "").strip().lower()
-    s = (sport or "").strip().upper()
-    out: List[Dict] = []
-    if et == "player":
-        loc = search_players(s, q, limit)
-        for p in loc:
-            raw_name = (p.get("name") or "").strip()
-            team_name = (p.get("current_team") or "").strip()
-            label = f"{raw_name} ({team_name})" if team_name else raw_name
-            out.append({
-                "id": p["id"],
-                "label": label,
-                "name": raw_name,
-                "entity_type": "player",
-                "sport": s,
-                "team": team_name or None,
-                "team_abbr": p.get("team_abbr"),
-            })
-        return out[:limit]
-    if et == "team":
-        loc = search_teams(s, q, limit)
-        for t in loc:
-            raw_name = (t.get("name") or "").strip()
-            label = raw_name or t.get("current_league") or ""
-            out.append({
-                "id": t["id"],
-                "label": label,
-                "name": raw_name,
-                "entity_type": "team",
-                "sport": s,
-                "league": (t.get("current_league") or "").strip() or None,
-                "team_abbr": None,
-            })
-        return out[:limit]
-    return []
 
 
 def purge_sport(sport: str):
