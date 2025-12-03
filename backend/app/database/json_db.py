@@ -334,14 +334,3 @@ def search_teams(sport: str, q: str, limit: int = 10) -> List[Dict[str, Optional
             "current_league": c.get("current_league"),
         })
     return result
-
-
-# Backward compatibility aliases
-def local_search_players(sport: str, q: str, limit: int) -> List[Dict[str, Optional[str]]]:
-    """Backward-compatible alias for search_players."""
-    return search_players(sport, q, limit)
-
-
-def local_search_teams(sport: str, q: str, limit: int) -> List[Dict[str, Optional[str]]]:
-    """Backward-compatible alias for search_teams."""
-    return search_teams(sport, q, limit)
