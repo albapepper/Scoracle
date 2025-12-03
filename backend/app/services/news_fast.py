@@ -8,7 +8,7 @@ import unicodedata
 import re
 import feedparser  # faster and robust RSS parser
 
-from app.database.local_dbs import list_all_players, list_all_teams, get_player_by_id as local_get_player_by_id, get_team_by_id as local_get_team_by_id
+from app.database.json_db import list_all_players, list_all_teams, get_player_by_id as local_get_player_by_id, get_team_by_id as local_get_team_by_id
 from app.services.cache import widget_cache
 from app.services.apisports import apisports_service
 

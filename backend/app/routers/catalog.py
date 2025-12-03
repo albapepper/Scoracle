@@ -8,16 +8,16 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, Response
 
-from app.database.local_dbs import (
-    _db_path_for_sport,
+from app.database.json_db import (
+    _data_file_path,
     _first_last_only,
     _strip_specials_preserve_case,
     get_player_by_id as local_get_player_by_id,
     get_team_by_id as local_get_team_by_id,
     list_all_players,
     list_all_teams,
-    local_search_players,
-    local_search_teams,
+    search_players as local_search_players,
+    search_teams as local_search_teams,
 )
 from app.routers._sport_helpers import hash_bootstrap_payload
 
@@ -107,21 +107,21 @@ async def sync_teams(sport: str):
 @router.get("/bootstrap")
 async def bootstrap(sport: str, request: Request, since: str | None = Query(None)):
     s = sport.upper()
-    db_path = _db_path_for_sport(s)
-    db_exists = os.path.exists(db_path)
-    logger.info("[bootstrap] sport=%s db_path=%s exists=%s", s, db_path, db_exists)
+    data_path = _data_file_path(s)
+    data_exists = os.path.exists(data_path)
+    logger.info("[bootstrap] sport=%s data_path=%s exists=%s", s, data_path, data_exists)
     try:
         players_raw = list_all_players(s)
         teams_raw = list_all_teams(s)
     except Exception as e:
-        logger.exception("[bootstrap] Failed to read local DB for sport=%s db_path=%s", s, db_path)
+        logger.exception("[bootstrap] Failed to read data for sport=%s data_path=%s", s, data_path)
         return JSONResponse(
             status_code=500,
             content={
-                "error": "Failed to read local DB",
+                "error": "Failed to read data",
                 "sport": s,
-                "db_path": db_path,
-                "exists": db_exists,
+                "data_path": data_path,
+                "exists": data_exists,
                 "detail": str(e),
             },
         )

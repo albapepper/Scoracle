@@ -1,12 +1,11 @@
-"""Database package aggregating local SQLite helpers and seed utilities."""
-from .local_dbs import (
+"""Database package using JSON-based storage for serverless environments."""
+from .json_db import (
     get_player_by_id,
     get_team_by_id,
     search_players,
     search_teams,
-    upsert_players,
-    upsert_teams,
-    purge_sport,
+    list_all_players,
+    list_all_teams,
 )
 
 __all__ = [
@@ -14,7 +13,6 @@ __all__ = [
     'get_team_by_id',
     'search_players',
     'search_teams',
-    'upsert_players',
-    'upsert_teams',
-    'purge_sport',
+    'list_all_players',
+    'list_all_teams',
 ]

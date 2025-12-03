@@ -7,11 +7,11 @@ from typing import Any, Dict, List
 
 from fastapi import HTTPException
 
-from app.database.local_dbs import (
+from app.database.json_db import (
     get_player_by_id,
     get_team_by_id,
-    local_search_players,
-    local_search_teams,
+    search_players as local_search_players,
+    search_teams as local_search_teams,
 )
 from app.services.apisports import apisports_service
 

@@ -5,7 +5,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.database.local_dbs import local_search_players, local_search_teams
+from app.database.json_db import search_players as local_search_players, search_teams as local_search_teams
 from app.services.apisports import apisports_service
 
 router = APIRouter(tags=["sports"])

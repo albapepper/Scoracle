@@ -2,7 +2,7 @@ from typing import Optional, Dict, Any
 from fastapi import HTTPException
 
 from app.services.apisports import apisports_service
-from app.database.local_dbs import get_player_by_id as local_get_player_by_id
+from app.database.json_db import get_player_by_id as local_get_player_by_id
 
 
 async def build_player_widget_payload(sport: str, player_id: str, season: Optional[str]) -> Dict[str, Any]:

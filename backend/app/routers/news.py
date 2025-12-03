@@ -39,17 +39,17 @@ async def mentions_fast_by_entity(entity_type: str, entity_id: str, sport: Optio
 @router.get("/news/debug")
 def news_debug():
     """Debug endpoint to check service status."""
-    from app.database.local_dbs import _candidate_db_dirs, _db_path_for_sport
+    from app.database.json_db import _get_data_dir, _data_file_path
     
     debug_info = {
         "vercel_env": os.getenv("VERCEL", "0"),
         "cwd": os.getcwd(),
-        "candidate_db_dirs": _candidate_db_dirs(),
+        "data_dir": str(_get_data_dir()),
     }
     
     for sport in ["NBA", "NFL", "FOOTBALL"]:
-        db_path = _db_path_for_sport(sport)
-        debug_info[f"db_path_{sport.lower()}"] = db_path
-        debug_info[f"db_exists_{sport.lower()}"] = os.path.exists(db_path)
+        data_path = _data_file_path(sport)
+        debug_info[f"data_path_{sport.lower()}"] = data_path
+        debug_info[f"data_exists_{sport.lower()}"] = os.path.exists(data_path)
     
     return debug_info
