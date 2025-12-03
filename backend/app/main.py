@@ -16,6 +16,8 @@ from app.routers import widgets, sports, players, teams, catalog, news, twitter,
 from app.utils.middleware import CorrelationIdMiddleware, RateLimitMiddleware
 from app.utils.errors import build_error_payload, map_status_to_code
 
+# Configure logging if not already configured
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
