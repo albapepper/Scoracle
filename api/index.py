@@ -82,6 +82,7 @@ except Exception as e:
 # Fallback handler if main app failed to load
 def fallback_handler(event, context):
     """Emergency fallback handler that returns diagnostic info."""
+    import traceback
     return {
         "statusCode": 500,
         "headers": {"Content-Type": "application/json"},
@@ -89,6 +90,7 @@ def fallback_handler(event, context):
             "error": "Application failed to start",
             "diagnostics": STARTUP_DIAGNOSTICS,
             "import_error": IMPORT_ERROR,
+            "handler_type": str(type(handler)) if 'handler' in globals() else "handler not defined",
         }, indent=2)
     }
 
@@ -96,4 +98,13 @@ def fallback_handler(event, context):
 if handler is None:
     print("[api/index.py] Using fallback handler due to import errors", file=sys.stderr)
     handler = fallback_handler
+
+# Export handler for Vercel
+# Vercel Python runtime looks for a 'handler' variable at module level
+# Mangum adapter wraps FastAPI app for AWS Lambda/Vercel compatibility
+__all__ = ["handler"]
+
+# Debug: Print handler type for troubleshooting
+print(f"[api/index.py] Handler type: {type(handler)}", file=sys.stderr)
+print(f"[api/index.py] Handler is callable: {callable(handler)}", file=sys.stderr)
 
