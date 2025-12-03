@@ -24,6 +24,13 @@ venv/
 .venv/
 ENV/
 
+# SQLite databases (not needed - using JSON)
+*.sqlite
+*.sqlite3
+*.db
+instance/
+backend/instance/
+
 # Node.js / React
 node_modules/
 /frontend/build
