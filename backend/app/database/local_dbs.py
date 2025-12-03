@@ -426,6 +426,21 @@ def search_teams(sport: str, q: str, limit: int) -> List[Dict[str, Optional[str]
         conn.close()
 
 
+def local_search_players(sport: str, q: str, limit: int) -> List[Dict[str, Optional[str]]]:
+    """Backward-compatible alias for search_players used by older imports.
+
+    The project historically exposed these names; some routers still import
+    `local_search_players` / `local_search_teams`. Provide thin wrappers
+    so existing call-sites keep working.
+    """
+    return search_players(sport, q, limit)
+
+
+def local_search_teams(sport: str, q: str, limit: int) -> List[Dict[str, Optional[str]]]:
+    """Backward-compatible alias for search_teams used by older imports."""
+    return search_teams(sport, q, limit)
+
+
 def purge_sport(sport: str):
     """Delete all rows for the sport's local DB (players and teams)."""
     _init_if_needed(sport)
