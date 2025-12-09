@@ -5,22 +5,20 @@ import { useTranslation } from 'react-i18next';
 import { useThemeMode, getThemeColors } from '../../theme';
 import { useSportContext } from '../../context/SportContext';
 import Widget from '../../components/Widget';
-import { useFastNewsByEntity } from '../../features/news/useFastNews';
+import { useEntity } from '../../features/entities/hooks/useEntity';
 import { getEntityNameFromUrl, buildEntityUrl } from '../../utils/entityName';
 
 type Params = { entityType?: string; entityId?: string };
 
 function MentionsPage() {
   const { entityType, entityId } = useParams<Params>();
-  const type = (entityType || '').toLowerCase();
-    const { activeSport, changeSport: setSport } = useSportContext();
+  const type = (entityType || '').toLowerCase() as 'player' | 'team';
+  const { activeSport, changeSport: setSport } = useSportContext();
   const { t } = useTranslation();
   const { colorScheme } = useThemeMode();
   const colors = getThemeColors(colorScheme);
 
-  const [error, setError] = useState<string>('');
   const [entityName, setEntityName] = useState<string>('');
-
   const { search } = useLocation();
   
   useEffect(() => {
@@ -33,45 +31,43 @@ function MentionsPage() {
     } catch (_) {}
   }, [search, setSport]);
 
-  // Use fast news endpoint for both articles and rankings - uses entity-based endpoint
-  const { data: fastNews, isLoading: fastLoading, error: fastError } = useFastNewsByEntity({
-    entityType: type,
+  // Use unified entity API - gets entity info, widget, and news in one call
+  const { data: entityData, isLoading, error } = useEntity({
+    entityType: type === 'team' ? 'team' : 'player',
     entityId: entityId || '',
-    mode: (type === 'player' ? 'player' : (type === 'team' ? 'team' : 'auto')) as any,
-    hours: 48,
+    includeWidget: true,
+    includeNews: true,
     enabled: !!entityType && !!entityId,
   });
 
-  // Build widget URL for basic widget
-  const widgetUrl = entityType && entityId 
-    ? `/api/v1/${activeSport}/${entityType}s/${entityId}/widget/basic`
-    : '';
+  // Use entity name from API if available
+  const displayName = entityData?.entity?.name || entityName || `${entityType} ${entityId}`;
 
-  useEffect(() => {
-    if (fastError) setError(t('mentions.failedLoad'));
-    else setError('');
-  }, [fastError, t]);
-
-  const displayName = entityName || `${entityType} ${entityId}`;
-
+  // Sort mentions by date
   const mentions = useMemo(() => {
-    const arr = (fastNews as any)?.articles || [];
+    const arr = entityData?.news?.articles || [];
     return [...arr].sort((a, b) => {
       const dateA = a.pub_date ? new Date(a.pub_date).getTime() : 0;
       const dateB = b.pub_date ? new Date(b.pub_date).getTime() : 0;
       return dateB - dateA;
     });
-  }, [fastNews]);
+  }, [entityData?.news?.articles]);
 
   return (
     <Container size="md" py="xl">
       <Stack gap="xl">
-        {/* Entity Info Card - Always visible, loads immediately */}
+        {/* Entity Info Card */}
         <Card shadow="sm" p="lg" radius="md" withBorder>
           <Stack gap="lg" align="center">
-            <Title order={2} style={{ color: colors.text.primary, textAlign: 'center' }}>{displayName}</Title>
+            <Title order={2} style={{ color: colors.text.primary, textAlign: 'center' }}>
+              {displayName}
+            </Title>
             <Box w="100%" style={{ display: 'flex', justifyContent: 'center' }}>
-              {widgetUrl && <Widget url={widgetUrl} />}
+              <Widget 
+                data={entityData?.widget}
+                loading={isLoading}
+                error={error?.message}
+              />
             </Box>
             <Button
               component={Link}
@@ -85,7 +81,7 @@ function MentionsPage() {
           </Stack>
         </Card>
 
-        {/* Articles Card - Shows immediately with loading state inside */}
+        {/* Articles Card */}
         <Card shadow="sm" p="lg" radius="md" withBorder>
           <Tabs defaultValue="articles">
             <Tabs.List justify="center">
@@ -94,20 +90,20 @@ function MentionsPage() {
               <Tabs.Tab value="reddit">{t('mentions.redditTab', 'Reddit')}</Tabs.Tab>
             </Tabs.List>
             <Tabs.Panel value="articles" pt="md">
-              {fastLoading ? (
+              {isLoading ? (
                 <Stack gap="md" align="center" py="xl">
                   <Loader size="md" color={colors.ui.primary} />
                   <Text c="dimmed">{t('mentions.loading')}</Text>
                 </Stack>
               ) : error ? (
                 <Stack gap="md" align="center" py="xl">
-                  <Text c={colors.status.error}>{error}</Text>
+                  <Text c={colors.status.error}>{error.message}</Text>
                 </Stack>
               ) : mentions.length === 0 ? (
                 <Text>{t('mentions.none')}</Text>
               ) : (
                 <Stack gap="lg">
-                  {mentions.map((mention: any, index: number) => (
+                  {mentions.map((mention, index) => (
                     <Card key={`${mention.link || index}`} shadow="sm" p="lg" radius="md" withBorder>
                       <Stack gap="sm">
                         <Group align="flex-start" gap="lg">
@@ -116,8 +112,18 @@ function MentionsPage() {
                           </Stack>
                         </Group>
                         <Group justify="space-between" align="center" mt="xs" gap="md">
-                          <Text size="sm" c="dimmed">{[mention.source, mention.pub_date ? new Date(mention.pub_date).toLocaleDateString() : ''].filter(Boolean).join(' • ')}</Text>
-                          <Button component="a" href={mention.link} target="_blank" rel="noopener noreferrer" variant="outline" size="compact-sm" style={{ borderColor: colors.ui.primary, color: colors.ui.primary }}>
+                          <Text size="sm" c="dimmed">
+                            {[mention.source, mention.pub_date ? new Date(mention.pub_date).toLocaleDateString() : ''].filter(Boolean).join(' • ')}
+                          </Text>
+                          <Button 
+                            component="a" 
+                            href={mention.link} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            variant="outline" 
+                            size="compact-sm" 
+                            style={{ borderColor: colors.ui.primary, color: colors.ui.primary }}
+                          >
                             {t('common.link')}
                           </Button>
                         </Group>

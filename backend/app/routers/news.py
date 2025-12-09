@@ -31,9 +31,35 @@ def mentions_fast(query: str = Query(...), sport: str = Query("NBA"), hours: int
 @router.get("/news/fast/{entity_type}/{entity_id}")
 async def mentions_fast_by_entity(entity_type: str, entity_id: str, sport: Optional[str] = Query(None), hours: int = Query(48), mode: str = Query("auto")):
     """High-performance mentions endpoint that resolves entity_id to name."""
-    resolved_name = await news_fast.resolve_entity_name(entity_type, entity_id, sport)
-    result = news_fast.fast_mentions(query=resolved_name.strip(), sport=(sport or "NBA").upper(), hours=max(1, min(hours, 168)), mode=mode.lower())
-    return result
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    sport_upper = (sport or "NBA").upper()
+    
+    try:
+        resolved_name = await news_fast.resolve_entity_name(entity_type, entity_id, sport)
+        logger.info(f"[news/fast] Resolved {entity_type}/{entity_id} to '{resolved_name}'")
+    except Exception as e:
+        logger.error(f"[news/fast] Failed to resolve {entity_type}/{entity_id}: {e}")
+        resolved_name = entity_id  # Fallback to raw ID
+    
+    try:
+        result = news_fast.fast_mentions(
+            query=resolved_name.strip(), 
+            sport=sport_upper, 
+            hours=max(1, min(hours, 168)), 
+            mode=mode.lower()
+        )
+        return result
+    except Exception as e:
+        logger.error(f"[news/fast] fast_mentions failed: {e}")
+        # Return empty result instead of crashing
+        return {
+            "mode": mode.lower(),
+            "query": resolved_name,
+            "articles": [],
+            "error": str(e),
+        }
 
 
 @router.get("/news/debug")

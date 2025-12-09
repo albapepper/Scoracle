@@ -76,44 +76,64 @@ def local_team_profile_payload(sport: str, team_id: str) -> Dict[str, Any]:
 
 async def get_player_info(sport: str, player_id: str) -> Dict[str, Any]:
     """Fetch player profile for widget rendering."""
+    import logging
+    logger = logging.getLogger(__name__)
     s = sport.upper()
-    if s == "NBA":
-        try:
+    
+    if s not in ("NBA", "FOOTBALL", "NFL"):
+        raise HTTPException(status_code=501, detail=f"Player widget not implemented for sport {s}")
+    
+    # Try API-Sports first
+    try:
+        if s == "NBA":
             return await apisports_service.get_nba_player_profile(player_id)
-        except Exception:
-            return local_player_profile_payload(s, player_id)
-    if s == "FOOTBALL":
-        try:
+        if s == "FOOTBALL":
             return await apisports_service.get_football_player_profile(player_id)
-        except Exception:
-            return local_player_profile_payload(s, player_id)
-    if s == "NFL":
-        try:
+        if s == "NFL":
             return await apisports_service.get_nfl_player_profile(player_id)
-        except Exception:
-            return local_player_profile_payload(s, player_id)
-    raise HTTPException(status_code=501, detail=f"Player widget not implemented for sport {s}")
+    except Exception as e:
+        logger.warning(f"[get_player_info] API-Sports failed for {s}/{player_id}: {e}")
+    
+    # Fallback to local DB
+    try:
+        return local_player_profile_payload(s, player_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[get_player_info] Local DB failed for {s}/{player_id}: {e}")
+        # Return minimal data rather than crash
+        return {"id": player_id, "name": f"Player {player_id}", "firstname": None, "lastname": None}
 
 
 async def get_team_info(sport: str, team_id: str) -> Dict[str, Any]:
     """Fetch team profile for widget rendering."""
+    import logging
+    logger = logging.getLogger(__name__)
     s = sport.upper()
-    if s == "NBA":
-        try:
+    
+    if s not in ("NBA", "FOOTBALL", "NFL"):
+        raise HTTPException(status_code=501, detail=f"Team widget not implemented for sport {s}")
+    
+    # Try API-Sports first
+    try:
+        if s == "NBA":
             return await apisports_service.get_nba_team_profile(team_id)
-        except Exception:
-            return local_team_profile_payload(s, team_id)
-    if s == "FOOTBALL":
-        try:
+        if s == "FOOTBALL":
             return await apisports_service.get_football_team_profile(team_id)
-        except Exception:
-            return local_team_profile_payload(s, team_id)
-    if s == "NFL":
-        try:
+        if s == "NFL":
             return await apisports_service.get_nfl_team_profile(team_id)
-        except Exception:
-            return local_team_profile_payload(s, team_id)
-    raise HTTPException(status_code=501, detail=f"Team widget not implemented for sport {s}")
+    except Exception as e:
+        logger.warning(f"[get_team_info] API-Sports failed for {s}/{team_id}: {e}")
+    
+    # Fallback to local DB
+    try:
+        return local_team_profile_payload(s, team_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[get_team_info] Local DB failed for {s}/{team_id}: {e}")
+        # Return minimal data rather than crash
+        return {"id": team_id, "name": f"Team {team_id}"}
 
 
 async def get_player_stats(sport: str, player_id: str, season: str | None = None) -> Dict[str, Any]:

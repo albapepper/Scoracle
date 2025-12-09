@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
 
 from app.config import settings
-from app.routers import widgets, sports, players, teams, catalog, news, twitter, reddit
+from app.routers import widgets, sports, players, teams, catalog, news, twitter, reddit, entities
 from app.utils.middleware import CorrelationIdMiddleware, RateLimitMiddleware
 from app.utils.errors import build_error_payload, map_status_to_code
 
@@ -66,7 +66,10 @@ app.state.rate_limit = (
     int(settings.RATE_LIMIT_BURST),
 )
 
-# Routers
+# Routers - New unified entity router first (preferred)
+app.include_router(entities.router, prefix=settings.API_V1_STR)
+
+# Legacy routers - kept for backwards compatibility
 app.include_router(widgets.router, prefix=settings.API_V1_STR)
 app.include_router(sports.router, prefix=settings.API_V1_STR)
 app.include_router(players.router, prefix=settings.API_V1_STR)
@@ -89,12 +92,13 @@ async def root_index():
         "name": settings.PROJECT_NAME,
         "version": settings.PROJECT_VERSION,
         "routers": [
-            "widgets",
-            "sports",
-            "players",
-            "teams",
+            "entities (unified - use this)",
+            "widgets (legacy)",
+            "sports (legacy)",
+            "players (legacy)",
+            "teams (legacy)",
             "catalog",
-            "news",
+            "news (legacy)",
             "twitter",
             "reddit",
         ],

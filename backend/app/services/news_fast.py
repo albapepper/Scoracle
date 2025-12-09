@@ -119,13 +119,21 @@ def _get_matchers(sport: str) -> Tuple[AliasMatcher, AliasMatcher]:
     if cached is not None:
         return cached[0], cached[1]
 
-    p_aliases, c_aliases = _load_aliases_for_sport(s)
-    P = _build_matcher(p_aliases)
-    C = _build_matcher(c_aliases)
-    widget_cache.set(cache_key, (P, C), ttl=3600)
-    _PLAYER_MATCHERS[s] = P
-    _CLUB_MATCHERS[s] = C
-    return P, C
+    try:
+        p_aliases, c_aliases = _load_aliases_for_sport(s)
+        P = _build_matcher(p_aliases)
+        C = _build_matcher(c_aliases)
+        widget_cache.set(cache_key, (P, C), ttl=3600)
+        _PLAYER_MATCHERS[s] = P
+        _CLUB_MATCHERS[s] = C
+        return P, C
+    except Exception as e:
+        # If SQLite fails (e.g., in serverless), return empty matchers
+        # News will still work, just without entity detection
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to load entity matchers for {s}: {e}")
+        empty = AliasMatcher(alias_map={}, alias_entries=[])
+        return empty, empty
 
 
 def _filter_recent(entries: List[Any], hours: int = 48) -> List[Any]:
