@@ -49,7 +49,8 @@ const DEFAULT_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
  */
 export async function getLastSyncTimestamp(sport: SportCode): Promise<number | null> {
   try {
-    const key = `${SYNC_META_KEY_PREFIX}${sport}`;
+    const sportUpper = sport.toUpperCase();
+    const key = `${SYNC_META_KEY_PREFIX}${sportUpper}`;
     const meta = await getMeta<{ timestamp: number; datasetVersion: string }>(key);
     return meta?.timestamp || null;
   } catch (error) {
@@ -63,7 +64,8 @@ export async function getLastSyncTimestamp(sport: SportCode): Promise<number | n
  */
 export async function getLastDatasetVersion(sport: SportCode): Promise<string | null> {
   try {
-    const key = `${SYNC_META_KEY_PREFIX}${sport}`;
+    const sportUpper = sport.toUpperCase();
+    const key = `${SYNC_META_KEY_PREFIX}${sportUpper}`;
     const meta = await getMeta<{ timestamp: number; datasetVersion: string }>(key);
     return meta?.datasetVersion || null;
   } catch (error) {
@@ -109,12 +111,11 @@ export async function syncSport(sport: SportCode, force: boolean = false): Promi
       if (lastVersion && lastSync) {
         const age = Date.now() - lastSync;
         if (age < DEFAULT_MAX_AGE_MS) {
-          // Try conditional request
+          // Try conditional request with custom validateStatus to allow 304
           try {
             const response = await http.raw.get(`${sportUpper.toLowerCase()}/bootstrap`, {
-              headers: {
-                'If-None-Match': lastVersion,
-              },
+              headers: { 'If-None-Match': lastVersion },
+              validateStatus: (status) => (status >= 200 && status < 300) || status === 304,
             });
             
             if (response.status === 304) {

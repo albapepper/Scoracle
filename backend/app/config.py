@@ -18,18 +18,30 @@ class Settings(BaseSettings):
 	API_V1_STR: str = "/api/v1"
 
 	# CORS Configuration
+	# Set BACKEND_CORS_ORIGINS env var as comma-separated URLs for production
+	# e.g., "https://scoracle.vercel.app,https://your-domain.com"
 	BACKEND_CORS_ORIGINS: List[Union[str, AnyHttpUrl]] = [
 		"http://localhost:3000",
 		"http://localhost:8000",
+		"http://localhost:5173",
 	]
 
 	@validator("BACKEND_CORS_ORIGINS", pre=True)
 	def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
+		# Default origins for development
+		defaults = [
+			"http://localhost:3000",
+			"http://localhost:8000",
+			"http://localhost:5173",
+		]
 		if isinstance(v, str) and not v.startswith("["):
-			return [i.strip() for i in v.split(",")]
-		elif isinstance(v, (list, str)):
-			return v
-		raise ValueError(v)
+			# Parse comma-separated string from env var
+			parsed = [i.strip() for i in v.split(",") if i.strip()]
+			# Merge with defaults, avoiding duplicates
+			return list(dict.fromkeys(defaults + parsed))
+		elif isinstance(v, list):
+			return list(dict.fromkeys(defaults + v))
+		return defaults
 
 	# API-Sports.com key (required provider)
 	API_SPORTS_KEY: str = os.getenv("API_SPORTS_KEY", "")

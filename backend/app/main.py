@@ -4,6 +4,7 @@ Mounts all routers and configures lifespan resources.
 """
 from contextlib import asynccontextmanager
 import logging
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +20,9 @@ from app.utils.errors import build_error_payload, map_status_to_code
 # Configure logging if not already configured
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Detect Vercel environment for CORS configuration
+IS_VERCEL = os.getenv("VERCEL") == "1"
 
 
 @asynccontextmanager
@@ -41,11 +45,16 @@ app = FastAPI(
 # Middleware
 app.add_middleware(GZipMiddleware, minimum_size=500)
 app.add_middleware(CorrelationIdMiddleware)
-app.add_middleware(RateLimitMiddleware)
+# Only enable rate limiting in non-Vercel environments (Vercel has its own)
+if not IS_VERCEL:
+    app.add_middleware(RateLimitMiddleware)
+
+# CORS: In Vercel, allow all origins for preview deployments; otherwise use config
+cors_origins = ["*"] if IS_VERCEL else settings.BACKEND_CORS_ORIGINS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS,
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials=not IS_VERCEL,  # credentials not supported with "*"
     allow_methods=["*"],
     allow_headers=["*"],
 )
