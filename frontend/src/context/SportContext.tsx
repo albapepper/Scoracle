@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useMemo, useState, useCallback } from 'react';
-import { useIndexedDBSync } from '../hooks/useIndexedDBSync';
+import React, { createContext, useContext, useMemo, useState, useCallback, useEffect } from 'react';
 import { mapSportToBackendCode } from '../utils/sportMapping';
+import { preloadSport } from '../features/autocomplete/dataLoader';
 
 export interface SportInfo { id: string; display: string }
 export interface SportContextValue { activeSport: string; sports: SportInfo[]; changeSport: (id: string) => void }
@@ -18,20 +18,15 @@ export function SportContextProvider({ children }: { children: React.ReactNode }
   const [activeSport, setActiveSport] = useState<string>('football');
   const sports = DEFAULT_SPORTS;
 
-  // Get backend sport code for syncing
-  const backendSportCode = mapSportToBackendCode(activeSport);
-  
-  // Auto-sync IndexedDB when sport changes (loads from bundled JSON files)
-  // Sync happens automatically in the background - no need to track status here
-  useIndexedDBSync({
-    sport: backendSportCode,
-    autoSync: true,
-  });
+  // Preload autocomplete data when sport changes
+  useEffect(() => {
+    const backendCode = mapSportToBackendCode(activeSport);
+    preloadSport(backendCode);
+  }, [activeSport]);
 
   const changeSport = useCallback((sportId: string) => {
     if (sports.some((s) => s.id === sportId)) {
       setActiveSport(sportId);
-      // Sync will be triggered automatically by useIndexedDBSync hook
     }
   }, [sports]);
 

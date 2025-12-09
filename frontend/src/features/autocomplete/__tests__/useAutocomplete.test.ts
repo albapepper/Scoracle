@@ -1,52 +1,23 @@
-import { renderHook, act } from '@testing-library/react';
-import { waitFor } from '@testing-library/react';
-// Correct relative path: one level up from __tests__ to feature root
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAutocomplete } from '../useAutocomplete';
+import * as dataLoader from '../dataLoader';
 
-// Mock Worker for test environment
-class MockWorker {
-  handlers: Record<string, any>;
-  onmessage: ((event: MessageEvent) => void) | null = null;
+// Mock the dataLoader module
+jest.mock('../dataLoader', () => ({
+  searchPlayers: jest.fn(),
+  searchTeams: jest.fn(),
+  preloadSport: jest.fn(),
+}));
 
-  constructor() {
-    this.handlers = {};
-  }
-
-  postMessage(msg: { type: string; query: string; requestId: number; entityType: string; sport: string }) {
-    // Simulate async search resolution
-    setTimeout(() => {
-      if (msg.type === 'search') {
-        const { query, requestId, entityType, sport } = msg;
-        if (query.trim().length < 2) {
-          if (this.onmessage) {
-            this.onmessage({ data: { type: 'results', requestId, results: [] } } as MessageEvent);
-          }
-        } else {
-          const fake = [
-            entityType === 'player'
-              ? { id: 1, label: 'Test Player', name: 'Test Player', entity_type: 'player', sport }
-              : { id: 10, label: 'Test Team', name: 'Test Team', entity_type: 'team', sport },
-          ];
-          if (this.onmessage) {
-            this.onmessage({ data: { type: 'results', requestId, results: fake } } as MessageEvent);
-          }
-        }
-      }
-    }, 5);
-  }
-
-  addEventListener(type: string, handler: (event: MessageEvent) => void) {
-    if (type === 'message') this.onmessage = handler;
-  }
-
-  removeEventListener() {}
-}
-
-// Patch global Worker
-(global as any).Worker = MockWorker;
+const mockSearchPlayers = dataLoader.searchPlayers as jest.Mock;
+const mockSearchTeams = dataLoader.searchTeams as jest.Mock;
 
 beforeEach(() => {
   jest.useFakeTimers();
+  mockSearchPlayers.mockReset();
+  mockSearchTeams.mockReset();
+  mockSearchPlayers.mockResolvedValue([]);
+  mockSearchTeams.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -65,37 +36,103 @@ describe('useAutocomplete', () => {
   });
 
   test('returns results for valid query', async () => {
+    mockSearchTeams.mockResolvedValue([
+      { id: 10, name: 'Test Team', normalizedName: 'test team', score: 100 }
+    ]);
+
     const { result } = renderHook(() => useAutocomplete({ sport: 'NBA', entityType: 'team', debounceMs: 0 }));
+    
     act(() => {
       result.current.setQuery('te');
     });
-    // Flush debounce (0ms) then worker (5ms)
-    act(() => {
-      jest.advanceTimersByTime(6);
+    
+    // Flush debounce timer
+    await act(async () => {
+      jest.advanceTimersByTime(10);
     });
+    
     await waitFor(() => {
       expect(result.current.results.length).toBe(1);
     });
+    
     expect(result.current.results[0].label).toBe('Test Team');
+    expect(result.current.results[0].entity_type).toBe('team');
+  });
+
+  test('searches both players and teams when entityType is both', async () => {
+    mockSearchPlayers.mockResolvedValue([
+      { id: 1, name: 'Test Player', normalizedName: 'test player', score: 100, team: 'Lakers' }
+    ]);
+    mockSearchTeams.mockResolvedValue([
+      { id: 10, name: 'Test Team', normalizedName: 'test team', score: 90 }
+    ]);
+
+    const { result } = renderHook(() => useAutocomplete({ sport: 'NBA', entityType: 'both', debounceMs: 0 }));
+    
+    act(() => {
+      result.current.setQuery('test');
+    });
+    
+    await act(async () => {
+      jest.advanceTimersByTime(10);
+    });
+    
+    await waitFor(() => {
+      expect(result.current.results.length).toBe(2);
+    });
+    
+    expect(mockSearchPlayers).toHaveBeenCalled();
+    expect(mockSearchTeams).toHaveBeenCalled();
   });
 
   test('updates loading state during search', async () => {
+    mockSearchPlayers.mockImplementation(() => new Promise(resolve => {
+      setTimeout(() => resolve([{ id: 1, name: 'Player', normalizedName: 'player', score: 100 }]), 50);
+    }));
+
     const { result } = renderHook(() => useAutocomplete({ sport: 'NBA', entityType: 'player', debounceMs: 0 }));
+    
     act(() => {
       result.current.setQuery('pla');
     });
-    // Immediately after setQuery, loading still false (timer not fired yet)
+    
+    // Initially not loading (debounce not fired)
     expect(result.current.loading).toBe(false);
-    act(() => {
-      jest.advanceTimersByTime(1); // fire debounce 0ms
+    
+    // Fire debounce
+    await act(async () => {
+      jest.advanceTimersByTime(1);
     });
+    
     expect(result.current.loading).toBe(true);
-    act(() => {
-      jest.advanceTimersByTime(6); // fire worker response
+    
+    // Complete the search
+    await act(async () => {
+      jest.advanceTimersByTime(100);
     });
+    
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
   });
-});
 
+  test('handles search errors gracefully', async () => {
+    mockSearchPlayers.mockRejectedValue(new Error('Network error'));
+
+    const { result } = renderHook(() => useAutocomplete({ sport: 'NBA', entityType: 'player', debounceMs: 0 }));
+    
+    act(() => {
+      result.current.setQuery('test');
+    });
+    
+    await act(async () => {
+      jest.advanceTimersByTime(10);
+    });
+    
+    await waitFor(() => {
+      expect(result.current.error).toBe('Network error');
+    });
+    
+    expect(result.current.results).toEqual([]);
+  });
+});

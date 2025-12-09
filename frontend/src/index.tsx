@@ -5,12 +5,6 @@ import App from './app/App';
 import './styles/global.css';
 import '@mantine/core/styles.css';
 import './i18n';
-import { initializeIndexedDB } from './services/indexedDB';
-
-// Initialize IndexedDB early
-initializeIndexedDB().catch((error) => {
-  console.error('Failed to initialize IndexedDB:', error);
-});
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 root.render(

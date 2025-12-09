@@ -5,7 +5,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
  * 
  * - Vercel CDN handles caching at the edge
  * - Rate limiting is handled server-side
- * - ETag handling only where explicitly needed (syncService)
+ * - Simple Axios wrapper for API calls
  */
 
 let lastCorrelationId: string | null = null;
@@ -68,7 +68,6 @@ export const http = {
   },
   /**
    * Raw Axios instance for advanced use cases (e.g., custom headers, status handling)
-   * Used by syncService for ETag-based conditional requests
    */
   raw: api,
   getLastCorrelationId: () => lastCorrelationId,
