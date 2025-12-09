@@ -27,12 +27,13 @@ export default function EntityPage() {
     bottomRight: 'graph',
   });
 
-  // Use unified entity API
+  // Use unified entity API with enhanced data (photos, etc.)
   const { data: entityData, isLoading, error } = useEntity({
     entityType: type,
     entityId: entityId || '',
     includeWidget: true,
-    includeNews: false,  // News is shown on MentionsPage
+    includeEnhanced: true,  // Get photos, positions from API-Sports
+    includeNews: false,     // News is shown on MentionsPage
     enabled: !!entityId,
   });
 

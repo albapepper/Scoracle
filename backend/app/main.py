@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
 
 from app.config import settings
-from app.routers import widgets, sports, players, teams, catalog, news, twitter, reddit, entities
+from app.routers import entities, catalog, sports, twitter, reddit
 from app.utils.middleware import CorrelationIdMiddleware, RateLimitMiddleware
 from app.utils.errors import build_error_payload, map_status_to_code
 
@@ -66,18 +66,12 @@ app.state.rate_limit = (
     int(settings.RATE_LIMIT_BURST),
 )
 
-# Routers - New unified entity router first (preferred)
-app.include_router(entities.router, prefix=settings.API_V1_STR)
-
-# Legacy routers - kept for backwards compatibility
-app.include_router(widgets.router, prefix=settings.API_V1_STR)
-app.include_router(sports.router, prefix=settings.API_V1_STR)
-app.include_router(players.router, prefix=settings.API_V1_STR)
-app.include_router(teams.router, prefix=settings.API_V1_STR)
-app.include_router(catalog.router, prefix=settings.API_V1_STR)
-app.include_router(news.router, prefix=settings.API_V1_STR)
-app.include_router(twitter.router, prefix=settings.API_V1_STR)
-app.include_router(reddit.router, prefix=settings.API_V1_STR)
+# Routers
+app.include_router(entities.router, prefix=settings.API_V1_STR)  # Unified entity API
+app.include_router(catalog.router, prefix=settings.API_V1_STR)   # Static data/sync
+app.include_router(sports.router, prefix=settings.API_V1_STR)    # Sport switching
+app.include_router(twitter.router, prefix=settings.API_V1_STR)   # Twitter integration
+app.include_router(reddit.router, prefix=settings.API_V1_STR)    # Reddit integration
 
 
 @app.get("/health")
@@ -85,22 +79,17 @@ async def health():
     return {"status": "ok", "version": settings.PROJECT_VERSION}
 
 
-# Simple informational root
 @app.get("/")
 async def root_index():
     return {
         "name": settings.PROJECT_NAME,
         "version": settings.PROJECT_VERSION,
         "routers": [
-            "entities (unified - use this)",
-            "widgets (legacy)",
-            "sports (legacy)",
-            "players (legacy)",
-            "teams (legacy)",
-            "catalog",
-            "news (legacy)",
-            "twitter",
-            "reddit",
+            "entities - unified player/team/widget/news API",
+            "catalog - static data download",
+            "sports - sport configuration",
+            "twitter - Twitter integration",
+            "reddit - Reddit integration",
         ],
         "api_base": settings.API_V1_STR,
         "docs": "/api/docs",

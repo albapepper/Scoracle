@@ -31,11 +31,12 @@ function MentionsPage() {
     } catch (_) {}
   }, [search, setSport]);
 
-  // Use unified entity API - gets entity info, widget, and news in one call
+  // Use unified entity API - gets entity info, widget, enhanced data, and news
   const { data: entityData, isLoading, error } = useEntity({
     entityType: type === 'team' ? 'team' : 'player',
     entityId: entityId || '',
     includeWidget: true,
+    includeEnhanced: true,  // Get photos from API-Sports
     includeNews: true,
     enabled: !!entityType && !!entityId,
   });

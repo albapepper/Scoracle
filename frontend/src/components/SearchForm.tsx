@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Button, Card, Text, Stack, Group, Flex } from '@mantine/core';
 import { IconArrowUp } from '@tabler/icons-react';
 import { useSportContext } from '../context/SportContext';
-import apiSearch from '../features/search/api';
 import EntityAutocomplete from './EntityAutocomplete';
 import { useThemeMode, getThemeColors } from '../theme';
 import { useTranslation } from 'react-i18next';
 import type { AutocompleteResult } from '../features/autocomplete/types';
+import { searchData } from '../features/autocomplete/dataLoader';
 import './SearchForm.css';
 
 interface SearchFormProps {
@@ -33,25 +33,25 @@ export default function SearchForm({ inline = false }: SearchFormProps) {
       if (!query.trim() && !selected) {
         throw new Error(t('search.enterTerm'));
       }
+      
+      // If user selected from autocomplete, navigate directly
       if (selected) {
         const plainName = (selected.name || selected.label || '').trim();
         const entityType = selected.entity_type || 'player';
         navigate(`/mentions/${entityType}/${selected.id}?sport=${activeSport}&name=${encodeURIComponent(plainName)}`);
         return;
       }
-      // Fallback: if no selection, try searching both types
-      // Note: This should rarely happen since autocomplete should provide results
-      const playerResults = await (apiSearch as any).searchEntities(query, 'player', activeSport);
-      const teamResults = await (apiSearch as any).searchEntities(query, 'team', activeSport);
-      const allResults = [...(playerResults.results || []), ...(teamResults.results || [])];
       
-      if (allResults.length === 1) {
-        const only = allResults[0];
+      // Fallback: search local bundled data
+      const results = await searchData(activeSport, query.trim(), 10);
+      
+      if (results.length === 1) {
+        const only = results[0];
         const plainName = (only.name || only.label || query).trim();
         const entityType = only.entity_type || 'player';
         navigate(`/mentions/${entityType}/${only.id}?sport=${activeSport}&name=${encodeURIComponent(plainName)}`);
-      } else if (allResults.length > 1) {
-        const first = allResults[0];
+      } else if (results.length > 1) {
+        const first = results[0];
         const plainName = (first.name || first.label || query).trim();
         const entityType = first.entity_type || 'player';
         navigate(`/mentions/${entityType}/${first.id}?sport=${activeSport}&name=${encodeURIComponent(plainName)}`);

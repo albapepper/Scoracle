@@ -226,3 +226,65 @@ export function getLoadedStats(sport: string): { players: number; teams: number 
   };
 }
 
+/**
+ * Combined search for both players and teams
+ * Returns results in AutocompleteResult format
+ */
+export async function searchData(
+  sport: string,
+  query: string,
+  limit = 10
+): Promise<Array<{
+  id: number;
+  name: string;
+  label: string;
+  entity_type: 'player' | 'team';
+  team?: string;
+  league?: string;
+}>> {
+  // Search both in parallel
+  const [players, teams] = await Promise.all([
+    searchPlayers(sport, query, limit),
+    searchTeams(sport, query, limit),
+  ]);
+  
+  // Combine and sort by score
+  const combined: Array<{
+    id: number;
+    name: string;
+    label: string;
+    entity_type: 'player' | 'team';
+    team?: string;
+    league?: string;
+    score: number;
+  }> = [];
+  
+  for (const p of players) {
+    combined.push({
+      id: p.id,
+      name: p.name,
+      label: p.team ? `${p.name} (${p.team})` : p.name,
+      entity_type: 'player',
+      team: p.team,
+      score: p.score,
+    });
+  }
+  
+  for (const t of teams) {
+    combined.push({
+      id: t.id,
+      name: t.name,
+      label: t.league ? `${t.name} (${t.league})` : t.name,
+      entity_type: 'team',
+      league: t.league,
+      score: t.score,
+    });
+  }
+  
+  // Sort by score descending
+  combined.sort((a, b) => b.score - a.score);
+  
+  // Return without score field, limited
+  return combined.slice(0, limit).map(({ score, ...rest }) => rest);
+}
+
