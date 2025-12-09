@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
-import { Container, Title, Card, Button, Text, Stack, Box } from '@mantine/core';
+import { Container, Title, Card, Button, Text, Stack, Box, ActionIcon, Tooltip, SimpleGrid, Group, Flex } from '@mantine/core';
+import { IconChartBar, IconTable } from '@tabler/icons-react';
 import Widget from '../../components/Widget';
 import { useTranslation } from 'react-i18next';
 import { useSportContext } from '../../context/SportContext';
 import { useThemeMode, getThemeColors } from '../../theme';
 import { getEntityNameFromUrl, buildEntityUrl } from '../../utils/entityName';
+import './EntityPage.css';
 
 export default function EntityPage() {
 	const { entityType, entityId } = useParams();
@@ -17,6 +19,12 @@ export default function EntityPage() {
 	const colors = getThemeColors(colorScheme);
 
 	const [entityName, setEntityName] = useState<string>('');
+	const [viewModes, setViewModes] = useState<Record<string, 'graph' | 'table'>>({
+		topLeft: 'graph',
+		topRight: 'graph',
+		bottomLeft: 'graph',
+		bottomRight: 'graph',
+	});
 
 	useEffect(() => {
 		const name = getEntityNameFromUrl(search);
@@ -38,20 +46,88 @@ export default function EntityPage() {
 
 	const displayName = entityName || `${entityType} ${entityId}`;
 
+	const toggleView = (key: keyof typeof viewModes) => {
+		setViewModes((prev) => ({
+			...prev,
+			[key]: prev[key] === 'graph' ? 'table' : 'graph',
+		}));
+	};
+
+	const renderCard = (key: keyof typeof viewModes, title: string) => {
+		const isGraph = viewModes[key] === 'graph';
+		const icon = isGraph ? <IconTable size={18} /> : <IconChartBar size={18} />;
+		const tooltip = isGraph ? t('entityPage.switchToTable', 'Switch to table view') : t('entityPage.switchToGraph', 'Switch to graph view');
+
+		return (
+			<div className={`entity-flip-card-shell ${isGraph ? '' : 'is-flipped'}`} key={key}>
+				<div className="entity-flip-card-inner">
+					<Card shadow="sm" p="lg" radius="md" withBorder className="entity-flip-card-face entity-flip-card-front">
+						<Group justify="space-between" align="center" pb="xs">
+							<Title
+								order={4}
+								c={colorScheme === 'dark' ? colors.text.accent : undefined}
+							>
+								{title}
+							</Title>
+							<Tooltip label={tooltip} withArrow>
+								<ActionIcon
+									variant="light"
+									aria-label={tooltip}
+									onClick={() => toggleView(key)}
+									size="sm"
+								>
+									{icon}
+								</ActionIcon>
+							</Tooltip>
+						</Group>
+						<Text size="sm" c="dimmed">
+							{t('entityPage.graphComingSoon', 'Graph view coming soon')}
+						</Text>
+					</Card>
+
+					<Card shadow="sm" p="lg" radius="md" withBorder className="entity-flip-card-face entity-flip-card-back">
+						<Group justify="space-between" align="center" pb="xs">
+							<Title
+								order={4}
+								c={colorScheme === 'dark' ? colors.text.accent : undefined}
+							>
+								{title}
+							</Title>
+							<Tooltip label={tooltip} withArrow>
+								<ActionIcon
+									variant="light"
+									aria-label={tooltip}
+									onClick={() => toggleView(key)}
+									size="sm"
+								>
+									{icon}
+								</ActionIcon>
+							</Tooltip>
+						</Group>
+						<Text size="sm" c="dimmed">
+							{t('entityPage.tableComingSoon', 'Table view coming soon')}
+						</Text>
+					</Card>
+				</div>
+			</div>
+		);
+	};
+
 	return (
 		<Container size="lg" py="xl">
 							<div className="entity-page-columns">
 				{/* Entity Info Card - Perfect duplicate of MentionsPage top card */}
 				<Card shadow="sm" p="lg" radius="md" withBorder>
 					<Stack gap="lg" align="center">
-						<Title order={2} style={{ color: colors.text.primary, textAlign: 'center' }}>{displayName}</Title>
-						<Box w="100%" style={{ display: 'flex', justifyContent: 'center' }}>
+						<Title order={2} c={colors.text.primary} ta="center">{displayName}</Title>
+						<Flex w="100%" justify="center">
 							{basicWidgetUrl && <Widget url={basicWidgetUrl} />}
-						</Box>
+						</Flex>
 						<Button
 							component={Link}
 							to={buildEntityUrl('/mentions', type, entityId || '', activeSport, displayName)}
-							style={{ backgroundColor: colors.ui.primary, color: 'white' }}
+							bg={colors.ui.primary}
+							c="white"
 							size="md"
 							fullWidth
 						>
@@ -61,32 +137,12 @@ export default function EntityPage() {
 				</Card>
 
 				{/* Advanced Stats Widgets - 2x2 grid, separate cards */}
-				<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
-					<Card shadow="sm" p="lg" radius="md" withBorder>
-						<Stack gap="xs" align="center">
-							<Title order={4} style={{ color: colorScheme === 'dark' ? colors.text.accent : undefined }}>{cardTitles.topLeft}</Title>
-							<Text size="sm" c="dimmed">{t('entityPage.comingSoon', 'Coming soon')}</Text>
-						</Stack>
-					</Card>
-					<Card shadow="sm" p="lg" radius="md" withBorder>
-						<Stack gap="xs" align="center">
-							<Title order={4} style={{ color: colorScheme === 'dark' ? colors.text.accent : undefined }}>{cardTitles.topRight}</Title>
-							<Text size="sm" c="dimmed">{t('entityPage.comingSoon', 'Coming soon')}</Text>
-						</Stack>
-					</Card>
-					<Card shadow="sm" p="lg" radius="md" withBorder>
-						<Stack gap="xs" align="center">
-							<Title order={4} style={{ color: colorScheme === 'dark' ? colors.text.accent : undefined }}>{cardTitles.bottomLeft}</Title>
-							<Text size="sm" c="dimmed">{t('entityPage.comingSoon', 'Coming soon')}</Text>
-						</Stack>
-					</Card>
-					<Card shadow="sm" p="lg" radius="md" withBorder>
-						<Stack gap="xs" align="center">
-							<Title order={4} style={{ color: colorScheme === 'dark' ? colors.text.accent : undefined }}>{cardTitles.bottomRight}</Title>
-							<Text size="sm" c="dimmed">{t('entityPage.comingSoon', 'Coming soon')}</Text>
-						</Stack>
-					</Card>
-				</div>
+				<SimpleGrid cols={2} spacing="md" mt="md">
+					{renderCard('topLeft', cardTitles.topLeft)}
+					{renderCard('topRight', cardTitles.topRight)}
+					{renderCard('bottomLeft', cardTitles.bottomLeft)}
+					{renderCard('bottomRight', cardTitles.bottomRight)}
+				</SimpleGrid>
 			</div>
 		</Container>
 	);
