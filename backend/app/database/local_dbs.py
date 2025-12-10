@@ -233,7 +233,7 @@ def _get_normalized_or_compute(norm: Optional[str], name: str) -> str:
         return norm
     
     # Fallback: compute normalization (should be rare if DB is properly populated)
-    logger.debug(f"Fallback normalization needed for: {name}")
+    logger.debug("Fallback normalization needed for: %s", name)
     return normalize_text(name)
 
 
