@@ -10,7 +10,7 @@
 # Usage (from repo root):
 #   ./local.ps1 backend             # run API with reload on port 8000
 #   ./local.ps1 backend -Port 9000  # run API on a different port
-#   ./local.ps1 frontend            # run React dev server
+#   ./local.ps1 frontend            # run Svelte dev server (uses Bun if available)
 #   ./local.ps1 up                  # run backend + frontend
 #   ./local.ps1 pip "install httpx==0.25.0"  # run pip within venv
 
@@ -97,25 +97,35 @@ function Start-Backend {
 }
 
 function Start-Frontend {
-  $frontendDir = Join-Path $RepoRoot 'frontend'
+  $frontendDir = Join-Path $RepoRoot 'scoracle-svelte'
   Push-Location $frontendDir
   try {
-    if (-not (Test-Path 'node_modules')) { Write-Info 'Installing frontend deps...' ; npm install }
-    Write-Ok 'Starting React dev server on http://localhost:3000'
-    npm start
+    # Check if Bun is available
+    $bunPath = Join-Path $env:USERPROFILE '.bun\bin\bun.exe'
+    $useBun = Test-Path $bunPath
+    
+    if ($useBun) {
+      if (-not (Test-Path 'node_modules')) { 
+        Write-Info 'Installing frontend deps with Bun...'
+        & $bunPath install
+      }
+      Write-Ok 'Starting Svelte dev server on http://localhost:5173 (Bun)'
+      & $bunPath run dev
+    } else {
+      if (-not (Test-Path 'node_modules')) { 
+        Write-Info 'Installing frontend deps with npm...'
+        npm install
+      }
+      Write-Ok 'Starting Svelte dev server on http://localhost:5173'
+      npm run dev
+    }
   }
   finally { Pop-Location }
 }
 
 function Invoke-OpenApiTypes {
-  $frontendDir = Join-Path $RepoRoot 'frontend'
-  Push-Location $frontendDir
-  try {
-    if (-not (Test-Path 'node_modules')) { Write-Info 'Installing frontend deps...' ; npm install }
-    Write-Ok 'Generating OpenAPI TypeScript types (frontend/src/types/api.ts)'
-    npm run api:types
-  }
-  finally { Pop-Location }
+  Write-Warn 'OpenAPI types generation not yet configured for Svelte frontend'
+  Write-Info 'You can manually generate types or add api:types script to scoracle-svelte/package.json'
 }
 
 switch ($Command) {
