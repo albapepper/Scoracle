@@ -4,8 +4,8 @@
    * Migrated from React HomePage.tsx
    */
   import { _ } from 'svelte-i18n';
-  import { activeSport, sports } from '$lib/stores';
-  import { colorScheme, getThemeColors } from '$lib/stores';
+  import { activeSport, sports } from '$lib/stores/index';
+  import { colorScheme, getThemeColors } from '$lib/stores/index';
   import SearchForm from '$lib/components/SearchForm.svelte';
 
   $: colors = getThemeColors($colorScheme);

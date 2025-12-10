@@ -4,9 +4,9 @@
    */
   import { onMount } from 'svelte';
   import { isLoading } from 'svelte-i18n';
-  import { colorScheme } from '$lib/stores';
+  import { colorScheme } from '$lib/stores/index';
   import { preloadSport } from '$lib/data/dataLoader';
-  import { activeSport } from '$lib/stores';
+  import { activeSport } from '$lib/stores/index';
   import Header from '$lib/components/Header.svelte';
   import Footer from '$lib/components/Footer.svelte';
   import '$lib/i18n';

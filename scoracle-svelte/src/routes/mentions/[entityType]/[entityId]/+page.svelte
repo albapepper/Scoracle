@@ -5,7 +5,7 @@
    */
   import { _ } from 'svelte-i18n';
   import { IconNews, IconChartLine, IconBrandTwitter, IconBrandReddit, IconExternalLink } from '@tabler/icons-svelte';
-  import { colorScheme, getThemeColors } from '$lib/stores';
+  import { colorScheme, getThemeColors } from '$lib/stores/index';
   import Widget from '$lib/components/Widget.svelte';
   import { buildEntityUrl } from '$lib/utils/entityName';
   import type { PageData } from './$types';

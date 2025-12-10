@@ -2,11 +2,9 @@
   "name": "scoracle-root",
   "private": true,
   "scripts": {
-    "install-frontend": "cd frontend && npm install",
-    "build": "cd frontend && npm install && npm run build"
+    "build": "cd scoracle-svelte && npm install && npm run build"
   },
   "engines": {
     "node": ">=18.0.0"
   }
 }
-
