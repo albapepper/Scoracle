@@ -25,7 +25,6 @@ from app.database.local_dbs import (
     get_team_by_id,
     _db_path_for_sport,
     _strip_specials_preserve_case,
-    _first_last_only,
 )
 
 SPORTS = {
@@ -42,16 +41,11 @@ def export_sport(sport_key: str, sport_code: str, output_dir: Path):
         players = list_all_players(sport_code)
         teams = list_all_teams(sport_code)
         
-        # Convert to format expected by frontend (matches BootstrapResponse interface exactly)
-        # Match the same logic as sport_bootstrap endpoint
+        # Convert to format expected by frontend
         players_items = []
         for pid, name in players:
-            # Clean name same way as bootstrap endpoint
+            # Clean name - preserve the full name (remove special chars but keep all name parts)
             cleaned_name = _strip_specials_preserve_case(name or "")
-            cleaned_name = _first_last_only(cleaned_name)
-            parts = cleaned_name.split()
-            first_name = parts[0] if parts else ""
-            last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
             
             # Get current team from database
             current_team = None
@@ -65,8 +59,7 @@ def export_sport(sport_key: str, sport_code: str, output_dir: Path):
             
             players_items.append({
                 "id": int(pid),
-                "firstName": first_name,
-                "lastName": last_name,
+                "name": cleaned_name,
                 "currentTeam": current_team,
             })
         

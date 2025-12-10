@@ -1,0 +1,16 @@
+{
+  "short_name": "Scoracle",
+  "name": "Scoracle Sports Intelligence",
+  "icons": [
+    {
+      "src": "scoracle-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#1f2933",
+  "background_color": "#f5f3ed"
+}
+

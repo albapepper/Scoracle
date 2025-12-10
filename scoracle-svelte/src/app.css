@@ -1,0 +1,133 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Scoracle custom styles */
+:root {
+  --font-family-primary: 'Söhne', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+html {
+  font-family: var(--font-family-primary);
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Light mode defaults */
+html.scoracle-light {
+  --scoracle-bg-primary: #F5F5E8;
+  --scoracle-bg-secondary: #EAEADA;
+  --scoracle-bg-tertiary: #E0E0D0;
+  --scoracle-text-primary: #2D3748;
+  --scoracle-text-secondary: #4A5568;
+  --scoracle-text-accent: #1A365D;
+  --scoracle-ui-primary: #2D3748;
+  --scoracle-ui-border: #CBD5E0;
+}
+
+/* Dark mode */
+html.scoracle-dark {
+  --scoracle-bg-primary: #1A1A1A;
+  --scoracle-bg-secondary: #242424;
+  --scoracle-bg-tertiary: #2D2D2D;
+  --scoracle-text-primary: #F5F5E8;
+  --scoracle-text-secondary: #D0D0C0;
+  --scoracle-text-accent: #E8C4A0;
+  --scoracle-ui-primary: #A85A39;
+  --scoracle-ui-border: #404040;
+}
+
+/* Custom component overrides */
+.card {
+  @apply bg-surface-200 dark:bg-surface-800 rounded-lg shadow-sm;
+  @apply border border-transparent dark:border-surface-700;
+}
+
+.btn-primary {
+  @apply bg-primary-500 hover:bg-primary-600 text-white dark:bg-primary-500 dark:hover:bg-primary-400;
+}
+
+/* Search form specific styles */
+.search-form-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: var(--scoracle-bg-secondary);
+  border-radius: 24px;
+  padding: 4px 8px 4px 16px;
+  border: 1px solid var(--scoracle-ui-border);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-form-input-wrapper:focus-within {
+  border-color: var(--scoracle-ui-primary);
+  box-shadow: 0 0 0 2px rgba(45, 55, 72, 0.1);
+}
+
+html.scoracle-dark .search-form-input-wrapper:focus-within {
+  box-shadow: 0 0 0 2px rgba(168, 90, 57, 0.2);
+}
+
+/* Skeleton loading animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--scoracle-bg-tertiary) 25%,
+    var(--scoracle-bg-secondary) 50%,
+    var(--scoracle-bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Entity page flip card animation */
+.entity-flip-card-shell {
+  perspective: 1000px;
+}
+
+.entity-flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.entity-flip-card-shell.is-flipped .entity-flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+.entity-flip-card-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+}
+
+.entity-flip-card-back {
+  transform: rotateY(180deg);
+}
+
+/* Autocomplete dropdown */
+.autocomplete-dropdown {
+  @apply absolute z-50 w-full mt-1 bg-surface-100 dark:bg-surface-800 rounded-lg shadow-lg border border-surface-300 dark:border-surface-600;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.autocomplete-item {
+  @apply px-4 py-2 cursor-pointer hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors;
+}
+
+.autocomplete-item.active {
+  @apply bg-surface-200 dark:bg-surface-700;
+}
+

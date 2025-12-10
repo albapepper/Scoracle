@@ -1,0 +1,10 @@
+# Bun configuration for Scoracle Svelte
+
+[install]
+# Use exact versions for reproducibility
+exact = true
+
+[install.lockfile]
+# Generate lockfile
+save = true
+

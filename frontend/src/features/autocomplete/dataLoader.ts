@@ -7,8 +7,7 @@
 
 export interface PlayerData {
   id: number;
-  firstName?: string;
-  lastName?: string;
+  name: string;
   currentTeam?: string;
 }
 
@@ -137,14 +136,13 @@ export async function searchPlayers(sport: string, query: string, limit = 8): Pr
   const results: SearchResult[] = [];
   
   for (const player of data.players.items) {
-    const fullName = `${player.firstName || ''} ${player.lastName || ''}`.trim();
-    const normalizedName = normalizeText(fullName);
-    const score = calculateMatchScore(normalizedQuery, normalizedName, fullName);
+    const normalizedName = normalizeText(player.name);
+    const score = calculateMatchScore(normalizedQuery, normalizedName, player.name);
     
     if (score > 0) {
       results.push({
         id: player.id,
-        name: fullName,
+        name: player.name,
         normalizedName,
         score,
         team: player.currentTeam,

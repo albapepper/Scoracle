@@ -261,9 +261,8 @@ def upsert_players(sport: str, rows: List[Tuple[int, str, Optional[str]]]):
         now = int(time.time())
         payload = []
         for (pid, name, team) in rows:
-            # Clean display name, reduce to First Last, and normalize tokens
-            display_raw = _strip_specials_preserve_case(name)
-            display = _first_last_only(display_raw)
+            # Clean display name - preserve full name, just strip special characters
+            display = _strip_specials_preserve_case(name)
             norm = normalize_text(display or name)
             toks = tokenize(norm)
             payload.append((pid, display or name, team, now, norm, toks))
