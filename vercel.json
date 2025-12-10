@@ -1,8 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "cd scoracle-svelte && npm install && npm run build",
-  "outputDirectory": "scoracle-svelte/.svelte-kit/output",
-  "framework": "sveltekit",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.py" },
     { "source": "/health", "destination": "/api/index.py" }
