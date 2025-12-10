@@ -34,6 +34,10 @@ export interface SportData {
 const dataCache = new Map<string, SportData>();
 const loadingPromises = new Map<string, Promise<SportData>>();
 
+// Search optimization constants
+const EARLY_TERMINATION_MULTIPLIER = 3; // Collect 3x more results before checking for early termination
+const HIGH_QUALITY_SCORE_THRESHOLD = 100; // Score threshold for early termination
+
 /**
  * Normalize text for searching (lowercase, strip accents, remove special chars)
  */
@@ -170,7 +174,7 @@ export async function searchPlayers(sport: string, query: string, limit = 8): Pr
       
       // Early termination: if we have enough high-quality results, stop searching
       // This is beneficial for large datasets (thousands of players)
-      if (results.length >= limit * 3 && score > 100) {
+      if (results.length >= limit * EARLY_TERMINATION_MULTIPLIER && score > HIGH_QUALITY_SCORE_THRESHOLD) {
         break;
       }
     }
@@ -213,7 +217,7 @@ export async function searchTeams(sport: string, query: string, limit = 8): Prom
       });
       
       // Early termination: if we have enough high-quality results, stop searching
-      if (results.length >= limit * 3 && score > 100) {
+      if (results.length >= limit * EARLY_TERMINATION_MULTIPLIER && score > HIGH_QUALITY_SCORE_THRESHOLD) {
         break;
       }
     }

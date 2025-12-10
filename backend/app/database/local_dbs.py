@@ -213,6 +213,14 @@ def tokenize(s: str) -> str:
     return " ".join(s.split())
 
 
+def _get_normalized_or_compute(norm: Optional[str], name: str) -> str:
+    """Get pre-normalized name from DB or compute it if missing.
+    
+    Helper to avoid duplicating the fallback logic across search functions.
+    """
+    return norm if norm else normalize_text(name)
+
+
 def _strip_specials_preserve_case(s: Optional[str]) -> str:
     """Remove accents and non-alphanumeric characters while preserving case for display.
 
@@ -287,23 +295,20 @@ def upsert_players(sport: str, rows: List[Tuple[int, str, Optional[str]]]):
     """
     _init_if_needed(sport)
     path = _db_path_for_sport(sport)
-    conn = _connect(path)
-    try:
-        now = int(time.time())
-        payload = []
-        for (pid, name, team) in rows:
-            # Clean display name - preserve full name, just strip special characters
-            display = _strip_specials_preserve_case(name)
-            norm = normalize_text(display or name)
-            toks = tokenize(norm)
-            payload.append((pid, display or name, team, now, norm, toks))
-        conn.executemany(
-            "INSERT INTO players(id, name, current_team, updated_at, normalized_name, tokens) VALUES(?, ?, ?, ?, ?, ?)\n"
-            "ON CONFLICT(id) DO UPDATE SET name=excluded.name, current_team=excluded.current_team, updated_at=excluded.updated_at, normalized_name=excluded.normalized_name, tokens=excluded.tokens",
-            payload,
-        )
-    finally:
-        conn.close()
+    conn = _get_pooled_connection(path)
+    now = int(time.time())
+    payload = []
+    for (pid, name, team) in rows:
+        # Clean display name - preserve full name, just strip special characters
+        display = _strip_specials_preserve_case(name)
+        norm = normalize_text(display or name)
+        toks = tokenize(norm)
+        payload.append((pid, display or name, team, now, norm, toks))
+    conn.executemany(
+        "INSERT INTO players(id, name, current_team, updated_at, normalized_name, tokens) VALUES(?, ?, ?, ?, ?, ?)\n"
+        "ON CONFLICT(id) DO UPDATE SET name=excluded.name, current_team=excluded.current_team, updated_at=excluded.updated_at, normalized_name=excluded.normalized_name, tokens=excluded.tokens",
+        payload,
+    )
 
 
 def upsert_teams(sport: str, rows: List[Tuple[int, str, Optional[str]]]):
@@ -313,22 +318,19 @@ def upsert_teams(sport: str, rows: List[Tuple[int, str, Optional[str]]]):
     """
     _init_if_needed(sport)
     path = _db_path_for_sport(sport)
-    conn = _connect(path)
-    try:
-        now = int(time.time())
-        payload = []
-        for (tid, name, league) in rows:
-            display = _strip_specials_preserve_case(name)
-            norm = normalize_text(display or name)
-            toks = tokenize(norm)
-            payload.append((tid, display or name, league, now, norm, toks))
-        conn.executemany(
-            "INSERT INTO teams(id, name, current_league, updated_at, normalized_name, tokens) VALUES(?, ?, ?, ?, ?, ?)\n"
-            "ON CONFLICT(id) DO UPDATE SET name=excluded.name, current_league=excluded.current_league, updated_at=excluded.updated_at, normalized_name=excluded.normalized_name, tokens=excluded.tokens",
-            payload,
-        )
-    finally:
-        conn.close()
+    conn = _get_pooled_connection(path)
+    now = int(time.time())
+    payload = []
+    for (tid, name, league) in rows:
+        display = _strip_specials_preserve_case(name)
+        norm = normalize_text(display or name)
+        toks = tokenize(norm)
+        payload.append((tid, display or name, league, now, norm, toks))
+    conn.executemany(
+        "INSERT INTO teams(id, name, current_league, updated_at, normalized_name, tokens) VALUES(?, ?, ?, ?, ?, ?)\n"
+        "ON CONFLICT(id) DO UPDATE SET name=excluded.name, current_league=excluded.current_league, updated_at=excluded.updated_at, normalized_name=excluded.normalized_name, tokens=excluded.tokens",
+        payload,
+    )
 
 
 def list_all_players(sport: str) -> List[Tuple[int, str]]:
@@ -376,7 +378,7 @@ def search_players(sport: str, q: str, limit: int) -> List[Dict[str, Optional[st
         scored = []
         for pid, name, team, norm in candidates:
             # Use pre-normalized name from DB to avoid redundant normalization
-            base = norm if norm else normalize_text(name)
+            base = _get_normalized_or_compute(norm, name)
             score = fuzz.WRatio(nq, base)
             # Heuristics: prefer first-token match and prefix matches; then shorter names
             tokens_q = [t for t in nq.split(' ') if t]
@@ -390,7 +392,7 @@ def search_players(sport: str, q: str, limit: int) -> List[Dict[str, Optional[st
         if not scored:
             cur2 = conn.execute("SELECT id, name, current_team, normalized_name FROM players LIMIT ?", (int(limit) * 30,))
             for pid, name, team, norm in cur2.fetchall():
-                base = norm if norm else normalize_text(name)
+                base = _get_normalized_or_compute(norm, name)
                 score = fuzz.WRatio(nq, base)
                 tokens_q = [t for t in nq.split(' ') if t]
                 first_tok = tokens_q[0] if tokens_q else ''
@@ -430,13 +432,13 @@ def search_teams(sport: str, q: str, limit: int) -> List[Dict[str, Optional[str]
         scored = []
         for tid, name, league, norm in candidates:
             # Use pre-normalized name from DB to avoid redundant normalization
-            base = norm if norm else normalize_text(name)
+            base = _get_normalized_or_compute(norm, name)
             score = fuzz.WRatio(nq, base)
             scored.append((score, tid, name, league))
         if not scored:
             cur2 = conn.execute("SELECT id, name, current_league, normalized_name FROM teams LIMIT ?", (int(limit) * 30,))
             for tid, name, league, norm in cur2.fetchall():
-                base = norm if norm else normalize_text(name)
+                base = _get_normalized_or_compute(norm, name)
                 score = fuzz.WRatio(nq, base)
                 scored.append((score, tid, name, league))
         scored.sort(reverse=True)
@@ -464,19 +466,21 @@ def local_search_teams(sport: str, q: str, limit: int) -> List[Dict[str, Optiona
 
 
 def purge_sport(sport: str):
-    """Delete all rows for the sport's local DB (players and teams)."""
+    """Delete all rows for the sport's local DB (players and teams).
+    
+    Note: Uses pooled connection in autocommit mode, so changes are immediate.
+    VACUUM is run to reclaim space after deletion.
+    """
     _init_if_needed(sport)
     path = _db_path_for_sport(sport)
-    conn = _connect(path)
+    conn = _get_pooled_connection(path)
+    conn.execute("DELETE FROM players;")
+    conn.execute("DELETE FROM teams;")
     try:
-        conn.execute("DELETE FROM players;")
-        conn.execute("DELETE FROM teams;")
-        try:
-            conn.execute("VACUUM;")
-        except Exception:
-            pass
-    finally:
-        conn.close()
+        conn.execute("VACUUM;")
+    except Exception:
+        # VACUUM may fail in read-only mode or with active connections
+        pass
 
 
 def get_player_by_id(sport: str, player_id: int) -> Optional[Dict[str, Optional[str]]]:
