@@ -16,10 +16,17 @@ class TTLCache:
     def _evict_if_needed(self):
         if len(self._store) <= self._max_items:
             return
+        
         # Evict expired entries first
         now = time.time()
-        expired_keys = [k for k, (exp, _) in self._store.items() if exp < now]
-        for k in expired_keys:
+        # Create a list of keys to evict (safe for iteration while modifying)
+        keys_to_evict = []
+        for k, (exp, _) in self._store.items():
+            if exp < now:
+                keys_to_evict.append(k)
+        
+        # Remove expired keys
+        for k in keys_to_evict:
             self._store.pop(k, None)
         
         # If still over limit, evict oldest accessed items (LRU)

@@ -85,6 +85,16 @@ def _get_pooled_connection(path: str) -> sqlite3.Connection:
     
     Uses connection pooling to avoid repeated open/close overhead.
     Connections are cached per path and reused across queries.
+    
+    Thread Safety Note:
+    - The pool access is protected by a lock
+    - Connections are created with check_same_thread=False
+    - Uses autocommit mode (isolation_level=None) to avoid transaction conflicts
+    - Safe for concurrent reads which is the primary use case
+    - For write operations, SQLite's built-in locking handles concurrency
+    
+    This approach is appropriate for this application's read-heavy workload
+    with occasional writes in autocommit mode.
     """
     with _POOL_LOCK:
         # Check if we already have a connection for this path
@@ -217,8 +227,14 @@ def _get_normalized_or_compute(norm: Optional[str], name: str) -> str:
     """Get pre-normalized name from DB or compute it if missing.
     
     Helper to avoid duplicating the fallback logic across search functions.
+    Logs a warning if fallback normalization is needed (indicates DB may need updates).
     """
-    return norm if norm else normalize_text(name)
+    if norm:
+        return norm
+    
+    # Fallback: compute normalization (should be rare if DB is properly populated)
+    logger.debug(f"Fallback normalization needed for: {name}")
+    return normalize_text(name)
 
 
 def _strip_specials_preserve_case(s: Optional[str]) -> str:

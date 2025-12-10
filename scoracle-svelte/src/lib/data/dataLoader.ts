@@ -172,9 +172,11 @@ export async function searchPlayers(sport: string, query: string, limit = 8): Pr
         team: player.currentTeam,
       });
       
-      // Early termination: if we have enough high-quality results, stop searching
-      // This is beneficial for large datasets (thousands of players)
-      if (results.length >= limit * EARLY_TERMINATION_MULTIPLIER && score > HIGH_QUALITY_SCORE_THRESHOLD) {
+      // Early termination: stop searching if we have enough results
+      // Two conditions for early exit:
+      // 1. We have collected enough candidates (3x limit) to be confident in our results
+      // 2. We found a perfect match (score >= 150) - no need to search further
+      if (results.length >= limit * EARLY_TERMINATION_MULTIPLIER || score >= 150) {
         break;
       }
     }
@@ -216,8 +218,11 @@ export async function searchTeams(sport: string, query: string, limit = 8): Prom
         league: team.league,
       });
       
-      // Early termination: if we have enough high-quality results, stop searching
-      if (results.length >= limit * EARLY_TERMINATION_MULTIPLIER && score > HIGH_QUALITY_SCORE_THRESHOLD) {
+      // Early termination: stop searching if we have enough results
+      // Two conditions for early exit:
+      // 1. We have collected enough candidates (3x limit) to be confident in our results
+      // 2. We found a perfect match (score >= 150) - no need to search further
+      if (results.length >= limit * EARLY_TERMINATION_MULTIPLIER || score >= 150) {
         break;
       }
     }
