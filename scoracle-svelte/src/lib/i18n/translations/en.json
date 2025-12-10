@@ -1,0 +1,71 @@
+{
+  "header": {
+    "menu": "Menu",
+    "language": "Language",
+    "settings": "Settings",
+    "appearance": "Appearance",
+    "darkMode": "Dark mode"
+  },
+  "home": {
+    "title": "Welcome to Scoracle",
+    "selectSport": "Select a sport to get started",
+    "findLatest": "Find the latest mentions for {sport}",
+    "nextSelect": "Next, select a player or team"
+  },
+  "search": {
+    "title": "Search {sport} {entity}",
+    "placeholder": "Search...",
+    "enterTerm": "Please enter a search term",
+    "noneFound": "No {entity} found matching \"{query}\"",
+    "errorGeneric": "An error occurred while searching",
+    "searchEntity": "Search {entity}",
+    "noMatches": "No matches found",
+    "searchPlayerOrTeam": "Search for player or team..."
+  },
+  "common": {
+    "entity": {
+      "player": "Player",
+      "team": "Team",
+      "all": "players or teams"
+    },
+    "go": "Go",
+    "search": "Search",
+    "returnHome": "Return Home",
+    "link": "Link"
+  },
+  "entityPage": {
+    "title": "Statistical Profile",
+    "recentMentions": "Recent Mentions",
+    "graphComingSoon": "Graph view coming soon",
+    "tableComingSoon": "Table view coming soon",
+    "switchToTable": "Switch to table view",
+    "switchToGraph": "Switch to graph view"
+  },
+  "mentions": {
+    "mentions": "Mentions",
+    "failedLoad": "Failed to load mentions",
+    "loading": "Loading mentions...",
+    "statisticalProfile": "Statistical Profile",
+    "profile": "Profile",
+    "articlesTab": "Articles",
+    "rankingsTab": "Rankings",
+    "tweetsTab": "X",
+    "redditTab": "Reddit",
+    "none": "No mentions found",
+    "linkedTeams": "Linked Teams",
+    "linkedPlayers": "Linked Players",
+    "tweetsComingSoon": "Twitter feed coming soon.",
+    "redditComingSoon": "Reddit feed coming soon."
+  },
+  "footer": {
+    "allRightsReserved": "All rights reserved.",
+    "terms": "Terms",
+    "privacy": "Privacy"
+  },
+  "notFound": {
+    "title": "Page Not Found",
+    "message": "The page you are looking for does not exist.",
+    "backHome": "Back to Home"
+  }
+}
+

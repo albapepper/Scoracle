@@ -1,0 +1,71 @@
+{
+  "header": {
+    "menu": "Menü",
+    "language": "Sprache",
+    "settings": "Einstellungen",
+    "appearance": "Erscheinungsbild",
+    "darkMode": "Dunkler Modus"
+  },
+  "home": {
+    "title": "Willkommen bei Scoracle",
+    "selectSport": "Wählen Sie eine Sportart aus, um zu beginnen",
+    "findLatest": "Finden Sie die neuesten Erwähnungen für {sport}",
+    "nextSelect": "Als Nächstes wählen Sie einen Spieler oder ein Team aus"
+  },
+  "search": {
+    "title": "{sport} {entity} suchen",
+    "placeholder": "Suchen...",
+    "enterTerm": "Bitte geben Sie einen Suchbegriff ein",
+    "noneFound": "Kein {entity} gefunden, der mit \"{query}\" übereinstimmt",
+    "errorGeneric": "Beim Suchen ist ein Fehler aufgetreten",
+    "searchEntity": "{entity} suchen",
+    "noMatches": "Keine Übereinstimmungen gefunden",
+    "searchPlayerOrTeam": "Spieler oder Team suchen..."
+  },
+  "common": {
+    "entity": {
+      "player": "Spieler",
+      "team": "Mannschaft",
+      "all": "Spieler oder Mannschaften"
+    },
+    "go": "Gehen",
+    "search": "Suchen",
+    "returnHome": "Zurück zur Startseite",
+    "link": "Link"
+  },
+  "entityPage": {
+    "title": "Statistisches Profil",
+    "recentMentions": "Aktuelle Erwähnungen",
+    "graphComingSoon": "Grafikansicht kommt bald",
+    "tableComingSoon": "Tabellenansicht kommt bald",
+    "switchToTable": "Zur Tabellenansicht wechseln",
+    "switchToGraph": "Zur Grafikansicht wechseln"
+  },
+  "mentions": {
+    "mentions": "Erwähnungen",
+    "failedLoad": "Erwähnungen konnten nicht geladen werden",
+    "loading": "Erwähnungen werden geladen...",
+    "statisticalProfile": "Statistisches Profil",
+    "profile": "Profil",
+    "articlesTab": "Artikel",
+    "rankingsTab": "Ranglisten",
+    "tweetsTab": "X",
+    "redditTab": "Reddit",
+    "none": "Keine Erwähnungen gefunden",
+    "linkedTeams": "Verknüpfte Mannschaften",
+    "linkedPlayers": "Verknüpfte Spieler",
+    "tweetsComingSoon": "Twitter-Feed kommt bald.",
+    "redditComingSoon": "Reddit-Feed kommt bald."
+  },
+  "footer": {
+    "allRightsReserved": "Alle Rechte vorbehalten.",
+    "terms": "Bedingungen",
+    "privacy": "Datenschutz"
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "message": "Die gesuchte Seite existiert nicht.",
+    "backHome": "Zurück zur Startseite"
+  }
+}
+
