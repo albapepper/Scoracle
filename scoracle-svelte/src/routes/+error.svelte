@@ -4,7 +4,7 @@
    */
   import { page } from '$app/stores';
   import { _ } from 'svelte-i18n';
-  import { colorScheme, getThemeColors } from '$lib/stores/theme';
+  import { colorScheme, getThemeColors } from '$lib/stores';
 
   $: colors = getThemeColors($colorScheme);
   $: status = $page.status;

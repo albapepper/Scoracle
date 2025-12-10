@@ -5,8 +5,8 @@
    */
   import { _ } from 'svelte-i18n';
   import { IconChartBar, IconTable } from '@tabler/icons-svelte';
-  import { activeSport } from '$lib/stores/sport';
-  import { colorScheme, getThemeColors } from '$lib/stores/theme';
+  import { activeSport } from '$lib/stores';
+  import { colorScheme, getThemeColors } from '$lib/stores';
   import Widget from '$lib/components/Widget.svelte';
   import { buildEntityUrl } from '$lib/utils/entityName';
   import type { PageData } from './$types';
