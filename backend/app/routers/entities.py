@@ -111,7 +111,10 @@ def _fetch_news_articles(query: str, hours: int = 48) -> List[Dict[str, Any]]:
 # ============ Widget Data Generation ============
 
 def _build_widget_data(entity: EntityInfo, enhanced_data: Optional[Dict] = None) -> Dict[str, Any]:
-    """Build widget display data from entity info with optional enhancement."""
+    """Build widget display data from entity info with optional enhancement.
+    
+    Includes full raw API-Sports profile data for complete widget customization.
+    """
     base = {
         "type": entity.entity_type,
         "id": entity.id,
@@ -131,6 +134,11 @@ def _build_widget_data(entity: EntityInfo, enhanced_data: Optional[Dict] = None)
     
     # Add enhanced data if available
     if enhanced_data:
+        # Include full raw profile with ALL API-Sports data points
+        if enhanced_data.get("profile"):
+            base["profile"] = enhanced_data["profile"]
+        
+        # Also include commonly used extracted fields for convenience
         if enhanced_data.get("photo_url"):
             base["photo_url"] = enhanced_data["photo_url"]
         if enhanced_data.get("logo_url"):
@@ -141,10 +149,16 @@ def _build_widget_data(entity: EntityInfo, enhanced_data: Optional[Dict] = None)
             base["age"] = enhanced_data["age"]
         if enhanced_data.get("height"):
             base["height"] = enhanced_data["height"]
+        if enhanced_data.get("weight"):
+            base["weight"] = enhanced_data["weight"]
+        if enhanced_data.get("nationality"):
+            base["nationality"] = enhanced_data["nationality"]
         if enhanced_data.get("conference"):
             base["conference"] = enhanced_data["conference"]
         if enhanced_data.get("division"):
             base["division"] = enhanced_data["division"]
+        if enhanced_data.get("stats"):
+            base["stats"] = enhanced_data["stats"]
         base["enhanced"] = True
     else:
         base["enhanced"] = False

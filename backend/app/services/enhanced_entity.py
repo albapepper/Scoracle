@@ -32,16 +32,17 @@ class EnhancedEntityData:
     # Basic info (always available from bundled JSON)
     entity: EntityInfo
     
-    # Enhanced profile data (from API-Sports, optional)
+    # Full raw profile from API-Sports (all data points)
+    profile: Dict[str, Any] = field(default_factory=dict)
+    
+    # Commonly used fields extracted for convenience
     photo_url: Optional[str] = None
+    logo_url: Optional[str] = None
     position: Optional[str] = None
     height: Optional[str] = None
     weight: Optional[str] = None
     age: Optional[int] = None
     nationality: Optional[str] = None
-    
-    # Team enhanced data
-    logo_url: Optional[str] = None
     conference: Optional[str] = None
     division: Optional[str] = None
     
@@ -54,13 +55,16 @@ class EnhancedEntityData:
     def to_dict(self) -> Dict[str, Any]:
         base = self.entity.to_dict()
         base.update({
+            # Include full raw profile with all API-Sports data
+            "profile": self.profile if self.profile else None,
+            # Common extracted fields for convenience
             "photo_url": self.photo_url,
+            "logo_url": self.logo_url,
             "position": self.position,
             "height": self.height,
             "weight": self.weight,
             "age": self.age,
             "nationality": self.nationality,
-            "logo_url": self.logo_url,
             "conference": self.conference,
             "division": self.division,
             "stats": self.stats if self.stats else None,
@@ -133,6 +137,7 @@ async def _enhance_player(entity: EntityInfo, sport: str, include_stats: bool) -
     result = EnhancedEntityData(entity=entity)
     
     try:
+        profile = None
         # Fetch profile based on sport
         if sport == "NBA":
             profile = await apisports_service.get_nba_player_profile(entity.id)
@@ -150,6 +155,10 @@ async def _enhance_player(entity: EntityInfo, sport: str, include_stats: bool) -
             profile = await apisports_service.get_nfl_player_profile(entity.id)
             _extract_nfl_player_profile(profile, result)
         
+        # Store full raw profile for complete data access
+        if profile:
+            result.profile = profile
+        
         result.enhanced = True
         
     except Exception as e:
@@ -164,6 +173,7 @@ async def _enhance_team(entity: EntityInfo, sport: str, include_stats: bool) -> 
     result = EnhancedEntityData(entity=entity)
     
     try:
+        profile = None
         if sport == "NBA":
             profile = await apisports_service.get_nba_team_profile(entity.id)
             _extract_nba_team_profile(profile, result)
@@ -179,6 +189,10 @@ async def _enhance_team(entity: EntityInfo, sport: str, include_stats: bool) -> 
         elif sport == "NFL":
             profile = await apisports_service.get_nfl_team_profile(entity.id)
             _extract_nfl_team_profile(profile, result)
+        
+        # Store full raw profile for complete data access
+        if profile:
+            result.profile = profile
         
         result.enhanced = True
         

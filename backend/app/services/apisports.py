@@ -855,15 +855,15 @@ class ApiSportsService:
             logger.error("API-Sports NBA standings network error", extra={"error": str(e)})
             raise HTTPException(status_code=502, detail="API-Sports network error")
 
-    # --- Football (EPL) basics ---
+    # --- Football basics ---
     async def get_football_player_basic(self, player_id: str, season: Optional[str] = None) -> Dict[str, Any]:
-        cache_key = f"apisports:epl:player_basic:{player_id}:{season or ''}"
+        cache_key = f"apisports:football:player_basic:{player_id}:{season or ''}"
         cached = basic_cache.get(cache_key)
         if cached is not None:
             return cached
-        base = self._base_url_for('EPL')
+        base = self._base_url_for('FOOTBALL')
         headers = self._headers_for_base(base)
-        defaults = settings.API_SPORTS_DEFAULTS.get('EPL', {})
+        defaults = settings.API_SPORTS_DEFAULTS.get('FOOTBALL', {})
         season_param = season or defaults.get('season')
         params = {"id": player_id}
         if season_param:
@@ -905,11 +905,11 @@ class ApiSportsService:
             raise HTTPException(status_code=502, detail="API-Sports network error")
 
     async def get_football_team_basic(self, team_id: str) -> Dict[str, Any]:
-        cache_key = f"apisports:epl:team_basic:{team_id}"
+        cache_key = f"apisports:football:team_basic:{team_id}"
         cached = basic_cache.get(cache_key)
         if cached is not None:
             return cached
-        base = self._base_url_for('EPL')
+        base = self._base_url_for('FOOTBALL')
         headers = self._headers_for_base(base)
         try:
             async with httpx.AsyncClient(timeout=20.0) as client:
@@ -1128,7 +1128,7 @@ class ApiSportsService:
         cached = basic_cache.get(cache_key)
         if cached is not None:
             return cached
-        base = self._base_url_for('EPL')
+        base = self._base_url_for('FOOTBALL')
         headers = self._headers_for_base(base)
         try:
             async with httpx.AsyncClient(timeout=20.0) as client:
@@ -1162,7 +1162,7 @@ class ApiSportsService:
         cached = basic_cache.get(cache_key)
         if cached is not None:
             return cached
-        base = self._base_url_for('EPL')
+        base = self._base_url_for('FOOTBALL')
         headers = self._headers_for_base(base)
         try:
             async with httpx.AsyncClient(timeout=20.0) as client:
