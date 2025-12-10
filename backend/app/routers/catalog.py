@@ -1,9 +1,12 @@
 """Local dataset and bootstrap endpoints."""
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import os
 from datetime import datetime, timezone
+from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, Response
@@ -19,7 +22,15 @@ from app.database.local_dbs import (
     local_search_players,
     local_search_teams,
 )
-from app.routers._sport_helpers import hash_bootstrap_payload
+
+
+def hash_bootstrap_payload(data: Dict[str, Any]) -> str:
+    """Compute ETag hash for bootstrap payload."""
+    try:
+        content = json.dumps(data, sort_keys=True, separators=(",", ":"), default=str)
+        return hashlib.md5(content.encode()).hexdigest()[:16]
+    except Exception:
+        return ""
 
 router = APIRouter(prefix="/{sport}", tags=["catalog"])
 logger = logging.getLogger(__name__)
