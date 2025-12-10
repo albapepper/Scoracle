@@ -13,6 +13,9 @@ from pathlib import Path
 
 _INIT_LOCK = threading.Lock()
 _INITIALIZED: set[str] = set()
+# Connection pool: cache connections per sport to avoid repeated open/close
+_CONNECTION_POOL: Dict[str, sqlite3.Connection] = {}
+_POOL_LOCK = threading.Lock()
 logger = logging.getLogger(__name__)
 
 
@@ -75,6 +78,34 @@ def _db_path_for_sport(sport: str) -> str:
             return path
     # Otherwise, use the first candidate as the place to create it
     return os.path.join(candidates[0], fname)
+
+
+def _get_pooled_connection(path: str) -> sqlite3.Connection:
+    """Get a pooled connection for the given path, creating if needed.
+    
+    Uses connection pooling to avoid repeated open/close overhead.
+    Connections are cached per path and reused across queries.
+    """
+    with _POOL_LOCK:
+        # Check if we already have a connection for this path
+        if path in _CONNECTION_POOL:
+            conn = _CONNECTION_POOL[path]
+            # Verify connection is still valid
+            try:
+                conn.execute("SELECT 1")
+                return conn
+            except sqlite3.Error:
+                # Connection is stale, remove and recreate
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+                del _CONNECTION_POOL[path]
+        
+        # Create new connection
+        conn = _connect(path)
+        _CONNECTION_POOL[path] = conn
+        return conn
 
 
 def _connect(path: str) -> sqlite3.Connection:
@@ -306,12 +337,9 @@ def list_all_players(sport: str) -> List[Tuple[int, str]]:
     Intended for building in-memory indexes (e.g., Aho-Corasick)."""
     _init_if_needed(sport)
     path = _db_path_for_sport(sport)
-    conn = _connect(path)
-    try:
-        cur = conn.execute("SELECT id, name FROM players")
-        return [(int(r[0]), str(r[1] or "")) for r in cur.fetchall()]
-    finally:
-        conn.close()
+    conn = _get_pooled_connection(path)
+    cur = conn.execute("SELECT id, name FROM players")
+    return [(int(r[0]), str(r[1] or "")) for r in cur.fetchall()]
 
 
 def list_all_teams(sport: str) -> List[Tuple[int, str]]:
@@ -320,40 +348,50 @@ def list_all_teams(sport: str) -> List[Tuple[int, str]]:
     Intended for building in-memory indexes (e.g., Aho-Corasick)."""
     _init_if_needed(sport)
     path = _db_path_for_sport(sport)
-    conn = _connect(path)
-    try:
-        cur = conn.execute("SELECT id, name FROM teams")
-        return [(int(r[0]), str(r[1] or "")) for r in cur.fetchall()]
-    finally:
-        conn.close()
+    conn = _get_pooled_connection(path)
+    cur = conn.execute("SELECT id, name FROM teams")
+    return [(int(r[0]), str(r[1] or "")) for r in cur.fetchall()]
 
 
 def search_players(sport: str, q: str, limit: int) -> List[Dict[str, Optional[str]]]:
     _init_if_needed(sport)
     path = _db_path_for_sport(sport)
-    conn = _connect(path)
+    conn = _get_pooled_connection(path)
+    nq = normalize_text(q)
+    # Get a candidate pool larger than limit
+    # Build token-AND match for subset queries (e.g., search 'cole palmer' matches 'cole jermaine palmer')
+    tokens = [t for t in tokenize(nq).split(" ") if t]
+    where = "(name LIKE ? OR normalized_name LIKE ?)"
+    params: List[object] = [f"%{q}%", f"%{nq}%"]
+    if tokens:
+        and_clauses = " AND ".join(["tokens LIKE ?" for _ in tokens])
+        where = f"({where} OR ({and_clauses}))"
+        params.extend([f"%{t}%" for t in tokens])
+    sql = f"SELECT id, name, current_team, normalized_name FROM players WHERE {where} ORDER BY name LIMIT ?"
+    params.append(int(limit) * 8)
+    cur = conn.execute(sql, params)
+    candidates = cur.fetchall()
     try:
-        nq = normalize_text(q)
-        # Get a candidate pool larger than limit
-        # Build token-AND match for subset queries (e.g., search 'cole palmer' matches 'cole jermaine palmer')
-        tokens = [t for t in tokenize(nq).split(" ") if t]
-        where = "(name LIKE ? OR normalized_name LIKE ?)"
-        params: List[object] = [f"%{q}%", f"%{nq}%"]
-        if tokens:
-            and_clauses = " AND ".join(["tokens LIKE ?" for _ in tokens])
-            where = f"({where} OR ({and_clauses}))"
-            params.extend([f"%{t}%" for t in tokens])
-        sql = f"SELECT id, name, current_team, normalized_name FROM players WHERE {where} ORDER BY name LIMIT ?"
-        params.append(int(limit) * 8)
-        cur = conn.execute(sql, params)
-        candidates = cur.fetchall()
-        try:
-            from rapidfuzz import fuzz
-            scored = []
-            for pid, name, team, norm in candidates:
-                base = norm or normalize_text(name)
+        from rapidfuzz import fuzz
+        scored = []
+        for pid, name, team, norm in candidates:
+            # Use pre-normalized name from DB to avoid redundant normalization
+            base = norm if norm else normalize_text(name)
+            score = fuzz.WRatio(nq, base)
+            # Heuristics: prefer first-token match and prefix matches; then shorter names
+            tokens_q = [t for t in nq.split(' ') if t]
+            first_tok = tokens_q[0] if tokens_q else ''
+            name_tokens = base.split(' ')
+            first_token_match = 1 if (first_tok and name_tokens and name_tokens[0] == first_tok) else 0
+            prefix_match = 1 if (first_tok and base.startswith(first_tok)) else 0
+            length_penalty = -len(base)
+            scored.append((score, first_token_match, prefix_match, length_penalty, pid, name, team))
+        # Add a fallback: if no candidates, consider broader scan (bounded)
+        if not scored:
+            cur2 = conn.execute("SELECT id, name, current_team, normalized_name FROM players LIMIT ?", (int(limit) * 30,))
+            for pid, name, team, norm in cur2.fetchall():
+                base = norm if norm else normalize_text(name)
                 score = fuzz.WRatio(nq, base)
-                # Heuristics: prefer first-token match and prefix matches; then shorter names
                 tokens_q = [t for t in nq.split(' ') if t]
                 first_tok = tokens_q[0] if tokens_q else ''
                 name_tokens = base.split(' ')
@@ -361,68 +399,53 @@ def search_players(sport: str, q: str, limit: int) -> List[Dict[str, Optional[st
                 prefix_match = 1 if (first_tok and base.startswith(first_tok)) else 0
                 length_penalty = -len(base)
                 scored.append((score, first_token_match, prefix_match, length_penalty, pid, name, team))
-            # Add a fallback: if no candidates, consider broader scan (bounded)
-            if not scored:
-                cur2 = conn.execute("SELECT id, name, current_team, normalized_name FROM players LIMIT ?", (int(limit) * 30,))
-                for pid, name, team, norm in cur2.fetchall():
-                    base = norm or normalize_text(name)
-                    score = fuzz.WRatio(nq, base)
-                    tokens_q = [t for t in nq.split(' ') if t]
-                    first_tok = tokens_q[0] if tokens_q else ''
-                    name_tokens = base.split(' ')
-                    first_token_match = 1 if (first_tok and name_tokens and name_tokens[0] == first_tok) else 0
-                    prefix_match = 1 if (first_tok and base.startswith(first_tok)) else 0
-                    length_penalty = -len(base)
-                    scored.append((score, first_token_match, prefix_match, length_penalty, pid, name, team))
-            scored.sort(reverse=True)
-            out = []
-            for _score, _ftm, _pm, _lp, pid, name, team in scored[:limit]:
-                out.append({"id": pid, "name": name, "current_team": team})
-            return out
-        except Exception:
-            # No rapidfuzz; return simple LIKE candidates
-            return [{"id": r[0], "name": r[1], "current_team": r[2]} for r in candidates[:limit]]
-    finally:
-        conn.close()
+        scored.sort(reverse=True)
+        out = []
+        for _score, _ftm, _pm, _lp, pid, name, team in scored[:limit]:
+            out.append({"id": pid, "name": name, "current_team": team})
+        return out
+    except Exception:
+        # No rapidfuzz; return simple LIKE candidates
+        return [{"id": r[0], "name": r[1], "current_team": r[2]} for r in candidates[:limit]]
 
 
 def search_teams(sport: str, q: str, limit: int) -> List[Dict[str, Optional[str]]]:
     _init_if_needed(sport)
     path = _db_path_for_sport(sport)
-    conn = _connect(path)
+    conn = _get_pooled_connection(path)
+    nq = normalize_text(q)
+    tokens = [t for t in tokenize(nq).split(" ") if t]
+    where = "(name LIKE ? OR normalized_name LIKE ?)"
+    params: List[object] = [f"%{q}%", f"%{nq}%"]
+    if tokens:
+        and_clauses = " AND ".join(["tokens LIKE ?" for _ in tokens])
+        where = f"({where} OR ({and_clauses}))"
+        params.extend([f"%{t}%" for t in tokens])
+    sql = f"SELECT id, name, current_league, normalized_name FROM teams WHERE {where} ORDER BY name LIMIT ?"
+    params.append(int(limit) * 8)
+    cur = conn.execute(sql, params)
+    candidates = cur.fetchall()
     try:
-        nq = normalize_text(q)
-        tokens = [t for t in tokenize(nq).split(" ") if t]
-        where = "(name LIKE ? OR normalized_name LIKE ?)"
-        params: List[object] = [f"%{q}%", f"%{nq}%"]
-        if tokens:
-            and_clauses = " AND ".join(["tokens LIKE ?" for _ in tokens])
-            where = f"({where} OR ({and_clauses}))"
-            params.extend([f"%{t}%" for t in tokens])
-        sql = f"SELECT id, name, current_league, normalized_name FROM teams WHERE {where} ORDER BY name LIMIT ?"
-        params.append(int(limit) * 8)
-        cur = conn.execute(sql, params)
-        candidates = cur.fetchall()
-        try:
-            from rapidfuzz import fuzz
-            scored = []
-            for tid, name, league, norm in candidates:
-                score = fuzz.WRatio(nq, norm or normalize_text(name))
+        from rapidfuzz import fuzz
+        scored = []
+        for tid, name, league, norm in candidates:
+            # Use pre-normalized name from DB to avoid redundant normalization
+            base = norm if norm else normalize_text(name)
+            score = fuzz.WRatio(nq, base)
+            scored.append((score, tid, name, league))
+        if not scored:
+            cur2 = conn.execute("SELECT id, name, current_league, normalized_name FROM teams LIMIT ?", (int(limit) * 30,))
+            for tid, name, league, norm in cur2.fetchall():
+                base = norm if norm else normalize_text(name)
+                score = fuzz.WRatio(nq, base)
                 scored.append((score, tid, name, league))
-            if not scored:
-                cur2 = conn.execute("SELECT id, name, current_league, normalized_name FROM teams LIMIT ?", (int(limit) * 30,))
-                for tid, name, league, norm in cur2.fetchall():
-                    score = fuzz.WRatio(nq, norm or normalize_text(name))
-                    scored.append((score, tid, name, league))
-            scored.sort(reverse=True)
-            out = []
-            for score, tid, name, league in scored[:limit]:
-                out.append({"id": tid, "name": name, "current_league": league})
-            return out
-        except Exception:
-            return [{"id": r[0], "name": r[1], "current_league": r[2]} for r in candidates[:limit]]
-    finally:
-        conn.close()
+        scored.sort(reverse=True)
+        out = []
+        for score, tid, name, league in scored[:limit]:
+            out.append({"id": tid, "name": name, "current_league": league})
+        return out
+    except Exception:
+        return [{"id": r[0], "name": r[1], "current_league": r[2]} for r in candidates[:limit]]
 
 
 def local_search_players(sport: str, q: str, limit: int) -> List[Dict[str, Optional[str]]]:
@@ -459,26 +482,44 @@ def purge_sport(sport: str):
 def get_player_by_id(sport: str, player_id: int) -> Optional[Dict[str, Optional[str]]]:
     _init_if_needed(sport)
     path = _db_path_for_sport(sport)
-    conn = _connect(path)
-    try:
-        cur = conn.execute("SELECT id, name, current_team FROM players WHERE id = ?", (int(player_id),))
-        row = cur.fetchone()
-        if not row:
-            return None
-        return {"id": row[0], "name": row[1], "current_team": row[2]}
-    finally:
-        conn.close()
+    conn = _get_pooled_connection(path)
+    cur = conn.execute("SELECT id, name, current_team FROM players WHERE id = ?", (int(player_id),))
+    row = cur.fetchone()
+    if not row:
+        return None
+    return {"id": row[0], "name": row[1], "current_team": row[2]}
 
 
 def get_team_by_id(sport: str, team_id: int) -> Optional[Dict[str, Optional[str]]]:
     _init_if_needed(sport)
     path = _db_path_for_sport(sport)
-    conn = _connect(path)
-    try:
-        cur = conn.execute("SELECT id, name, current_league FROM teams WHERE id = ?", (int(team_id),))
-        row = cur.fetchone()
-        if not row:
-            return None
-        return {"id": row[0], "name": row[1], "current_league": row[2]}
-    finally:
-        conn.close()
+    conn = _get_pooled_connection(path)
+    cur = conn.execute("SELECT id, name, current_league FROM teams WHERE id = ?", (int(team_id),))
+    row = cur.fetchone()
+    if not row:
+        return None
+    return {"id": row[0], "name": row[1], "current_league": row[2]}
+
+
+def get_all_players_with_details(sport: str) -> List[Dict[str, Optional[str]]]:
+    """Get all players with full details in a single query (more efficient than N individual queries).
+    
+    Returns list of dicts with id, name, and current_team.
+    """
+    _init_if_needed(sport)
+    path = _db_path_for_sport(sport)
+    conn = _get_pooled_connection(path)
+    cur = conn.execute("SELECT id, name, current_team FROM players")
+    return [{"id": row[0], "name": row[1], "current_team": row[2]} for row in cur.fetchall()]
+
+
+def get_all_teams_with_details(sport: str) -> List[Dict[str, Optional[str]]]:
+    """Get all teams with full details in a single query (more efficient than N individual queries).
+    
+    Returns list of dicts with id, name, and current_league.
+    """
+    _init_if_needed(sport)
+    path = _db_path_for_sport(sport)
+    conn = _get_pooled_connection(path)
+    cur = conn.execute("SELECT id, name, current_league FROM teams")
+    return [{"id": row[0], "name": row[1], "current_league": row[2]} for row in cur.fetchall()]

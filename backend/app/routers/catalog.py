@@ -19,6 +19,8 @@ from app.database.local_dbs import (
     get_team_by_id as local_get_team_by_id,
     list_all_players,
     list_all_teams,
+    get_all_players_with_details,
+    get_all_teams_with_details,
     local_search_players,
     local_search_teams,
 )
@@ -59,21 +61,22 @@ async def entities_dump(sport: str, entity_type: str = Query("player")):
 async def sync_players(sport: str):
     s = sport.upper()
     try:
-        players_raw = list_all_players(s)
+        # Use batch query to get all player details at once (avoids N+1 queries)
+        players_with_details = get_all_players_with_details(s)
         items = []
-        for pid, name in players_raw:
-            cleaned_name = _strip_specials_preserve_case(name or "")
+        for player in players_with_details:
+            name = player.get("name") or ""
+            cleaned_name = _strip_specials_preserve_case(name)
             cleaned_name = _first_last_only(cleaned_name)
             parts = cleaned_name.split()
             first_name = parts[0] if parts else ""
             last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
-            player_record = local_get_player_by_id(s, int(pid))
-            current_team = player_record.get("current_team") if player_record else None
+            current_team = player.get("current_team")
             if current_team:
                 current_team = _strip_specials_preserve_case(current_team)
             items.append(
                 {
-                    "id": int(pid),
+                    "id": int(player.get("id")),
                     "firstName": first_name,
                     "lastName": last_name,
                     "currentTeam": current_team,
@@ -93,17 +96,15 @@ async def sync_players(sport: str):
 async def sync_teams(sport: str):
     s = sport.upper()
     try:
-        teams_raw = list_all_teams(s)
+        # Use batch query to get all team details at once (avoids N+1 queries)
+        teams_with_details = get_all_teams_with_details(s)
         items = []
-        for tid, name in teams_raw:
-            cleaned_name = _strip_specials_preserve_case(name or "")
-            team_data = {"id": int(tid), "name": cleaned_name}
-            try:
-                team_row = local_get_team_by_id(s, int(tid))
-                if team_row and team_row.get("current_league"):
-                    team_data["league"] = team_row.get("current_league")
-            except Exception:
-                pass
+        for team in teams_with_details:
+            name = team.get("name") or ""
+            cleaned_name = _strip_specials_preserve_case(name)
+            team_data = {"id": int(team.get("id")), "name": cleaned_name}
+            if team.get("current_league"):
+                team_data["league"] = team.get("current_league")
             items.append(team_data)
         return {
             "sport": s,
@@ -122,8 +123,9 @@ async def bootstrap(sport: str, request: Request, since: str | None = Query(None
     db_exists = os.path.exists(db_path)
     logger.info("[bootstrap] sport=%s db_path=%s exists=%s", s, db_path, db_exists)
     try:
-        players_raw = list_all_players(s)
-        teams_raw = list_all_teams(s)
+        # Use batch queries to get all data at once (avoids N+1 queries)
+        players_with_details = get_all_players_with_details(s)
+        teams_with_details = get_all_teams_with_details(s)
     except Exception as e:
         logger.exception("[bootstrap] Failed to read local DB for sport=%s db_path=%s", s, db_path)
         return JSONResponse(
@@ -138,22 +140,19 @@ async def bootstrap(sport: str, request: Request, since: str | None = Query(None
         )
 
     players_items = []
-    for pid, name in players_raw:
-        cleaned_name = _strip_specials_preserve_case(name or "")
+    for player in players_with_details:
+        name = player.get("name") or ""
+        cleaned_name = _strip_specials_preserve_case(name)
         cleaned_name = _first_last_only(cleaned_name)
         parts = cleaned_name.split()
         first_name = parts[0] if parts else ""
         last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
-        try:
-            row = local_get_player_by_id(s, int(pid))
-            current_team = row.get("current_team") if row else None
-            if current_team:
-                current_team = _strip_specials_preserve_case(current_team)
-        except Exception:
-            current_team = None
+        current_team = player.get("current_team")
+        if current_team:
+            current_team = _strip_specials_preserve_case(current_team)
         players_items.append(
             {
-                "id": int(pid),
+                "id": int(player.get("id")),
                 "firstName": first_name,
                 "lastName": last_name,
                 "currentTeam": current_team,
@@ -161,15 +160,12 @@ async def bootstrap(sport: str, request: Request, since: str | None = Query(None
         )
 
     teams_items = []
-    for tid, name in teams_raw:
-        cleaned_name = _strip_specials_preserve_case(name or "")
-        team_data = {"id": int(tid), "name": cleaned_name}
-        try:
-            team_row = local_get_team_by_id(s, int(tid))
-            if team_row and team_row.get("current_league"):
-                team_data["league"] = team_row.get("current_league")
-        except Exception:
-            pass
+    for team in teams_with_details:
+        name = team.get("name") or ""
+        cleaned_name = _strip_specials_preserve_case(name)
+        team_data = {"id": int(team.get("id")), "name": cleaned_name}
+        if team.get("current_league"):
+            team_data["league"] = team.get("current_league")
         teams_items.append(team_data)
 
     generated_at = datetime.now(timezone.utc).isoformat()

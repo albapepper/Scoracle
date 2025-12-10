@@ -12,12 +12,14 @@ export interface PlayerData {
   id: number;
   name: string;
   currentTeam?: string;
+  normalizedName?: string; // Pre-normalized for faster search
 }
 
 export interface TeamData {
   id: number;
   name: string;
   league?: string;
+  normalizedName?: string; // Pre-normalized for faster search
 }
 
 export interface SportData {
@@ -76,6 +78,15 @@ export async function loadSportData(sport: string): Promise<SportData> {
     }
 
     const data: SportData = await response.json();
+    
+    // Pre-normalize all names for faster search (compute once, use many times)
+    data.players.items.forEach((p) => {
+      p.normalizedName = normalizeText(p.name);
+    });
+    data.teams.items.forEach((t) => {
+      t.normalizedName = normalizeText(t.name);
+    });
+    
     dataCache.set(sportUpper, data);
     loadingPromises.delete(sportUpper);
 
@@ -144,7 +155,8 @@ export async function searchPlayers(sport: string, query: string, limit = 8): Pr
   const results: SearchResult[] = [];
 
   for (const player of data.players.items) {
-    const normalizedName = normalizeText(player.name);
+    // Use pre-normalized name to avoid repeated normalization
+    const normalizedName = player.normalizedName || normalizeText(player.name);
     const score = calculateMatchScore(normalizedQuery, normalizedName, player.name);
 
     if (score > 0) {
@@ -155,6 +167,12 @@ export async function searchPlayers(sport: string, query: string, limit = 8): Pr
         score,
         team: player.currentTeam,
       });
+      
+      // Early termination: if we have enough high-quality results, stop searching
+      // This is beneficial for large datasets (thousands of players)
+      if (results.length >= limit * 3 && score > 100) {
+        break;
+      }
     }
   }
 
@@ -181,7 +199,8 @@ export async function searchTeams(sport: string, query: string, limit = 8): Prom
   const results: SearchResult[] = [];
 
   for (const team of data.teams.items) {
-    const normalizedName = normalizeText(team.name);
+    // Use pre-normalized name to avoid repeated normalization
+    const normalizedName = team.normalizedName || normalizeText(team.name);
     const score = calculateMatchScore(normalizedQuery, normalizedName, team.name);
 
     if (score > 0) {
@@ -192,6 +211,11 @@ export async function searchTeams(sport: string, query: string, limit = 8): Prom
         score,
         league: team.league,
       });
+      
+      // Early termination: if we have enough high-quality results, stop searching
+      if (results.length >= limit * 3 && score > 100) {
+        break;
+      }
     }
   }
 
