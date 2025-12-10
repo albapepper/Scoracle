@@ -48,9 +48,9 @@ def _get_bundled_data_path() -> Path:
     """Get path to bundled JSON data directory."""
     # Check multiple locations for flexibility
     candidates = [
-        Path(__file__).parent.parent.parent.parent / "frontend" / "public" / "data",
-        Path(__file__).parent.parent.parent.parent / "frontend" / "dist" / "data",
-        Path("/var/task/frontend/dist/data"),  # Vercel
+        Path(__file__).parent.parent.parent.parent / "scoracle-svelte" / "static" / "data",
+        Path(__file__).parent.parent.parent.parent / "scoracle-svelte" / ".svelte-kit" / "output" / "client" / "data",
+        Path("/var/task/scoracle-svelte/static/data"),  # Vercel
         Path("/var/task/data"),  # Vercel alternative
     ]
     

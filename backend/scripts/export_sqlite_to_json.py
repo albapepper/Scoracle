@@ -110,9 +110,9 @@ def export_sport(sport_key: str, sport_code: str, output_dir: Path):
 
 def main():
     """Main export function."""
-    # Output to frontend/public/data (will be bundled with build)
+    # Output to scoracle-svelte/static/data (will be bundled with build)
     repo_root = Path(__file__).parent.parent.parent
-    output_dir = repo_root / "frontend" / "public" / "data"
+    output_dir = repo_root / "scoracle-svelte" / "static" / "data"
     output_dir.mkdir(parents=True, exist_ok=True)
     
     print(f"Exporting SQLite data to JSON files in {output_dir}")
