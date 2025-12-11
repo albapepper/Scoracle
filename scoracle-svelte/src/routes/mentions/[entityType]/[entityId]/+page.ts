@@ -2,7 +2,7 @@
  * MentionsPage data loader
  */
 import type { PageLoad } from './$types';
-import { getEntity } from '$lib/data/entityApi';
+import { getEntity, type NewsArticle } from '$lib/data/entityApi';
 
 export const load: PageLoad = async ({ params, url }) => {
   const { entityType, entityId } = params;
@@ -16,16 +16,8 @@ export const load: PageLoad = async ({ params, url }) => {
       includeEnhanced: true,
     });
 
-    // Map backend response to expected format
-    const mentions = response.news?.articles?.map((article: Record<string, unknown>) => ({
-      id: article.link || String(Math.random()),
-      title: article.title || '',
-      url: article.link || '',
-      source: article.source || '',
-      published_at: article.pub_date || '',
-      summary: '',
-      image_url: '',
-    })) || [];
+    // Map backend response to expected format - news is already NewsArticle[]
+    const mentions: NewsArticle[] = response.news || [];
 
     // Use URL name if provided (from search), otherwise fall back to API response
     const displayName = nameFromUrl || response.entity?.name || `${entityType} ${entityId}`;

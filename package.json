@@ -2,8 +2,10 @@
   "name": "scoracle-root",
   "private": true,
   "scripts": {
-    "install": "cd scoracle-svelte && npm install",
-    "build": "cd scoracle-svelte && npm run build"
+    "install": "cd scoracle-svelte && bun install",
+    "build": "cd scoracle-svelte && bun run build",
+    "dev": "cd scoracle-svelte && bun run dev",
+    "check": "cd scoracle-svelte && bun run check"
   },
   "engines": {
     "node": ">=18.0.0"

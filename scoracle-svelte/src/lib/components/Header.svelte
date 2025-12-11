@@ -1,15 +1,14 @@
 <script lang="ts">
   /**
    * Header component - site header with navigation and settings
-   * Migrated from React Header.tsx
+   * Uses BeerCSS styling
    */
   import { _ } from 'svelte-i18n';
   import { IconMenu2, IconX, IconSun, IconMoon } from '@tabler/icons-svelte';
-  import { colorScheme, isDark, getThemeColors } from '$lib/stores/theme';
+  import { colorScheme, isDark } from '$lib/stores/theme';
   import { languages, changeLanguage, locale } from '$lib/stores/language';
 
   let settingsOpen = false;
-  $: colors = getThemeColors($colorScheme);
 
   function toggleSettings() {
     settingsOpen = !settingsOpen;
@@ -25,106 +24,101 @@
   }
 </script>
 
-<header
-  class="sticky top-0 z-50 h-16 border-b transition-colors"
-  style="background-color: {colors.background.primary}; border-color: {colors.ui.border};"
->
-  <div class="container mx-auto h-full flex items-center justify-between px-4 relative">
-    <!-- Left: Hamburger menu -->
-    <button
-      class="p-2 rounded-lg hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
-      on:click={toggleSettings}
-      aria-label={$_('header.menu')}
-    >
-      <IconMenu2 size={22} style="color: {colors.text.primary}" />
+<header class="fixed">
+  <nav class="surface-variant">
+    <button class="circle transparent" on:click={toggleSettings} aria-label={$_('header.menu')}>
+      <IconMenu2 size={22} />
     </button>
-
-    <!-- Center: Logo -->
-    <a href="/" class="absolute left-1/2 -translate-x-1/2 flex items-center">
-      <img src="/scoracle-logo.png" alt="Scoracle" class="h-10" />
+    
+    <a href="/" class="max center-align">
+      <img src="/scoracle-logo.png" alt="Scoracle" class="responsive" style="max-height: 2.5rem;" />
     </a>
-
-    <!-- Right: Language selector -->
-    <select
-      class="px-2 py-1 text-sm rounded border bg-transparent cursor-pointer"
-      style="color: {colors.text.primary}; border-color: {colors.ui.border};"
-      value={$locale}
-      on:change={handleLanguageChange}
-      aria-label={$_('header.language')}
-    >
-      {#each languages as lang}
-        <option value={lang.id}>{lang.id.toUpperCase()}</option>
-      {/each}
-    </select>
-  </div>
+    
+    <div class="field suffix small border round" style="min-width: 80px;">
+      <select value={$locale} on:change={handleLanguageChange} aria-label={$_('header.language')}>
+        {#each languages as lang}
+          <option value={lang.id}>{lang.id.toUpperCase()}</option>
+        {/each}
+      </select>
+      <i>arrow_drop_down</i>
+    </div>
+  </nav>
 </header>
 
-<!-- Settings Drawer Overlay -->
+<!-- Settings Drawer -->
+<dialog class="left" class:active={settingsOpen}>
+  <nav>
+    <h5 class="max">{$_('header.settings')}</h5>
+    <button class="circle transparent" on:click={closeSettings} aria-label="Close">
+      <IconX size={20} />
+    </button>
+  </nav>
+  
+  <div class="padding">
+    <!-- Appearance Section -->
+    <h6>{$_('header.appearance')}</h6>
+    
+    <label class="switch">
+      <input type="checkbox" checked={$isDark} on:change={() => colorScheme.toggle()} />
+      <span></span>
+      <span class="row">
+        {#if $isDark}
+          <IconMoon size={18} />
+        {:else}
+          <IconSun size={18} />
+        {/if}
+        {$_('header.darkMode')}
+      </span>
+    </label>
+  </div>
+</dialog>
+
+<!-- Overlay for drawer -->
 {#if settingsOpen}
   <!-- svelte-ignore a11y-click-events-have-key-events -->
   <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div
-    class="fixed inset-0 z-50 bg-black/30"
-    on:click={closeSettings}
-  >
-    <!-- Drawer Panel -->
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div
-      class="absolute left-0 top-0 h-full w-80 shadow-xl transition-transform"
-      style="background-color: {colors.background.secondary};"
-      on:click|stopPropagation
-    >
-      <!-- Drawer Header -->
-      <div class="flex items-center justify-between p-4 border-b" style="border-color: {colors.ui.border};">
-        <h2 class="text-lg font-semibold" style="color: {colors.text.primary};">
-          {$_('header.settings')}
-        </h2>
-        <button
-          class="p-2 rounded-lg hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
-          on:click={closeSettings}
-          aria-label="Close"
-        >
-          <IconX size={20} style="color: {colors.text.primary}" />
-        </button>
-      </div>
-
-      <!-- Drawer Content -->
-      <div class="p-4 space-y-6">
-        <!-- Appearance Section -->
-        <div>
-          <h3 class="text-sm font-semibold mb-3" style="color: {colors.text.primary};">
-            {$_('header.appearance')}
-          </h3>
-
-          <!-- Dark Mode Toggle -->
-          <label class="flex items-center justify-between cursor-pointer">
-            <span class="flex items-center gap-2" style="color: {colors.text.primary};">
-              {#if $isDark}
-                <IconMoon size={18} />
-              {:else}
-                <IconSun size={18} />
-              {/if}
-              {$_('header.darkMode')}
-            </span>
-            <button
-              class="relative w-12 h-6 rounded-full transition-colors"
-              class:bg-primary-500={$isDark}
-              class:bg-surface-400={!$isDark}
-              on:click={() => colorScheme.toggle()}
-              role="switch"
-              aria-checked={$isDark}
-            >
-              <span
-                class="absolute top-1 w-4 h-4 bg-white rounded-full transition-transform"
-                class:translate-x-1={!$isDark}
-                class:translate-x-7={$isDark}
-              />
-            </button>
-          </label>
-        </div>
-      </div>
-    </div>
-  </div>
+  <div class="overlay active" on:click={closeSettings}></div>
 {/if}
+
+<style>
+  header {
+    z-index: 100;
+    top: 0;
+    left: 0;
+    right: 0;
+  }
+  
+  dialog.left {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 80vw;
+    margin: 0;
+    border-radius: 0 1rem 1rem 0;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 200;
+  }
+  
+  dialog.left.active {
+    transform: translateX(0);
+  }
+  
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 150;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  
+  .overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+</style>
 

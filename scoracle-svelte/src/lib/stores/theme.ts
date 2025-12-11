@@ -1,5 +1,6 @@
 /**
  * Theme store - replaces React ThemeProvider
+ * Updated for BeerCSS dark mode support
  */
 import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
@@ -27,12 +28,14 @@ function applyTheme(scheme: ColorScheme) {
   if (!browser) return;
 
   const html = document.documentElement;
-  html.classList.remove('scoracle-light', 'scoracle-dark', 'dark');
-
+  
+  // BeerCSS uses 'dark' class on html element
   if (scheme === 'dark') {
-    html.classList.add('scoracle-dark', 'dark');
+    html.classList.add('dark');
+    html.classList.remove('light');
   } else {
-    html.classList.add('scoracle-light');
+    html.classList.add('light');
+    html.classList.remove('dark');
   }
 
   try {
@@ -70,45 +73,4 @@ export const colorScheme = createThemeStore();
 
 // Derived store for checking if dark mode
 export const isDark = derived(colorScheme, ($scheme) => $scheme === 'dark');
-
-/**
- * Get theme colors based on current scheme
- */
-export function getThemeColors(scheme: ColorScheme) {
-  if (scheme === 'dark') {
-    return {
-      background: {
-        primary: '#1A1A1A',
-        secondary: '#242424',
-        tertiary: '#2D2D2D',
-      },
-      text: {
-        primary: '#F5F5E8',
-        secondary: '#D0D0C0',
-        accent: '#E8C4A0',
-      },
-      ui: {
-        primary: '#A85A39',
-        border: '#404040',
-      },
-    };
-  }
-
-  return {
-    background: {
-      primary: '#F5F5E8',
-      secondary: '#EAEADA',
-      tertiary: '#E0E0D0',
-    },
-    text: {
-      primary: '#2D3748',
-      secondary: '#4A5568',
-      accent: '#1A365D',
-    },
-    ui: {
-      primary: '#2D3748',
-      border: '#CBD5E0',
-    },
-  };
-}
 

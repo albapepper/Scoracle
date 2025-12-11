@@ -1,10 +1,10 @@
 #!/bin/bash
-# Combined build script for Vercel - builds frontend
+# Combined build script for Vercel - builds Svelte frontend
 
 set -e
 
-echo "Building frontend..."
-cd frontend && npm run build
+echo "Building Svelte frontend..."
+cd scoracle-svelte && npm run build
 
 cd ..
 

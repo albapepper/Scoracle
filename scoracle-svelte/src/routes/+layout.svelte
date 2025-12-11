@@ -1,23 +1,26 @@
 <script lang="ts">
   /**
    * Root layout - wraps all pages with Header and Footer
+   * Uses BeerCSS for styling
    */
   import { onMount } from 'svelte';
   import { isLoading } from 'svelte-i18n';
-  import { colorScheme } from '$lib/stores/index';
   import { preloadSport } from '$lib/data/dataLoader';
   import { activeSport } from '$lib/stores/index';
   import Header from '$lib/components/Header.svelte';
   import Footer from '$lib/components/Footer.svelte';
   import '$lib/i18n';
+  
+  // Import BeerCSS - CSS first, then JS
+  import 'beercss/dist/cdn/beer.min.css';
   import '../app.css';
-
-  // Preload data for initial sport
-  onMount(() => {
-    preloadSport($activeSport);
+  
+  // Import BeerCSS JS for dynamic features (only in browser)
+  onMount(async () => {
+    await import('beercss');
   });
 
-  // Subscribe to sport changes to preload data
+  // Preload data when sport changes (handles initial load too)
   $: if ($activeSport) {
     preloadSport($activeSport);
   }
@@ -30,23 +33,14 @@
 
 {#if $isLoading}
   <!-- Loading state while i18n initializes -->
-  <div class="min-h-screen flex items-center justify-center bg-surface-50">
-    <div class="animate-pulse text-xl">Loading...</div>
+  <div class="page center-align middle-align">
+    <progress class="circle"></progress>
   </div>
 {:else}
-  <div
-    class="min-h-screen flex flex-col transition-colors"
-    class:scoracle-light={$colorScheme === 'light'}
-    class:scoracle-dark={$colorScheme === 'dark'}
-    class:dark={$colorScheme === 'dark'}
-  >
+  <main class="responsive">
     <Header />
-
-    <main class="flex-1">
-      <slot />
-    </main>
-
+    <slot />
     <Footer />
-  </div>
+  </main>
 {/if}
 

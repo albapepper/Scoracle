@@ -3,7 +3,7 @@
  */
 import type { LayoutLoad } from './$types';
 
-// Disable SSR for now to avoid hydration issues with i18n and fetch
+// Disable SSR - client-side rendering only (SPA mode)
 export const ssr = false;
 
 export const load: LayoutLoad = async () => {

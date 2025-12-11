@@ -1,13 +1,12 @@
 <script lang="ts">
   /**
    * EntityAutocomplete component - search input with autocomplete dropdown
-   * Migrated from React EntityAutocomplete.tsx
+   * Uses BeerCSS styling
    */
   import { createEventDispatcher, onMount } from 'svelte';
   import { _ } from 'svelte-i18n';
-  import { IconSearch, IconUser, IconUsers } from '@tabler/icons-svelte';
+  import { IconUser, IconUsers } from '@tabler/icons-svelte';
   import { activeSport, mapSportToBackendCode } from '$lib/stores/sport';
-  import { colorScheme, getThemeColors } from '$lib/stores/theme';
   import { searchData, type AutocompleteResult } from '$lib/data/dataLoader';
 
   export let placeholder = '';
@@ -25,7 +24,6 @@
   let activeIndex = -1;
   let debounceTimer: ReturnType<typeof setTimeout>;
 
-  $: colors = getThemeColors($colorScheme);
   $: backendSport = mapSportToBackendCode($activeSport);
   $: placeholderText = placeholder || $_('search.searchPlayerOrTeam');
 
@@ -110,96 +108,105 @@
   });
 </script>
 
-<div class="relative w-full">
-  <!-- Input -->
-  <div class="relative">
+<div class="autocomplete-wrapper">
+  <div class="field label prefix border round">
+    <i>search</i>
     <input
       bind:this={inputElement}
       type="text"
       {value}
-      placeholder={placeholderText}
-      class="w-full pl-10 pr-4 py-2 rounded-full border-0 bg-transparent text-sm focus:outline-none"
-      style="color: {colors.text.primary};"
       on:input={handleInput}
       on:keydown={handleKeydown}
       on:focus={handleFocus}
       on:blur={handleBlur}
       autocomplete="off"
       aria-autocomplete="list"
-      aria-expanded={showDropdown}
+      aria-haspopup="listbox"
+      id="entity-search"
     />
-    <div class="absolute left-3 top-1/2 -translate-y-1/2">
-      <IconSearch size={18} style="color: {colors.text.secondary};" />
-    </div>
+    <label for="entity-search">{placeholderText}</label>
     {#if loading}
-      <div class="absolute right-3 top-1/2 -translate-y-1/2">
-        <div
-          class="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
-          style="border-color: {colors.ui.primary}; border-top-color: transparent;"
-        />
-      </div>
+      <progress class="circle small absolute"></progress>
     {/if}
   </div>
 
   <!-- Dropdown -->
   {#if showDropdown && results.length > 0}
-    <ul
-      class="absolute z-50 w-full mt-2 py-2 rounded-lg shadow-lg border max-h-72 overflow-y-auto"
-      style="background-color: {colors.background.secondary}; border-color: {colors.ui.border};"
-      role="listbox"
-    >
+    <!-- svelte-ignore a11y-no-noninteractive-element-to-interactive-role -->
+    <ul class="autocomplete-dropdown no-padding" role="listbox">
       {#each results as result, i}
         <!-- svelte-ignore a11y-click-events-have-key-events -->
         <li
-          class="px-4 py-2 cursor-pointer flex items-center gap-3 transition-colors"
-          class:bg-surface-200={i === activeIndex}
-          class:dark:bg-surface-700={i === activeIndex}
-          style="color: {colors.text.primary};"
+          class="row padding wave"
+          class:active={i === activeIndex}
           on:click={() => handleSelect(result)}
           on:mouseenter={() => (activeIndex = i)}
           role="option"
           aria-selected={i === activeIndex}
         >
           <!-- Icon -->
-          <span
-            class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-            class:bg-blue-500={result.entity_type === 'player'}
-            class:bg-green-500={result.entity_type === 'team'}
-          >
+          <div class="circle small" class:tertiary={result.entity_type === 'player'} class:secondary={result.entity_type === 'team'}>
             {#if result.entity_type === 'player'}
-              <IconUser size={12} class="text-white" />
+              <IconUser size={14} />
             {:else}
-              <IconUsers size={12} class="text-white" />
-            {/if}
-          </span>
-
-          <!-- Name -->
-          <div class="flex-1 min-w-0">
-            <div class="truncate font-medium">{result.name}</div>
-            {#if result.team || result.league}
-              <div class="text-xs truncate" style="color: {colors.text.secondary};">
-                {result.team || result.league}
-              </div>
+              <IconUsers size={14} />
             {/if}
           </div>
 
-          <!-- Type badge -->
-          <span
-            class="px-2 py-0.5 text-xs rounded-full capitalize"
-            class:bg-blue-100={result.entity_type === 'player'}
-            class:text-blue-700={result.entity_type === 'player'}
-            class:dark:bg-blue-900={result.entity_type === 'player'}
-            class:dark:text-blue-300={result.entity_type === 'player'}
-            class:bg-green-100={result.entity_type === 'team'}
-            class:text-green-700={result.entity_type === 'team'}
-            class:dark:bg-green-900={result.entity_type === 'team'}
-            class:dark:text-green-300={result.entity_type === 'team'}
-          >
-            {result.entity_type}
-          </span>
+          <!-- Name -->
+          <div class="max">
+            <span class="bold">{result.name}</span>
+            {#if result.team || result.league}
+              <div class="small-text">{result.team || result.league}</div>
+            {/if}
+          </div>
+
+          <!-- Type chip -->
+          <span class="chip small">{result.entity_type}</span>
         </li>
       {/each}
     </ul>
   {/if}
 </div>
+
+<style>
+  .autocomplete-wrapper {
+    position: relative;
+    width: 100%;
+  }
+  
+  .autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    margin-top: 4px;
+    max-height: 300px;
+    overflow-y: auto;
+    background: var(--surface-container-low);
+    border: 1px solid var(--outline);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    list-style: none;
+  }
+  
+  .autocomplete-dropdown li {
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+  }
+  
+  .autocomplete-dropdown li.active,
+  .autocomplete-dropdown li:hover {
+    background: var(--surface-container);
+  }
+  
+  .absolute {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+</style>
 

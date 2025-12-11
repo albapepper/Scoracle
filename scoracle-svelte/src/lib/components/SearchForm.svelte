@@ -1,24 +1,22 @@
 <script lang="ts">
   /**
    * SearchForm component - main search form with autocomplete
-   * Migrated from React SearchForm.tsx
+   * Uses BeerCSS styling
    */
   import { goto } from '$app/navigation';
   import { _ } from 'svelte-i18n';
   import { IconArrowUp } from '@tabler/icons-svelte';
   import { activeSport } from '$lib/stores/sport';
-  import { colorScheme, getThemeColors } from '$lib/stores/theme';
   import { searchData, type AutocompleteResult } from '$lib/data/dataLoader';
   import EntityAutocomplete from './EntityAutocomplete.svelte';
 
-  export let inline = false;
+  /** External reference only - kept for API compatibility */
+  export const inline = false;
 
   let query = '';
   let selected: AutocompleteResult | null = null;
   let isLoading = false;
   let error = '';
-
-  $: colors = getThemeColors($colorScheme);
 
   function handleSelect(event: CustomEvent<AutocompleteResult>) {
     selected = event.detail;
@@ -74,80 +72,34 @@
   }
 </script>
 
-{#if inline}
-  <!-- Inline form (no card wrapper) -->
-  <form on:submit={handleSubmit}>
-    <div class="space-y-2">
-      <div
-        class="search-form-input-wrapper flex items-center rounded-full px-4 py-1 border transition-all"
-        style="background-color: {colors.background.secondary}; border-color: {colors.ui.border};"
-      >
-        <div class="flex-1">
-          <EntityAutocomplete
-            on:select={handleSelect}
-            on:change={handleChange}
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={isLoading}
-          class="ml-2 w-9 h-9 rounded-full flex items-center justify-center text-white transition-colors disabled:opacity-50"
-          style="background-color: {colors.ui.primary};"
-        >
-          {#if isLoading}
-            <div
-              class="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"
-            />
-          {:else}
-            <IconArrowUp size={18} />
-          {/if}
-        </button>
-      </div>
-
-      {#if error}
-        <p class="text-center text-sm text-red-500 dark:text-red-400">{error}</p>
+<form on:submit={handleSubmit}>
+  <div class="field round fill suffix">
+    <EntityAutocomplete
+      on:select={handleSelect}
+      on:change={handleChange}
+    />
+    <button type="submit" class="circle" disabled={isLoading}>
+      {#if isLoading}
+        <progress class="circle small"></progress>
+      {:else}
+        <IconArrowUp size={18} />
       {/if}
-    </div>
-  </form>
-{:else}
-  <!-- Card-wrapped form -->
-  <div
-    class="card p-6 rounded-xl"
-    style="background-color: {colors.background.tertiary};"
-  >
-    <form on:submit={handleSubmit}>
-      <div class="space-y-2">
-        <div
-          class="flex items-center rounded-full px-4 py-1 border transition-all"
-          style="background-color: {colors.background.secondary}; border-color: {colors.ui.border};"
-        >
-          <div class="flex-1">
-            <EntityAutocomplete
-              on:select={handleSelect}
-              on:change={handleChange}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={isLoading}
-            class="ml-2 w-9 h-9 rounded-full flex items-center justify-center text-white transition-colors disabled:opacity-50"
-            style="background-color: {colors.ui.primary};"
-          >
-            {#if isLoading}
-              <div
-                class="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"
-              />
-            {:else}
-              <IconArrowUp size={18} />
-            {/if}
-          </button>
-        </div>
-
-        {#if error}
-          <p class="text-center text-sm text-red-500 dark:text-red-400">{error}</p>
-        {/if}
-      </div>
-    </form>
+    </button>
   </div>
-{/if}
+  
+  {#if error}
+    <p class="error-text small-text center-align">{error}</p>
+  {/if}
+</form>
+
+<style>
+  .field {
+    position: relative;
+  }
+  
+  .error-text {
+    color: var(--error);
+    margin-top: 0.5rem;
+  }
+</style>
 

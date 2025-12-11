@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * Widget component - displays entity info card.
-   * Migrated from React Widget.tsx
+   * Uses BeerCSS styling
    */
   import { IconUser, IconUsers, IconShirtSport } from '@tabler/icons-svelte';
   import type { WidgetData } from '$lib/data/entityApi';
@@ -34,89 +34,102 @@
 
 {#if loading}
   <!-- Loading skeleton -->
-  <div class="card p-6">
-    <div class="flex items-center gap-4">
-      <div class="w-16 h-16 rounded-full skeleton" />
-      <div class="flex-1 space-y-2">
-        <div class="h-5 w-3/4 skeleton rounded" />
-        <div class="h-4 w-1/2 skeleton rounded" />
+  <article class="surface-variant round padding">
+    <nav class="wrap">
+      <div class="circle large skeleton"></div>
+      <div class="max">
+        <div class="skeleton" style="height: 1.25rem; width: 75%;"></div>
+        <div class="skeleton small-margin" style="height: 1rem; width: 50%;"></div>
       </div>
-    </div>
-  </div>
+    </nav>
+  </article>
 {:else if error}
   <!-- Error state -->
-  <div class="card p-6">
-    <p class="text-center text-red-500 dark:text-red-400">{error}</p>
-  </div>
+  <article class="error round padding">
+    <p class="center-align">{error}</p>
+  </article>
 {:else if data}
   <!-- Widget content -->
-  <div class="card p-6">
-    <div class="flex items-center gap-4">
+  <article class="surface-variant round padding">
+    <nav class="wrap">
       <!-- Photo/Avatar -->
       {#if hasPhoto}
         <img
           src={photoUrl}
           alt={data.display_name}
-          class="w-16 h-16 rounded-full object-cover bg-surface-300 dark:bg-surface-600"
+          class="circle large"
           on:error={handleImageError}
         />
       {:else}
-        <div
-          class="w-16 h-16 rounded-full flex items-center justify-center"
-          class:bg-blue-500={isPlayer}
-          class:bg-green-500={!isPlayer}
-        >
+        <div class="circle large" class:tertiary={isPlayer} class:secondary={!isPlayer}>
           {#if isPlayer}
-            <IconUser size={24} class="text-white" />
+            <IconUser size={24} />
           {:else}
-            <IconUsers size={24} class="text-white" />
+            <IconUsers size={24} />
           {/if}
         </div>
       {/if}
 
       <!-- Info -->
-      <div class="flex-1 min-w-0">
-        <h3 class="text-lg font-semibold truncate text-surface-900 dark:text-surface-50">
-          {data.display_name}
-        </h3>
-
-        <div class="flex items-center gap-2 mt-1 flex-wrap">
-          <span
-            class="px-2 py-0.5 text-xs font-medium rounded-full"
-            class:bg-blue-100={isPlayer}
-            class:text-blue-700={isPlayer}
-            class:dark:bg-blue-900={isPlayer}
-            class:dark:text-blue-300={isPlayer}
-            class:bg-green-100={!isPlayer}
-            class:text-green-700={!isPlayer}
-            class:dark:bg-green-900={!isPlayer}
-            class:dark:text-green-300={!isPlayer}
-          >
+      <div class="max">
+        <h6 class="no-margin">{data.display_name}</h6>
+        
+        <nav class="wrap small-margin">
+          <span class="chip small" class:tertiary={isPlayer} class:secondary={!isPlayer}>
             {isPlayer ? 'Player' : 'Team'}
           </span>
           {#if data.subtitle}
-            <span class="text-sm text-surface-600 dark:text-surface-400">
-              {data.subtitle}
-            </span>
+            <span class="small-text">{data.subtitle}</span>
           {/if}
-        </div>
+        </nav>
 
         {#if details.length > 0}
-          <div class="flex flex-wrap gap-1.5 mt-2">
+          <nav class="wrap small-margin">
             {#each details as detail, i}
-              <span
-                class="px-2 py-0.5 text-xs rounded-full border border-surface-400 dark:border-surface-600 text-surface-600 dark:text-surface-400 flex items-center gap-1"
-              >
+              <span class="chip small border">
                 {#if i === 0 && data.position}
                   <IconShirtSport size={10} />
                 {/if}
                 {detail}
               </span>
             {/each}
-          </div>
+          </nav>
         {/if}
       </div>
-    </div>
-  </div>
+    </nav>
+  </article>
 {/if}
+
+<style>
+  img.circle.large {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+  }
+  
+  div.circle.large {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--surface-container) 25%,
+      var(--surface-variant) 50%,
+      var(--surface-container) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+  }
+  
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+</style>
 

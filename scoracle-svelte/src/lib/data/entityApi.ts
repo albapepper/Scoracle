@@ -1,7 +1,7 @@
 /**
  * Entity API - fetches entity data from backend
+ * Uses native fetch instead of axios for smaller bundle
  */
-import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -77,11 +77,15 @@ export async function getEntity(
     params.append('refresh', 'true');
   }
 
-  const response = await axios.get<EntityResponse>(
+  const response = await fetch(
     `${API_BASE}/entity/${entityType}/${entityId}?${params}`
   );
   
-  return response.data;
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+  
+  return response.json();
 }
 
 /**
@@ -98,11 +102,16 @@ export async function getEntityMentions(
   if (options.limit) params.append('limit', String(options.limit));
   if (options.offset) params.append('offset', String(options.offset));
 
-  const response = await axios.get<{ news: NewsArticle[] }>(
+  const response = await fetch(
     `${API_BASE}/entity/${entityType}/${entityId}/mentions?${params}`
   );
   
-  return response.data.news || [];
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data.news || [];
 }
 
 // Simple in-memory cache
