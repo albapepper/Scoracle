@@ -76,7 +76,7 @@
 
 {#if inline}
   <!-- Inline form (no card wrapper) -->
-  <form on:submit={handleSubmit}>
+  <form onsubmit={handleSubmit}>
     <div class="space-y-2">
       <div
         class="search-form-input-wrapper flex items-center rounded-full px-4 py-1 border transition-all"
@@ -97,7 +97,7 @@
           {#if isLoading}
             <div
               class="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"
-            />
+            ></div>
           {:else}
             <IconArrowUp size={18} />
           {/if}
@@ -115,7 +115,7 @@
     class="card p-6 rounded-xl"
     style="background-color: {colors.background.tertiary};"
   >
-    <form on:submit={handleSubmit}>
+    <form onsubmit={handleSubmit}>
       <div class="space-y-2">
         <div
           class="flex items-center rounded-full px-4 py-1 border transition-all"
@@ -136,7 +136,7 @@
             {#if isLoading}
               <div
                 class="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"
-              />
+              ></div>
             {:else}
               <IconArrowUp size={18} />
             {/if}

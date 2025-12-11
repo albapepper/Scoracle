@@ -54,7 +54,7 @@
 
           <div class="flex justify-center">
             <Widget
-              data={data.entity?.widget}
+              data={data.entity?.widget ?? null}
               loading={!data.entity && !data.error}
               error={data.error}
             />
@@ -79,17 +79,19 @@
         style="border-color: {colors.ui.border}; background-color: {colors.background.secondary};"
       >
         {#each tabs as tab}
-          <button
-            class="flex-1 py-3 px-4 flex items-center justify-center gap-2 font-medium transition-all"
-            class:text-white={activeTab === tab.id}
-            style={activeTab === tab.id
-              ? `background-color: ${colors.ui.primary}; color: white;`
-              : `color: ${colors.text.secondary};`}
-            on:click={() => (activeTab = tab.id)}
-          >
-            <svelte:component this={tab.icon} size={18} />
-            <span class="hidden sm:inline">{$_(tab.label)}</span>
-          </button>
+          {#each [tab] as { icon: Icon }}
+            <button
+              class="flex-1 py-3 px-4 flex items-center justify-center gap-2 font-medium transition-all"
+              class:text-white={activeTab === tab.id}
+              style={activeTab === tab.id
+                ? `background-color: ${colors.ui.primary}; color: white;`
+                : `color: ${colors.text.secondary};`}
+              onclick={() => (activeTab = tab.id)}
+            >
+              <Icon size={18} />
+              <span class="hidden sm:inline">{$_(tab.label)}</span>
+            </button>
+          {/each}
         {/each}
       </div>
 

@@ -56,7 +56,7 @@
 
         <div class="flex justify-center">
           <Widget
-            data={data.entity?.widget}
+            data={data.entity?.widget ?? null}
             loading={!data.entity && !data.error}
             error={data.error}
           />
@@ -89,7 +89,7 @@
                 </h3>
                 <button
                   class="p-2 rounded-lg transition-colors hover:bg-surface-200 dark:hover:bg-surface-700"
-                  on:click={() => toggleView(key)}
+                  onclick={() => toggleView(key)}
                   aria-label={$_('entityPage.switchToTable')}
                 >
                   <IconTable size={18} style="color: {colors.text.secondary};" />
@@ -111,7 +111,7 @@
                 </h3>
                 <button
                   class="p-2 rounded-lg transition-colors hover:bg-surface-200 dark:hover:bg-surface-700"
-                  on:click={() => toggleView(key)}
+                  onclick={() => toggleView(key)}
                   aria-label={$_('entityPage.switchToGraph')}
                 >
                   <IconChartBar size={18} style="color: {colors.text.secondary};" />

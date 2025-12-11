@@ -33,7 +33,7 @@
     <!-- Left: Hamburger menu -->
     <button
       class="p-2 rounded-lg hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
-      on:click={toggleSettings}
+      onclick={toggleSettings}
       aria-label={$_('header.menu')}
     >
       <IconMenu2 size={22} style="color: {colors.text.primary}" />
@@ -49,7 +49,7 @@
       class="px-2 py-1 text-sm rounded border bg-transparent cursor-pointer"
       style="color: {colors.text.primary}; border-color: {colors.ui.border};"
       value={$locale}
-      on:change={handleLanguageChange}
+      onchange={handleLanguageChange}
       aria-label={$_('header.language')}
     >
       {#each languages as lang}
@@ -65,7 +65,7 @@
   <!-- svelte-ignore a11y-no-static-element-interactions -->
   <div
     class="fixed inset-0 z-50 bg-black/30"
-    on:click={closeSettings}
+    onclick={closeSettings}
   >
     <!-- Drawer Panel -->
     <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -73,7 +73,7 @@
     <div
       class="absolute left-0 top-0 h-full w-80 shadow-xl transition-transform"
       style="background-color: {colors.background.secondary};"
-      on:click|stopPropagation
+      onclick={(e) => e.stopPropagation()}
     >
       <!-- Drawer Header -->
       <div class="flex items-center justify-between p-4 border-b" style="border-color: {colors.ui.border};">
@@ -82,7 +82,7 @@
         </h2>
         <button
           class="p-2 rounded-lg hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
-          on:click={closeSettings}
+          onclick={closeSettings}
           aria-label="Close"
         >
           <IconX size={20} style="color: {colors.text.primary}" />
@@ -111,7 +111,7 @@
               class="relative w-12 h-6 rounded-full transition-colors"
               class:bg-primary-500={$isDark}
               class:bg-surface-400={!$isDark}
-              on:click={() => colorScheme.toggle()}
+              onclick={() => colorScheme.toggle()}
               role="switch"
               aria-checked={$isDark}
             >
@@ -119,7 +119,7 @@
                 class="absolute top-1 w-4 h-4 bg-white rounded-full transition-transform"
                 class:translate-x-1={!$isDark}
                 class:translate-x-7={$isDark}
-              />
+              ></span>
             </button>
           </label>
         </div>

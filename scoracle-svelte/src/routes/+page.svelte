@@ -51,7 +51,7 @@
               style={$activeSport === sport.id
                 ? `background-color: ${colors.ui.primary}; color: white;`
                 : `background-color: ${colors.background.tertiary}; color: ${colors.text.primary};`}
-              on:click={() => handleSportChange(sport.id)}
+              onclick={() => handleSportChange(sport.id)}
             >
               {sport.display}
             </button>

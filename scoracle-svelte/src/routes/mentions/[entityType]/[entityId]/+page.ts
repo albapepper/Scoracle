@@ -17,15 +17,17 @@ export const load: PageLoad = async ({ params, url }) => {
     });
 
     // Map backend response to expected format
-    const mentions = response.news?.articles?.map((article: Record<string, unknown>) => ({
-      id: article.link || String(Math.random()),
-      title: article.title || '',
-      url: article.link || '',
-      source: article.source || '',
-      published_at: article.pub_date || '',
-      summary: '',
-      image_url: '',
-    })) || [];
+    const mentions = Array.isArray(response.news) 
+      ? response.news.map((article: Record<string, unknown>) => ({
+          id: article.link || String(Math.random()),
+          title: article.title || '',
+          url: article.link || '',
+          source: article.source || '',
+          published_at: article.pub_date || '',
+          summary: '',
+          image_url: '',
+        }))
+      : [];
 
     // Use URL name if provided (from search), otherwise fall back to API response
     const displayName = nameFromUrl || response.entity?.name || `${entityType} ${entityId}`;
