@@ -38,7 +38,11 @@ export interface NewsArticle {
 export interface EntityResponse {
   entity: EntityInfo;
   widget?: WidgetData;
-  news?: NewsArticle[];
+  news?: { 
+    query?: string;
+    count?: number;
+    articles?: Record<string, unknown>[];
+  };
   enhanced?: Record<string, unknown>;
   stats?: Record<string, unknown>;
 }

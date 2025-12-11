@@ -2,7 +2,7 @@
  * MentionsPage data loader
  */
 import type { PageLoad } from './$types';
-import { getEntity, getEntityCoMentions } from '$lib/data/entityApi';
+import { getEntity, getEntityCoMentions, type CoMention } from '$lib/data/entityApi';
 
 export const load: PageLoad = async ({ params, url }) => {
   const { entityType, entityId } = params;
@@ -17,20 +17,19 @@ export const load: PageLoad = async ({ params, url }) => {
     });
 
     // Map backend response to expected format
-    const mentions = Array.isArray(response.news) 
-      ? response.news.map((article: Record<string, unknown>) => ({
-          id: article.link || String(Math.random()),
-          title: article.title || '',
-          url: article.link || '',
-          source: article.source || '',
-          published_at: article.pub_date || '',
-          summary: '',
-          image_url: '',
-        }))
-      : [];
+    const articles = response.news?.articles || [];
+    const mentions = articles.map((article: Record<string, unknown>) => ({
+      id: String(article.link || Math.random()),
+      title: String(article.title || ''),
+      url: String(article.link || ''),
+      source: String(article.source || ''),
+      published_at: String(article.pub_date || ''),
+      summary: '',
+      image_url: '',
+    }));
 
     // Fetch co-mentions
-    let coMentions = [];
+    let coMentions: CoMention[] = [];
     try {
       coMentions = await getEntityCoMentions(entityType, entityId, sport, { hours: 48 });
     } catch (coMentionsErr) {

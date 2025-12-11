@@ -41,29 +41,27 @@ export const load: PageLoad = async ({ params, url }) => {
     }
 
     // Get articles from both entities
-    const articles1 = Array.isArray(entity1Response.news) 
-      ? entity1Response.news.map((article: Record<string, unknown>) => ({
-          id: article.link || String(Math.random()),
-          title: article.title || '',
-          url: article.link || '',
-          source: article.source || '',
-          published_at: article.pub_date || '',
-          summary: '',
-          image_url: '',
-        }))
-      : [];
+    const articles1Raw = entity1Response.news?.articles || [];
+    const articles1 = articles1Raw.map((article: Record<string, unknown>) => ({
+      id: String(article.link || Math.random()),
+      title: String(article.title || ''),
+      url: String(article.link || ''),
+      source: String(article.source || ''),
+      published_at: String(article.pub_date || ''),
+      summary: '',
+      image_url: '',
+    }));
 
-    const articles2 = Array.isArray(entity2Response.news) 
-      ? entity2Response.news.map((article: Record<string, unknown>) => ({
-          id: article.link || String(Math.random()),
-          title: article.title || '',
-          url: article.link || '',
-          source: article.source || '',
-          published_at: article.pub_date || '',
-          summary: '',
-          image_url: '',
-        }))
-      : [];
+    const articles2Raw = entity2Response.news?.articles || [];
+    const articles2 = articles2Raw.map((article: Record<string, unknown>) => ({
+      id: String(article.link || Math.random()),
+      title: String(article.title || ''),
+      url: String(article.link || ''),
+      source: String(article.source || ''),
+      published_at: String(article.pub_date || ''),
+      summary: '',
+      image_url: '',
+    }));
 
     // Find shared articles (by URL)
     const articles1Urls = new Set(articles1.map(a => a.url));
