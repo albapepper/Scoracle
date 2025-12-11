@@ -6,7 +6,7 @@
   import { IconUser, IconUsers, IconShirtSport } from '@tabler/icons-svelte';
   import type { WidgetData } from '$lib/data/entityApi';
 
-  let { data = $bindable(null), loading = $bindable(false), error = $bindable(null), showDetails = true }: {
+  let { data = null, loading = false, error = null, showDetails = true }: {
     data: WidgetData | null;
     loading?: boolean;
     error?: string | null;

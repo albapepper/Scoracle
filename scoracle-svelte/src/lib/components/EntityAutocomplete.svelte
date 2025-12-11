@@ -10,7 +10,7 @@
   import { colorScheme, getThemeColors } from '$lib/stores/theme';
   import { searchData, type AutocompleteResult } from '$lib/data/dataLoader';
 
-  let { placeholder = '', value = $bindable('') }: {
+  let { placeholder = '', value = '' }: {
     placeholder?: string;
     value?: string;
   } = $props();

@@ -6,7 +6,7 @@
   import { IconUser, IconUsers } from '@tabler/icons-svelte';
   import type { WidgetData } from '$lib/data/entityApi';
 
-  let { data = $bindable(null), loading = $bindable(false) }: {
+  let { data = null, loading = false }: {
     data: WidgetData | null;
     loading?: boolean;
   } = $props();

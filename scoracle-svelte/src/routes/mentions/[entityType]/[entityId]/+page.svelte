@@ -79,19 +79,17 @@
         style="border-color: {colors.ui.border}; background-color: {colors.background.secondary};"
       >
         {#each tabs as tab}
-          {#each [tab] as { icon: Icon }}
-            <button
-              class="flex-1 py-3 px-4 flex items-center justify-center gap-2 font-medium transition-all"
-              class:text-white={activeTab === tab.id}
-              style={activeTab === tab.id
-                ? `background-color: ${colors.ui.primary}; color: white;`
-                : `color: ${colors.text.secondary};`}
-              onclick={() => (activeTab = tab.id)}
-            >
-              <Icon size={18} />
-              <span class="hidden sm:inline">{$_(tab.label)}</span>
-            </button>
-          {/each}
+          <button
+            class="flex-1 py-3 px-4 flex items-center justify-center gap-2 font-medium transition-all"
+            class:text-white={activeTab === tab.id}
+            style={activeTab === tab.id
+              ? `background-color: ${colors.ui.primary}; color: white;`
+              : `color: ${colors.text.secondary};`}
+            onclick={() => (activeTab = tab.id)}
+          >
+            <tab.icon size={18} />
+            <span class="hidden sm:inline">{$_(tab.label)}</span>
+          </button>
         {/each}
       </div>
 
