@@ -12,12 +12,14 @@ export interface PlayerData {
   id: number;
   name: string;
   currentTeam?: string;
+  normalizedName?: string; // Pre-normalized for faster search
 }
 
 export interface TeamData {
   id: number;
   name: string;
   league?: string;
+  normalizedName?: string; // Pre-normalized for faster search
 }
 
 export interface SportData {
@@ -31,6 +33,11 @@ export interface SportData {
 // In-memory cache: sport -> data
 const dataCache = new Map<string, SportData>();
 const loadingPromises = new Map<string, Promise<SportData>>();
+
+// Search optimization constants
+const EARLY_TERMINATION_MULTIPLIER = 3; // Collect 3x more results before checking for early termination
+const HIGH_QUALITY_SCORE_THRESHOLD = 100; // Score threshold for early termination
+const PERFECT_MATCH_SCORE_THRESHOLD = 150; // Score threshold for perfect match - immediate termination
 
 /**
  * Normalize text for searching (lowercase, strip accents, remove special chars)
@@ -76,6 +83,15 @@ export async function loadSportData(sport: string): Promise<SportData> {
     }
 
     const data: SportData = await response.json();
+    
+    // Pre-normalize all names for faster search (compute once, use many times)
+    data.players.items.forEach((p) => {
+      p.normalizedName = normalizeText(p.name);
+    });
+    data.teams.items.forEach((t) => {
+      t.normalizedName = normalizeText(t.name);
+    });
+    
     dataCache.set(sportUpper, data);
     loadingPromises.delete(sportUpper);
 
@@ -144,7 +160,8 @@ export async function searchPlayers(sport: string, query: string, limit = 8): Pr
   const results: SearchResult[] = [];
 
   for (const player of data.players.items) {
-    const normalizedName = normalizeText(player.name);
+    // Use pre-normalized name to avoid repeated normalization
+    const normalizedName = player.normalizedName || normalizeText(player.name);
     const score = calculateMatchScore(normalizedQuery, normalizedName, player.name);
 
     if (score > 0) {
@@ -155,6 +172,14 @@ export async function searchPlayers(sport: string, query: string, limit = 8): Pr
         score,
         team: player.currentTeam,
       });
+      
+      // Early termination: stop searching if we have enough results
+      // Two conditions for early exit:
+      // 1. We have collected enough candidates (3x limit) to be confident in our results
+      // 2. We found a perfect match - no need to search further
+      if (results.length >= limit * EARLY_TERMINATION_MULTIPLIER || score >= PERFECT_MATCH_SCORE_THRESHOLD) {
+        break;
+      }
     }
   }
 
@@ -181,7 +206,8 @@ export async function searchTeams(sport: string, query: string, limit = 8): Prom
   const results: SearchResult[] = [];
 
   for (const team of data.teams.items) {
-    const normalizedName = normalizeText(team.name);
+    // Use pre-normalized name to avoid repeated normalization
+    const normalizedName = team.normalizedName || normalizeText(team.name);
     const score = calculateMatchScore(normalizedQuery, normalizedName, team.name);
 
     if (score > 0) {
@@ -192,6 +218,14 @@ export async function searchTeams(sport: string, query: string, limit = 8): Prom
         score,
         league: team.league,
       });
+      
+      // Early termination: stop searching if we have enough results
+      // Two conditions for early exit:
+      // 1. We have collected enough candidates (3x limit) to be confident in our results
+      // 2. We found a perfect match - no need to search further
+      if (results.length >= limit * EARLY_TERMINATION_MULTIPLIER || score >= PERFECT_MATCH_SCORE_THRESHOLD) {
+        break;
+      }
     }
   }
 
