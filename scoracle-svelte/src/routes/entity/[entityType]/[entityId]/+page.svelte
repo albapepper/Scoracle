@@ -11,27 +11,27 @@
   import { buildEntityUrl } from '$lib/utils/entityName';
   import type { PageData } from './$types';
 
-  export let data: PageData;
+  let { data }: { data: PageData } = $props();
 
-  $: colors = getThemeColors($colorScheme);
+  let colors = $derived(getThemeColors($colorScheme));
 
   // View modes for stat cards
-  let viewModes: Record<string, 'graph' | 'table'> = {
+  let viewModes = $state<Record<string, 'graph' | 'table'>>({
     topLeft: 'graph',
     topRight: 'graph',
     bottomLeft: 'graph',
     bottomRight: 'graph',
-  };
+  });
 
   // Card titles based on sport
-  $: isFootball = $activeSport?.toUpperCase() === 'FOOTBALL';
-  $: isNFL = $activeSport?.toLowerCase() === 'nfl';
-  $: cardTitles = {
+  let isFootball = $derived($activeSport?.toUpperCase() === 'FOOTBALL');
+  let isNFL = $derived($activeSport?.toLowerCase() === 'nfl');
+  let cardTitles = $derived({
     topLeft: isFootball ? 'Attacking' : 'Offense',
     topRight: 'Defensive',
     bottomLeft: isNFL ? 'Special Teams' : 'Dead Ball',
     bottomRight: 'Discipline',
-  };
+  });
 
   function toggleView(key: string) {
     viewModes = {

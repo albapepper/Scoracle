@@ -11,14 +11,14 @@
   import { searchData, type AutocompleteResult } from '$lib/data/dataLoader';
   import EntityAutocomplete from './EntityAutocomplete.svelte';
 
-  export let inline = false;
+  let { inline = false }: { inline?: boolean } = $props();
 
-  let query = '';
-  let selected: AutocompleteResult | null = null;
-  let isLoading = false;
-  let error = '';
+  let query = $state('');
+  let selected = $state<AutocompleteResult | null>(null);
+  let isLoading = $state(false);
+  let error = $state('');
 
-  $: colors = getThemeColors($colorScheme);
+  let colors = $derived(getThemeColors($colorScheme));
 
   function handleSelect(event: CustomEvent<AutocompleteResult>) {
     selected = event.detail;

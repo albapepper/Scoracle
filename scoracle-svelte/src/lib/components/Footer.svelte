@@ -6,8 +6,8 @@
   import { _ } from 'svelte-i18n';
   import { colorScheme, getThemeColors } from '$lib/stores/theme';
 
-  $: colors = getThemeColors($colorScheme);
-  $: year = new Date().getFullYear();
+  let colors = $derived(getThemeColors($colorScheme));
+  let year = $derived(new Date().getFullYear());
 </script>
 
 <footer

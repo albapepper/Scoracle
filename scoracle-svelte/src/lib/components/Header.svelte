@@ -8,8 +8,8 @@
   import { colorScheme, isDark, getThemeColors } from '$lib/stores/theme';
   import { languages, changeLanguage, locale } from '$lib/stores/language';
 
-  let settingsOpen = false;
-  $: colors = getThemeColors($colorScheme);
+  let settingsOpen = $state(false);
+  let colors = $derived(getThemeColors($colorScheme));
 
   function toggleSettings() {
     settingsOpen = !settingsOpen;

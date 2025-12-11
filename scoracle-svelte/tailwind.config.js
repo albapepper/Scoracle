@@ -1,19 +1,57 @@
-import { join } from 'path';
-import { skeleton } from '@skeletonlabs/tw-plugin';
+import { fontFamily } from 'tailwindcss/defaultTheme';
 
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: 'class',
+  darkMode: ['class'],
   content: [
     './src/**/*.{html,js,svelte,ts}',
-    join(require.resolve('@skeletonlabs/skeleton'), '../**/*.{html,js,svelte,ts}'),
   ],
+  safelist: ['dark'],
   theme: {
+    container: {
+      center: true,
+      padding: '2rem',
+      screens: {
+        '2xl': '1400px',
+      },
+    },
     extend: {
       colors: {
-        // Scoracle custom colors from React theme
+        border: 'hsl(var(--border) / <alpha-value>)',
+        input: 'hsl(var(--input) / <alpha-value>)',
+        ring: 'hsl(var(--ring) / <alpha-value>)',
+        background: 'hsl(var(--background) / <alpha-value>)',
+        foreground: 'hsl(var(--foreground) / <alpha-value>)',
+        primary: {
+          DEFAULT: 'hsl(var(--primary) / <alpha-value>)',
+          foreground: 'hsl(var(--primary-foreground) / <alpha-value>)',
+        },
+        secondary: {
+          DEFAULT: 'hsl(var(--secondary) / <alpha-value>)',
+          foreground: 'hsl(var(--secondary-foreground) / <alpha-value>)',
+        },
+        destructive: {
+          DEFAULT: 'hsl(var(--destructive) / <alpha-value>)',
+          foreground: 'hsl(var(--destructive-foreground) / <alpha-value>)',
+        },
+        muted: {
+          DEFAULT: 'hsl(var(--muted) / <alpha-value>)',
+          foreground: 'hsl(var(--muted-foreground) / <alpha-value>)',
+        },
+        accent: {
+          DEFAULT: 'hsl(var(--accent) / <alpha-value>)',
+          foreground: 'hsl(var(--accent-foreground) / <alpha-value>)',
+        },
+        popover: {
+          DEFAULT: 'hsl(var(--popover) / <alpha-value>)',
+          foreground: 'hsl(var(--popover-foreground) / <alpha-value>)',
+        },
+        card: {
+          DEFAULT: 'hsl(var(--card) / <alpha-value>)',
+          foreground: 'hsl(var(--card-foreground) / <alpha-value>)',
+        },
+        // Legacy Scoracle colors for backward compatibility
         'scoracle': {
-          // Light mode
           'bg-primary': '#F5F5E8',
           'bg-secondary': '#EAEADA',
           'bg-tertiary': '#E0E0D0',
@@ -22,7 +60,6 @@ export default {
           'text-accent': '#1A365D',
           'ui-primary': '#2D3748',
           'ui-border': '#CBD5E0',
-          // Dark mode
           'dark-bg-primary': '#1A1A1A',
           'dark-bg-secondary': '#242424',
           'dark-bg-tertiary': '#2D2D2D',
@@ -33,78 +70,16 @@ export default {
           'dark-ui-border': '#404040',
         },
       },
+      borderRadius: {
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
+      },
       fontFamily: {
-        sans: ['Söhne', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['Söhne', ...fontFamily.sans],
       },
     },
   },
-  plugins: [
-    skeleton({
-      themes: {
-        custom: [
-          {
-            name: 'scoracle-light',
-            properties: {
-              // Surface colors
-              '--color-surface-50': '#F5F5E8',
-              '--color-surface-100': '#EAEADA',
-              '--color-surface-200': '#E0E0D0',
-              '--color-surface-300': '#D0D0C0',
-              '--color-surface-400': '#B0B0A0',
-              '--color-surface-500': '#909080',
-              '--color-surface-600': '#707060',
-              '--color-surface-700': '#505040',
-              '--color-surface-800': '#303020',
-              '--color-surface-900': '#1A1A10',
-              // Primary colors
-              '--color-primary-50': '#F7FAFC',
-              '--color-primary-100': '#EDF2F7',
-              '--color-primary-200': '#E2E8F0',
-              '--color-primary-300': '#CBD5E0',
-              '--color-primary-400': '#A0AEC0',
-              '--color-primary-500': '#2D3748',
-              '--color-primary-600': '#2D3748',
-              '--color-primary-700': '#1A202C',
-              '--color-primary-800': '#171923',
-              '--color-primary-900': '#0D0D0D',
-              // Text
-              '--theme-font-color-base': '#2D3748',
-              '--theme-font-color-dark': '#F5F5E8',
-            },
-          },
-          {
-            name: 'scoracle-dark',
-            properties: {
-              // Surface colors (dark)
-              '--color-surface-50': '#404040',
-              '--color-surface-100': '#363636',
-              '--color-surface-200': '#2D2D2D',
-              '--color-surface-300': '#242424',
-              '--color-surface-400': '#1A1A1A',
-              '--color-surface-500': '#141414',
-              '--color-surface-600': '#0D0D0D',
-              '--color-surface-700': '#0A0A0A',
-              '--color-surface-800': '#050505',
-              '--color-surface-900': '#000000',
-              // Primary colors (burnt ember orange for dark)
-              '--color-primary-50': '#F9AE82',
-              '--color-primary-100': '#E99D73',
-              '--color-primary-200': '#D98C64',
-              '--color-primary-300': '#C97A56',
-              '--color-primary-400': '#B8674A',
-              '--color-primary-500': '#A85A39',
-              '--color-primary-600': '#8F563D',
-              '--color-primary-700': '#7D4A33',
-              '--color-primary-800': '#6B3F2A',
-              '--color-primary-900': '#5A3422',
-              // Text
-              '--theme-font-color-base': '#F5F5E8',
-              '--theme-font-color-dark': '#2D3748',
-            },
-          },
-        ],
-      },
-    }),
-  ],
+  plugins: [],
 };
 
