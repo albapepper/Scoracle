@@ -48,14 +48,21 @@
     "statisticalProfile": "Statistical Profile",
     "profile": "Profile",
     "articlesTab": "Articles",
-    "rankingsTab": "Rankings",
+    "coMentionsTab": "Co-mentions",
     "tweetsTab": "X",
     "redditTab": "Reddit",
     "none": "No mentions found",
+    "noCoMentions": "No co-mentions found",
     "linkedTeams": "Linked Teams",
     "linkedPlayers": "Linked Players",
     "tweetsComingSoon": "Twitter feed coming soon.",
-    "redditComingSoon": "Reddit feed coming soon."
+    "redditComingSoon": "Reddit feed coming soon.",
+    "coMentionsDescription": "Entities mentioned alongside {name}"
+  },
+  "links": {
+    "title": "Links",
+    "articlesAboutBoth": "Articles mentioning both entities",
+    "noArticles": "No articles found mentioning both entities"
   },
   "footer": {
     "allRightsReserved": "All rights reserved.",

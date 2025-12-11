@@ -15,11 +15,11 @@
   let colors = $derived(getThemeColors($colorScheme));
 
   // Active tab state
-  let activeTab = $state<'articles' | 'rankings' | 'twitter' | 'reddit'>('articles');
+  let activeTab = $state<'articles' | 'coMentions' | 'twitter' | 'reddit'>('articles');
 
   const tabs = [
     { id: 'articles' as const, icon: IconNews, label: 'mentions.articlesTab' },
-    { id: 'rankings' as const, icon: IconChartLine, label: 'mentions.rankingsTab' },
+    { id: 'coMentions' as const, icon: IconChartLine, label: 'mentions.coMentionsTab' },
     { id: 'twitter' as const, icon: IconBrandTwitter, label: 'mentions.tweetsTab' },
     { id: 'reddit' as const, icon: IconBrandReddit, label: 'mentions.redditTab' },
   ];
@@ -139,10 +139,42 @@
               {$_('mentions.none')}
             </p>
           {/if}
-        {:else if activeTab === 'rankings'}
-          <p class="text-center py-8" style="color: {colors.text.secondary};">
-            Rankings coming soon.
-          </p>
+        {:else if activeTab === 'coMentions'}
+          {#if data.coMentions && data.coMentions.length > 0}
+            <div class="space-y-3">
+              {#each data.coMentions as coMention}
+                <a
+                  href={buildEntityUrl('/links', data.entityType, data.entityId, data.sport, data.entityName) + 
+                    `/${coMention.entity_type}/${coMention.entity_id}?name2=${encodeURIComponent(coMention.name)}`}
+                  class="block p-4 rounded-lg border transition-colors hover:border-primary-500"
+                  style="border-color: {colors.ui.border}; background-color: {colors.background.tertiary};"
+                >
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h3 class="font-medium" style="color: {colors.text.primary};">
+                        {coMention.name}
+                      </h3>
+                      <p class="text-sm" style="color: {colors.text.secondary};">
+                        {coMention.entity_type === 'player' ? 'Player' : 'Team'}
+                      </p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-2xl font-bold" style="color: {colors.ui.primary};">
+                        {coMention.count}
+                      </span>
+                      <span class="text-sm" style="color: {colors.text.secondary};">
+                        {coMention.count === 1 ? 'article' : 'articles'}
+                      </span>
+                    </div>
+                  </div>
+                </a>
+              {/each}
+            </div>
+          {:else}
+            <p class="text-center py-8" style="color: {colors.text.secondary};">
+              {$_('mentions.noCoMentions')}
+            </p>
+          {/if}
         {:else if activeTab === 'twitter'}
           <p class="text-center py-8" style="color: {colors.text.secondary};">
             {$_('mentions.tweetsComingSoon')}

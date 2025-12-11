@@ -20,6 +20,7 @@ from fastapi import APIRouter, Query, HTTPException, Request, Response
 from app.services.entity_service import get_entity_or_fallback, search_entities, EntityInfo
 from app.services.enhanced_entity import get_enhanced_entity
 from app.services.cache import widget_cache
+from app.services.co_mentions import analyze_co_mentions
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/entity", tags=["entities"])
@@ -329,3 +330,63 @@ async def get_entity_mentions(
         "entity_info": entity.to_dict(),
         "mentions": articles,
     }
+
+
+@router.get("/{entity_type}/{entity_id}/co-mentions")
+async def get_entity_co_mentions(
+    response: Response,
+    entity_type: str,
+    entity_id: str,
+    sport: str = Query(...),
+    hours: int = Query(48),
+):
+    """Get co-mentioned entities for an entity based on news articles."""
+    entity_type_lower = entity_type.lower()
+    sport_upper = sport.upper()
+    
+    if entity_type_lower not in ("player", "team"):
+        raise HTTPException(status_code=400, detail="entity_type must be 'player' or 'team'")
+    
+    if sport_upper not in ("NBA", "NFL", "FOOTBALL"):
+        raise HTTPException(status_code=400, detail="sport must be NBA, NFL, or FOOTBALL")
+    
+    # Check cache
+    cache_key = _cache_key("co_mentions", entity_type_lower, entity_id, sport_upper, hours)
+    cached = widget_cache.get(cache_key)
+    if cached is not None:
+        logger.debug(f"Co-mentions cache hit for {entity_type}/{entity_id}")
+        response.headers["Cache-Control"] = f"public, max-age={CACHE_TTL_NEWS}"
+        response.headers["X-Cache"] = "HIT"
+        return cached
+    
+    # Get entity info
+    entity = get_entity_or_fallback(entity_type_lower, entity_id, sport_upper)
+    
+    # Fetch articles
+    articles = _fetch_news_articles(entity.name, hours=hours)
+    
+    # Analyze co-mentions
+    co_mentions = analyze_co_mentions(
+        entity_type_lower,
+        entity_id,
+        entity.name,
+        sport_upper,
+        articles
+    )
+    
+    result = {
+        "entity_type": entity_type_lower,
+        "entity_id": entity_id,
+        "sport": sport_upper,
+        "entity_name": entity.name,
+        "co_mentions": co_mentions,
+        "article_count": len(articles),
+    }
+    
+    # Cache result
+    widget_cache.set(cache_key, result, ttl=CACHE_TTL_NEWS)
+    
+    response.headers["Cache-Control"] = f"public, max-age={CACHE_TTL_NEWS}"
+    response.headers["X-Cache"] = "MISS"
+    
+    return result

@@ -105,6 +105,33 @@ export async function getEntityMentions(
   return response.data.news || [];
 }
 
+export interface CoMention {
+  entity_type: 'player' | 'team';
+  entity_id: string;
+  name: string;
+  count: number;
+}
+
+/**
+ * Fetch co-mentioned entities for an entity
+ */
+export async function getEntityCoMentions(
+  entityType: string,
+  entityId: string,
+  sport: string,
+  options: { hours?: number } = {}
+): Promise<CoMention[]> {
+  const params = new URLSearchParams({ sport });
+  
+  if (options.hours) params.append('hours', String(options.hours));
+
+  const response = await axios.get<{ co_mentions: CoMention[] }>(
+    `${API_BASE}/entity/${entityType}/${entityId}/co-mentions?${params}`
+  );
+  
+  return response.data.co_mentions || [];
+}
+
 // Simple in-memory cache
 const entityCache = new Map<string, { data: EntityResponse; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
