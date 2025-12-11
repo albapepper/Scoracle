@@ -3,9 +3,6 @@
  */
 import type { PageLoad } from './$types';
 import { getEntity } from '$lib/data/entityApi';
-import axios from 'axios';
-
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 export const load: PageLoad = async ({ params, url }) => {
   const { entityType1, entityId1, entityType2, entityId2 } = params;

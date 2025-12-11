@@ -46,11 +46,16 @@ def _build_entity_index(sport: str) -> Dict[str, Tuple[str, str, str]]:
     return index
 
 
-def _extract_entity_mentions(text: str, entity_index: Dict[str, Tuple[str, str, str]]) -> List[Tuple[str, str, str]]:
+def _extract_entity_mentions(text: str, entity_index: Dict[str, Tuple[str, str, str]], sorted_entities: List[Tuple[str, Tuple[str, str, str]]]) -> List[Tuple[str, str, str]]:
     """Extract all entity mentions from text.
     
     Returns list of (entity_type, entity_id, display_name) tuples.
     Uses simple case-insensitive substring matching.
+    
+    Args:
+        text: Text to search for entity mentions
+        entity_index: Dict mapping normalized names to entity info
+        sorted_entities: Pre-sorted list of (name, entity_info) tuples by length descending
     """
     if not text:
         return []
@@ -58,11 +63,8 @@ def _extract_entity_mentions(text: str, entity_index: Dict[str, Tuple[str, str, 
     text_lower = text.lower()
     mentions = []
     
-    # Sort by length descending to match longer names first (e.g., "Manchester United" before "Manchester")
-    sorted_entities = sorted(entity_index.items(), key=lambda x: len(x[0]), reverse=True)
-    
-    # Track already matched positions to avoid overlapping matches
-    matched_positions = set()
+    # Track already matched ranges to avoid overlapping matches
+    matched_ranges = []
     
     for entity_name, (entity_type, entity_id, display_name) in sorted_entities:
         # Find all occurrences of this entity name
@@ -72,17 +74,20 @@ def _extract_entity_mentions(text: str, entity_index: Dict[str, Tuple[str, str, 
             if pos == -1:
                 break
             
-            # Check if this position overlaps with an already matched entity
             end_pos = pos + len(entity_name)
-            if any(p in matched_positions for p in range(pos, end_pos)):
-                start = pos + 1
-                continue
             
-            # Mark these positions as matched
-            for p in range(pos, end_pos):
-                matched_positions.add(p)
+            # Check if this position overlaps with an already matched range
+            overlaps = False
+            for matched_start, matched_end in matched_ranges:
+                if not (end_pos <= matched_start or pos >= matched_end):
+                    overlaps = True
+                    break
             
-            mentions.append((entity_type, entity_id, display_name))
+            if not overlaps:
+                # Mark this range as matched
+                matched_ranges.append((pos, end_pos))
+                mentions.append((entity_type, entity_id, display_name))
+            
             start = pos + len(entity_name)
     
     return mentions
@@ -115,16 +120,24 @@ def analyze_co_mentions(
         logger.warning(f"No entities found in local DB for sport {sport}")
         return []
     
+    # Pre-sort entities by length descending for efficient matching
+    sorted_entities = sorted(entity_index.items(), key=lambda x: len(x[0]), reverse=True)
+    
+    # Build reverse index for looking up display names by (type, id)
+    entity_lookup = {}
+    for name_key, (e_type, e_id, d_name) in entity_index.items():
+        entity_lookup[(e_type, e_id)] = d_name
+    
     # Count co-mentions
     co_mention_counter = Counter()
-    target_key = entity_name.lower().strip()
+    target_key = (entity_type, entity_id)
     
     for article in articles:
         # Combine title and summary for analysis
         text = f"{article.get('title', '')} {article.get('summary', '')}"
         
         # Extract all entity mentions from this article
-        mentions = _extract_entity_mentions(text, entity_index)
+        mentions = _extract_entity_mentions(text, entity_index, sorted_entities)
         
         # Check if target entity is mentioned
         target_mentioned = False
@@ -135,28 +148,20 @@ def analyze_co_mentions(
             mentioned_entities.add(key)
             
             # Check if this is the target entity
-            if ent_type == entity_type and ent_id == entity_id:
-                target_mentioned = True
-            elif ent_name.lower().strip() == target_key:
+            if key == target_key:
                 target_mentioned = True
         
         # If target is mentioned, count all other entities in this article
         if target_mentioned:
-            for ent_type, ent_id in mentioned_entities:
+            for entity_key in mentioned_entities:
                 # Don't count the target entity itself
-                if not (ent_type == entity_type and ent_id == entity_id):
-                    if not (entity_index.get(ent_type, ("", "", ""))[2].lower().strip() == target_key):
-                        co_mention_counter[(ent_type, ent_id)] += 1
+                if entity_key != target_key:
+                    co_mention_counter[entity_key] += 1
     
     # Build result list
     results = []
     for (ent_type, ent_id), count in co_mention_counter.most_common():
-        # Find the display name
-        display_name = None
-        for name_key, (e_type, e_id, d_name) in entity_index.items():
-            if e_type == ent_type and e_id == ent_id:
-                display_name = d_name
-                break
+        display_name = entity_lookup.get((ent_type, ent_id))
         
         if display_name:
             results.append({
