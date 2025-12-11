@@ -48,14 +48,21 @@
     "statisticalProfile": "Perfil Estadístico",
     "profile": "Perfil",
     "articlesTab": "Artículos",
-    "rankingsTab": "Rankings",
+    "coMentionsTab": "Co-menciones",
     "tweetsTab": "X",
     "redditTab": "Reddit",
     "none": "No se encontraron menciones",
+    "noCoMentions": "No se encontraron co-menciones",
     "linkedTeams": "Equipos Relacionados",
     "linkedPlayers": "Jugadores Relacionados",
     "tweetsComingSoon": "Feed de Twitter próximamente.",
-    "redditComingSoon": "Feed de Reddit próximamente."
+    "redditComingSoon": "Feed de Reddit próximamente.",
+    "coMentionsDescription": "Entidades mencionadas junto con {name}"
+  },
+  "links": {
+    "title": "Enlaces",
+    "articlesAboutBoth": "Artículos que mencionan ambas entidades",
+    "noArticles": "No se encontraron artículos que mencionen ambas entidades"
   },
   "footer": {
     "allRightsReserved": "Todos los derechos reservados.",
