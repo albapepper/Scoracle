@@ -10,24 +10,26 @@
   import { colorScheme, getThemeColors } from '$lib/stores/theme';
   import { searchData, type AutocompleteResult } from '$lib/data/dataLoader';
 
-  export let placeholder = '';
-  export let value = '';
+  let { placeholder = '', value = '' }: {
+    placeholder?: string;
+    value?: string;
+  } = $props();
 
   const dispatch = createEventDispatcher<{
     select: AutocompleteResult;
     change: string;
   }>();
 
-  let inputElement: HTMLInputElement;
-  let results: AutocompleteResult[] = [];
-  let loading = false;
-  let showDropdown = false;
-  let activeIndex = -1;
-  let debounceTimer: ReturnType<typeof setTimeout>;
+  let inputElement = $state<HTMLInputElement | undefined>(undefined);
+  let results = $state<AutocompleteResult[]>([]);
+  let loading = $state(false);
+  let showDropdown = $state(false);
+  let activeIndex = $state(-1);
+  let debounceTimer = $state<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  $: colors = getThemeColors($colorScheme);
-  $: backendSport = mapSportToBackendCode($activeSport);
-  $: placeholderText = placeholder || $_('search.searchPlayerOrTeam');
+  let colors = $derived(getThemeColors($colorScheme));
+  let backendSport = $derived(mapSportToBackendCode($activeSport));
+  let placeholderText = $derived(placeholder || $_('search.searchPlayerOrTeam'));
 
   async function search(query: string) {
     if (!query || query.trim().length < 2) {
@@ -120,10 +122,10 @@
       placeholder={placeholderText}
       class="w-full pl-10 pr-4 py-2 rounded-full border-0 bg-transparent text-sm focus:outline-none"
       style="color: {colors.text.primary};"
-      on:input={handleInput}
-      on:keydown={handleKeydown}
-      on:focus={handleFocus}
-      on:blur={handleBlur}
+      oninput={handleInput}
+      onkeydown={handleKeydown}
+      onfocus={handleFocus}
+      onblur={handleBlur}
       autocomplete="off"
       aria-autocomplete="list"
       aria-expanded={showDropdown}
@@ -149,14 +151,11 @@
       role="listbox"
     >
       {#each results as result, i}
-        <!-- svelte-ignore a11y-click-events-have-key-events -->
         <li
           class="px-4 py-2 cursor-pointer flex items-center gap-3 transition-colors"
-          class:bg-surface-200={i === activeIndex}
-          class:dark:bg-surface-700={i === activeIndex}
-          style="color: {colors.text.primary};"
-          on:click={() => handleSelect(result)}
-          on:mouseenter={() => (activeIndex = i)}
+          style="color: {colors.text.primary}; {i === activeIndex ? `background-color: ${colors.background.tertiary};` : ''}"
+          onclick={() => handleSelect(result)}
+          onmouseenter={() => (activeIndex = i)}
           role="option"
           aria-selected={i === activeIndex}
         >

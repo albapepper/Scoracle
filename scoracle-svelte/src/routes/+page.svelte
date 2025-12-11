@@ -8,7 +8,7 @@
   import { colorScheme, getThemeColors } from '$lib/stores/index';
   import SearchForm from '$lib/components/SearchForm.svelte';
 
-  $: colors = getThemeColors($colorScheme);
+  let colors = $derived(getThemeColors($colorScheme));
 
   function handleSportChange(sportId: string) {
     activeSport.change(sportId);
@@ -51,7 +51,7 @@
               style={$activeSport === sport.id
                 ? `background-color: ${colors.ui.primary}; color: white;`
                 : `background-color: ${colors.background.tertiary}; color: ${colors.text.primary};`}
-              on:click={() => handleSportChange(sport.id)}
+              onclick={() => handleSportChange(sport.id)}
             >
               {sport.display}
             </button>

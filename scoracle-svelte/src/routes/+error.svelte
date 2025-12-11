@@ -6,9 +6,9 @@
   import { _ } from 'svelte-i18n';
   import { colorScheme, getThemeColors } from '$lib/stores/index';
 
-  $: colors = getThemeColors($colorScheme);
-  $: status = $page.status;
-  $: message = $page.error?.message || $_('notFound.message');
+  let colors = $derived(getThemeColors($colorScheme));
+  let status = $derived($page.status);
+  let message = $derived($page.error?.message || $_('notFound.message'));
 </script>
 
 <div class="container mx-auto px-4 py-16">

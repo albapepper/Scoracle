@@ -11,27 +11,27 @@
   import { buildEntityUrl } from '$lib/utils/entityName';
   import type { PageData } from './$types';
 
-  export let data: PageData;
+  let { data }: { data: PageData } = $props();
 
-  $: colors = getThemeColors($colorScheme);
+  let colors = $derived(getThemeColors($colorScheme));
 
   // View modes for stat cards
-  let viewModes: Record<string, 'graph' | 'table'> = {
+  let viewModes = $state<Record<string, 'graph' | 'table'>>({
     topLeft: 'graph',
     topRight: 'graph',
     bottomLeft: 'graph',
     bottomRight: 'graph',
-  };
+  });
 
   // Card titles based on sport
-  $: isFootball = $activeSport?.toUpperCase() === 'FOOTBALL';
-  $: isNFL = $activeSport?.toLowerCase() === 'nfl';
-  $: cardTitles = {
+  let isFootball = $derived($activeSport?.toUpperCase() === 'FOOTBALL');
+  let isNFL = $derived($activeSport?.toLowerCase() === 'nfl');
+  let cardTitles = $derived({
     topLeft: isFootball ? 'Attacking' : 'Offense',
     topRight: 'Defensive',
     bottomLeft: isNFL ? 'Special Teams' : 'Dead Ball',
     bottomRight: 'Discipline',
-  };
+  });
 
   function toggleView(key: string) {
     viewModes = {
@@ -56,7 +56,7 @@
 
         <div class="flex justify-center">
           <Widget
-            data={data.entity?.widget}
+            data={data.entity?.widget ?? null}
             loading={!data.entity && !data.error}
             error={data.error}
           />
@@ -89,7 +89,7 @@
                 </h3>
                 <button
                   class="p-2 rounded-lg transition-colors hover:bg-surface-200 dark:hover:bg-surface-700"
-                  on:click={() => toggleView(key)}
+                  onclick={() => toggleView(key)}
                   aria-label={$_('entityPage.switchToTable')}
                 >
                   <IconTable size={18} style="color: {colors.text.secondary};" />
@@ -111,7 +111,7 @@
                 </h3>
                 <button
                   class="p-2 rounded-lg transition-colors hover:bg-surface-200 dark:hover:bg-surface-700"
-                  on:click={() => toggleView(key)}
+                  onclick={() => toggleView(key)}
                   aria-label={$_('entityPage.switchToGraph')}
                 >
                   <IconChartBar size={18} style="color: {colors.text.secondary};" />

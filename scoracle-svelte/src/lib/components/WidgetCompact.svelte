@@ -6,11 +6,13 @@
   import { IconUser, IconUsers } from '@tabler/icons-svelte';
   import type { WidgetData } from '$lib/data/entityApi';
 
-  export let data: WidgetData | null = null;
-  export let loading = false;
+  let { data = null, loading = false }: {
+    data: WidgetData | null;
+    loading?: boolean;
+  } = $props();
 
-  $: isPlayer = data?.type === 'player';
-  $: photoUrl = isPlayer ? data?.photo_url : data?.logo_url;
+  let isPlayer = $derived(data?.type === 'player');
+  let photoUrl = $derived(isPlayer ? data?.photo_url : data?.logo_url);
 </script>
 
 {#if loading}
@@ -39,7 +41,7 @@
         {/if}
       </div>
     {/if}
-    <span class="text-sm font-medium truncate text-surface-900 dark:text-surface-50">
+    <span class="text-sm font-medium truncate" style="color: var(--scoracle-text-primary);">
       {data.display_name}
     </span>
   </div>

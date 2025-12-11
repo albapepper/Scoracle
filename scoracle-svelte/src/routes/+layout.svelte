@@ -18,9 +18,11 @@
   });
 
   // Subscribe to sport changes to preload data
-  $: if ($activeSport) {
-    preloadSport($activeSport);
-  }
+  $effect(() => {
+    if ($activeSport) {
+      preloadSport($activeSport);
+    }
+  });
 </script>
 
 <svelte:head>

@@ -10,12 +10,12 @@
   import { buildEntityUrl } from '$lib/utils/entityName';
   import type { PageData } from './$types';
 
-  export let data: PageData;
+  let { data }: { data: PageData } = $props();
 
-  $: colors = getThemeColors($colorScheme);
+  let colors = $derived(getThemeColors($colorScheme));
 
   // Active tab state
-  let activeTab: 'articles' | 'rankings' | 'twitter' | 'reddit' = 'articles';
+  let activeTab = $state<'articles' | 'rankings' | 'twitter' | 'reddit'>('articles');
 
   const tabs = [
     { id: 'articles' as const, icon: IconNews, label: 'mentions.articlesTab' },
@@ -54,7 +54,7 @@
 
           <div class="flex justify-center">
             <Widget
-              data={data.entity?.widget}
+              data={data.entity?.widget ?? null}
               loading={!data.entity && !data.error}
               error={data.error}
             />
@@ -85,9 +85,9 @@
             style={activeTab === tab.id
               ? `background-color: ${colors.ui.primary}; color: white;`
               : `color: ${colors.text.secondary};`}
-            on:click={() => (activeTab = tab.id)}
+            onclick={() => (activeTab = tab.id)}
           >
-            <svelte:component this={tab.icon} size={18} />
+            <tab.icon size={18} />
             <span class="hidden sm:inline">{$_(tab.label)}</span>
           </button>
         {/each}

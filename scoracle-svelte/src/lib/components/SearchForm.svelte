@@ -11,14 +11,14 @@
   import { searchData, type AutocompleteResult } from '$lib/data/dataLoader';
   import EntityAutocomplete from './EntityAutocomplete.svelte';
 
-  export let inline = false;
+  let { inline = false }: { inline?: boolean } = $props();
 
-  let query = '';
-  let selected: AutocompleteResult | null = null;
-  let isLoading = false;
-  let error = '';
+  let query = $state('');
+  let selected = $state<AutocompleteResult | null>(null);
+  let isLoading = $state(false);
+  let error = $state('');
 
-  $: colors = getThemeColors($colorScheme);
+  let colors = $derived(getThemeColors($colorScheme));
 
   function handleSelect(event: CustomEvent<AutocompleteResult>) {
     selected = event.detail;
@@ -76,7 +76,7 @@
 
 {#if inline}
   <!-- Inline form (no card wrapper) -->
-  <form on:submit={handleSubmit}>
+  <form onsubmit={handleSubmit}>
     <div class="space-y-2">
       <div
         class="search-form-input-wrapper flex items-center rounded-full px-4 py-1 border transition-all"
@@ -97,7 +97,7 @@
           {#if isLoading}
             <div
               class="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"
-            />
+            ></div>
           {:else}
             <IconArrowUp size={18} />
           {/if}
@@ -115,7 +115,7 @@
     class="card p-6 rounded-xl"
     style="background-color: {colors.background.tertiary};"
   >
-    <form on:submit={handleSubmit}>
+    <form onsubmit={handleSubmit}>
       <div class="space-y-2">
         <div
           class="flex items-center rounded-full px-4 py-1 border transition-all"
@@ -136,7 +136,7 @@
             {#if isLoading}
               <div
                 class="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin"
-              />
+              ></div>
             {:else}
               <IconArrowUp size={18} />
             {/if}

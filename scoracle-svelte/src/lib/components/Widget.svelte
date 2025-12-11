@@ -6,17 +6,19 @@
   import { IconUser, IconUsers, IconShirtSport } from '@tabler/icons-svelte';
   import type { WidgetData } from '$lib/data/entityApi';
 
-  export let data: WidgetData | null = null;
-  export let loading = false;
-  export let error: string | null = null;
-  export let showDetails = true;
+  let { data = null, loading = false, error = null, showDetails = true }: {
+    data: WidgetData | null;
+    loading?: boolean;
+    error?: string | null;
+    showDetails?: boolean;
+  } = $props();
 
-  $: isPlayer = data?.type === 'player';
-  $: photoUrl = isPlayer ? data?.photo_url : data?.logo_url;
-  $: hasPhoto = !!photoUrl;
+  let isPlayer = $derived(data?.type === 'player');
+  let photoUrl = $derived(isPlayer ? data?.photo_url : data?.logo_url);
+  let hasPhoto = $derived(!!photoUrl);
 
   // Build detail badges
-  $: details = showDetails
+  let details = $derived(showDetails
     ? [
         data?.position,
         data?.age ? `Age ${data.age}` : null,
@@ -24,7 +26,7 @@
         data?.conference,
         data?.division,
       ].filter(Boolean) as string[]
-    : [];
+    : []);
 
   function handleImageError(event: Event) {
     const img = event.target as HTMLImageElement;
@@ -57,8 +59,9 @@
         <img
           src={photoUrl}
           alt={data.display_name}
-          class="w-16 h-16 rounded-full object-cover bg-surface-300 dark:bg-surface-600"
-          on:error={handleImageError}
+          class="w-16 h-16 rounded-full object-cover"
+          style="background-color: var(--scoracle-bg-tertiary);"
+          onerror={handleImageError}
         />
       {:else}
         <div
@@ -76,7 +79,7 @@
 
       <!-- Info -->
       <div class="flex-1 min-w-0">
-        <h3 class="text-lg font-semibold truncate text-surface-900 dark:text-surface-50">
+        <h3 class="text-lg font-semibold truncate" style="color: var(--scoracle-text-primary);">
           {data.display_name}
         </h3>
 
@@ -95,7 +98,7 @@
             {isPlayer ? 'Player' : 'Team'}
           </span>
           {#if data.subtitle}
-            <span class="text-sm text-surface-600 dark:text-surface-400">
+            <span class="text-sm" style="color: var(--scoracle-text-secondary);">
               {data.subtitle}
             </span>
           {/if}
@@ -105,7 +108,8 @@
           <div class="flex flex-wrap gap-1.5 mt-2">
             {#each details as detail, i}
               <span
-                class="px-2 py-0.5 text-xs rounded-full border border-surface-400 dark:border-surface-600 text-surface-600 dark:text-surface-400 flex items-center gap-1"
+                class="px-2 py-0.5 text-xs rounded-full border flex items-center gap-1"
+                style="border-color: var(--scoracle-ui-border); color: var(--scoracle-text-secondary);"
               >
                 {#if i === 0 && data.position}
                   <IconShirtSport size={10} />
