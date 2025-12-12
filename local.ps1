@@ -100,12 +100,36 @@ function Start-Frontend {
   $frontendDir = Join-Path $RepoRoot 'astro-frontend'
   Push-Location $frontendDir
   try {
-    if (-not (Test-Path 'node_modules')) { 
-      Write-Info 'Installing frontend deps with npm...'
-      npm install
+    # Check if Bun is available (check PATH first, then user profile)
+    $bunInPath = Get-Command bun -ErrorAction SilentlyContinue
+    $bunUserPath = Join-Path $env:USERPROFILE '.bun\bin\bun.exe'
+    
+    if ($bunInPath) {
+      $bunCmd = 'bun'
+      $useBun = $true
+    } elseif (Test-Path $bunUserPath) {
+      $bunCmd = $bunUserPath
+      $useBun = $true
+    } else {
+      $useBun = $false
     }
-    Write-Ok 'Starting Astro dev server on http://localhost:3000'
-    npm run dev
+    
+    if ($useBun) {
+      if (-not (Test-Path 'node_modules')) { 
+        Write-Info 'Installing frontend deps with Bun (faster)...'
+        & $bunCmd install
+      }
+      Write-Ok 'Starting Astro dev server on http://localhost:3000 (Bun)'
+      & $bunCmd run dev
+    } else {
+      Write-Warn 'Bun not found. Install from https://bun.sh for faster builds'
+      if (-not (Test-Path 'node_modules')) { 
+        Write-Info 'Installing frontend deps with npm...'
+        npm install
+      }
+      Write-Ok 'Starting Astro dev server on http://localhost:3000'
+      npm run dev
+    }
   }
   finally { Pop-Location }
 }
