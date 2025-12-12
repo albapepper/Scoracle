@@ -1,41 +1,11 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
 import PlayerPage from '../../../components/PlayerPage';
-import { SPORTS } from '../../../lib/types';
+import { getEntityStaticPaths } from '../../../lib/utils/staticPaths';
 
 // Generate static paths for all players from the JSON data files
 export async function getStaticPaths() {
-  const paths = [];
-  
-  for (const sport of SPORTS) {
-    try {
-      // Read the static JSON file
-      const response = await fetch(`http://localhost:4321/data/${sport.id}.json`).catch(() => null);
-      if (!response) {
-        // Fallback to reading from file system during build
-        const fs = await import('fs/promises');
-        const path = await import('path');
-        const dataPath = path.join(process.cwd(), 'public', 'data', `${sport.id}.json`);
-        const content = await fs.readFile(dataPath, 'utf-8');
-        const data = JSON.parse(content);
-        
-        if (data.players?.items) {
-          for (const player of data.players.items) {
-            paths.push({
-              params: {
-                sport: sport.id,
-                id: String(player.id),
-              },
-            });
-          }
-        }
-      }
-    } catch (e) {
-      console.error(`Failed to load ${sport.id} data:`, e);
-    }
-  }
-  
-  return paths;
+  return await getEntityStaticPaths('player');
 }
 ---
 

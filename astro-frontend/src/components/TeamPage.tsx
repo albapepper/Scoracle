@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getEntity } from '../lib/api/entities';
-import type { SportId, EntityResponse } from '../lib/types';
+import { parseEntityUrl } from '../lib/utils/useEntityFromUrl';
+import type { EntityResponse } from '../lib/types';
 
 export default function TeamPage() {
   const [data, setData] = useState<EntityResponse | null>(null);
@@ -8,12 +9,9 @@ export default function TeamPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Extract sport and teamId from URL path
-    const pathParts = window.location.pathname.split('/').filter(Boolean);
-    const sport = pathParts[0] as SportId;
-    const teamId = pathParts[2];
+    const { sport, id } = parseEntityUrl();
 
-    if (!sport || !teamId) {
+    if (!sport || !id) {
       setError('Invalid URL');
       setLoading(false);
       return;
@@ -22,7 +20,7 @@ export default function TeamPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const result = await getEntity('team', teamId, sport, {
+        const result = await getEntity('team', id, sport, {
           includeWidget: true,
           includeNews: true,
         });
