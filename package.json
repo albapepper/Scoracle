@@ -2,10 +2,11 @@
   "name": "scoracle-root",
   "private": true,
   "scripts": {
-    "install": "cd scoracle-svelte && bun install",
-    "build": "cd scoracle-svelte && bun run build",
-    "dev": "cd scoracle-svelte && bun run dev",
-    "check": "cd scoracle-svelte && bun run check"
+    "install": "cd astro-frontend && npm install",
+    "build": "cd astro-frontend && npm run build",
+    "dev": "cd astro-frontend && npm run dev",
+    "check": "cd astro-frontend && npm run check",
+    "preview": "cd astro-frontend && npm run preview"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -1,14 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "buildCommand": "cd scoracle-svelte && npm run build",
-  "installCommand": "cd scoracle-svelte && npm install",
-  "outputDirectory": "scoracle-svelte/build",
-  "framework": null,
+  "buildCommand": "cd astro-frontend && npm run build",
+  "installCommand": "cd astro-frontend && npm install",
+  "outputDirectory": "astro-frontend/dist",
+  "framework": "astro",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.py" },
-    { "source": "/health", "destination": "/api/index.py" },
-    { "source": "/((?!api|_app|favicon|data|manifest).*)", "destination": "/index.html" }
+    { "source": "/health", "destination": "/api/index.py" }
   ],
   "functions": {
     "api/index.py": {
