@@ -1,0 +1,14 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import TeamPage from '../../../components/TeamPage';
+import { getEntityStaticPaths } from '../../../lib/utils/staticPaths';
+
+// Generate static paths for all teams from the JSON data files
+export async function getStaticPaths() {
+  return await getEntityStaticPaths('team');
+}
+---
+
+<Layout title="Team - Scoracle" description="Team stats and news">
+  <TeamPage client:only="react" />
+</Layout>

@@ -1,0 +1,14 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import PlayerPage from '../../../components/PlayerPage';
+import { getEntityStaticPaths } from '../../../lib/utils/staticPaths';
+
+// Generate static paths for all players from the JSON data files
+export async function getStaticPaths() {
+  return await getEntityStaticPaths('player');
+}
+---
+
+<Layout title="Player - Scoracle" description="Player stats and news">
+  <PlayerPage client:only="react" />
+</Layout>
