@@ -4,6 +4,7 @@
     "jsx": "react-jsx",
     "jsxImportSource": "react",
     "baseUrl": ".",
+    "moduleResolution": "bundler",
     "paths": {
       "@/*": ["src/*"],
       "@components/*": ["src/components/*"],
@@ -11,5 +12,7 @@
       "@lib/*": ["src/lib/*"],
       "@pages/*": ["src/pages/*"]
     }
-  }
+  },
+  "include": ["src/**/*", ".astro/types.d.ts"],
+  "exclude": ["node_modules", "dist"]
 }

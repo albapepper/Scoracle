@@ -6,9 +6,28 @@ import '../styles/global.css';
 interface Props {
   title: string;
   description?: string;
+  image?: string;
+  canonical?: string;
+  type?: string;
 }
 
-const { title, description = 'Sports News & Statistics Platform' } = Astro.props;
+const { 
+  title, 
+  description = 'Sports News & Statistics Platform',
+  image = 'https://scoracle.vercel.app/og-image.png',
+  canonical = Astro.url.href,
+  type = 'website',
+} = Astro.props;
+
+// Structured data for SEO
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': type === 'person' ? 'Person' : type === 'sportsTeam' ? 'SportsTeam' : 'WebSite',
+  name: title,
+  description: description,
+  url: canonical,
+  image: image,
+};
 ---
 
 <!DOCTYPE html>
@@ -19,15 +38,35 @@ const { title, description = 'Sports News & Statistics Platform' } = Astro.props
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
     
-    <!-- Open Graph -->
+    <!-- Canonical URL -->
+    <link rel="canonical" href={canonical} />
+    
+    <!-- Preconnect to API domain for faster requests -->
+    <link rel="dns-prefetch" href={import.meta.env.PUBLIC_API_URL || '/api/v1'} />
+    <link rel="preconnect" href={import.meta.env.PUBLIC_API_URL || '/api/v1'} />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content={type} />
+    <meta property="og:url" content={canonical} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:type" content="website" />
+    <meta property="og:image" content={image} />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content={canonical} />
+    <meta property="twitter:title" content={title} />
+    <meta property="twitter:description" content={description} />
+    <meta property="twitter:image" content={image} />
     
     <title>{title}</title>
     
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json" set:html={JSON.stringify(structuredData)} is:inline></script>
     
     <!-- Theme initialization script (runs before page load to prevent flash) -->
     <script is:inline>

@@ -19,7 +19,12 @@ export default {
           secondary: '#ffffff',
         },
       },
+      animation: {
+        pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      },
     },
   },
+  // Only include used CSS in production
+  safelist: [],
   plugins: [],
 };

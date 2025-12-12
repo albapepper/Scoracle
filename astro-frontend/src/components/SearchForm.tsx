@@ -6,6 +6,14 @@ interface SearchFormProps {
   sport: SportId;
 }
 
+const CACHE_KEY = 'scoracle_autocomplete_cache';
+const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
+
+interface CachedData {
+  data: AutocompleteEntity[];
+  timestamp: number;
+}
+
 export default function SearchForm({ sport }: SearchFormProps) {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<AutocompleteEntity[]>([]);
@@ -14,17 +22,38 @@ export default function SearchForm({ sport }: SearchFormProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Load autocomplete data for the current sport
+    // Load autocomplete data with caching
     const loadData = async () => {
       try {
-        const response = await fetch(`/data/${sport}.json`);
-        const data = await response.json();
+        // Check cache first
+        const cache = localStorage.getItem(CACHE_KEY);
+        let cachedData: Record<string, CachedData> | null = null;
         
+        if (cache) {
+          try {
+            cachedData = JSON.parse(cache);
+            if (cachedData && cachedData[sport]) {
+              const { data, timestamp } = cachedData[sport];
+              if (Date.now() - timestamp < CACHE_EXPIRY) {
+                setAllData(data);
+                return; // Use cached data
+              }
+            }
+          } catch (e) {
+            console.warn('Cache parse error:', e);
+          }
+        }
+
+        // Fetch fresh data if not cached
+        const response = await fetch(`/data/${sport}.json`);
+        if (!response.ok) throw new Error('Failed to fetch data');
+        
+        const json = await response.json();
         const items: AutocompleteEntity[] = [];
         
         // Add players
-        if (data.players?.items) {
-          items.push(...data.players.items.map((p: any) => ({
+        if (json.players?.items) {
+          items.push(...json.players.items.map((p: any) => ({
             id: String(p.id),
             name: p.name,
             type: 'player',
@@ -33,8 +62,8 @@ export default function SearchForm({ sport }: SearchFormProps) {
         }
         
         // Add teams
-        if (data.teams?.items) {
-          items.push(...data.teams.items.map((t: any) => ({
+        if (json.teams?.items) {
+          items.push(...json.teams.items.map((t: any) => ({
             id: String(t.id),
             name: t.name,
             type: 'team',
@@ -42,10 +71,19 @@ export default function SearchForm({ sport }: SearchFormProps) {
         }
         
         setAllData(items);
+        
+        // Update cache
+        if (cachedData) {
+          cachedData[sport] = { data: items, timestamp: Date.now() };
+        } else {
+          cachedData = { [sport]: { data: items, timestamp: Date.now() } };
+        }
+        localStorage.setItem(CACHE_KEY, JSON.stringify(cachedData));
       } catch (error) {
         console.error('Failed to load autocomplete data:', error);
       }
     };
+    
     loadData();
   }, [sport]);
 
@@ -56,10 +94,10 @@ export default function SearchForm({ sport }: SearchFormProps) {
       return;
     }
 
+    // Case-insensitive search
+    const lowerQuery = query.toLowerCase();
     const filtered = allData
-      .filter(item =>
-        item.name.toLowerCase().includes(query.toLowerCase())
-      )
+      .filter(item => item.name.toLowerCase().includes(lowerQuery))
       .slice(0, 10);
 
     setSuggestions(filtered);
@@ -75,7 +113,8 @@ export default function SearchForm({ sport }: SearchFormProps) {
 
   const handleSelect = (entity: AutocompleteEntity) => {
     const type = entity.type || 'player';
-    window.location.href = `/${sport}/${type}/${entity.id}`;
+    // Redirect to mentions page with query params
+    window.location.href = `/mentions?sport=${sport}&type=${type}&id=${entity.id}`;
   };
 
   return (
@@ -90,10 +129,12 @@ export default function SearchForm({ sport }: SearchFormProps) {
           onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
           placeholder={`Search for ${sport.toUpperCase()} players or teams...`}
           className="input pr-12"
+          autoComplete="off"
         />
         <button
           type="submit"
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-500 hover:text-blue-600"
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          aria-label="Search"
         >
           <IconSearch size={20} />
         </button>
@@ -106,7 +147,7 @@ export default function SearchForm({ sport }: SearchFormProps) {
               key={`${suggestion.id}-${index}`}
               type="button"
               onClick={() => handleSelect(suggestion)}
-              className="w-full text-left px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-200 dark:border-slate-700 last:border-b-0"
+              className="w-full text-left px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-200 dark:border-slate-700 last:border-b-0 transition-colors"
             >
               <div className="font-medium">{suggestion.name}</div>
               {suggestion.team && (
