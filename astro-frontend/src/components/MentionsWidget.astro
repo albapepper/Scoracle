@@ -1,0 +1,173 @@
+---
+/**
+ * Mentions Page Widget Container
+ * 
+ * Displays social mentions for an entity (from URL params).
+ */
+import Card from './Card.astro';
+---
+
+<div id="mentions-page">
+  <!-- Loading -->
+  <div id="mentions-loading">
+    <div class="mb-6 animate-pulse">
+      <div class="h-8 bg-slate-300 dark:bg-slate-700 rounded w-48 mb-2"></div>
+      <div class="h-4 bg-slate-300 dark:bg-slate-700 rounded w-32"></div>
+    </div>
+    <Card>
+      <div class="animate-pulse space-y-4">
+        {[1,2,3].map(() => (
+          <div class="py-3 border-b border-slate-200 dark:border-slate-700 last:border-0">
+            <div class="h-4 bg-slate-300 dark:bg-slate-700 rounded w-3/4 mb-2"></div>
+            <div class="h-3 bg-slate-300 dark:bg-slate-700 rounded w-1/2"></div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  </div>
+
+  <!-- Error -->
+  <div id="mentions-error" class="hidden text-center py-12">
+    <p class="text-2xl mb-2">😕</p>
+    <h1 class="text-xl font-bold text-red-600 dark:text-red-400 mb-2">Error</h1>
+    <p id="error-message" class="text-slate-600 dark:text-slate-400 mb-6"></p>
+    <a href="/" class="btn btn-primary">Back to Home</a>
+  </div>
+
+  <!-- Empty -->
+  <div id="mentions-empty" class="hidden text-center py-12">
+    <p class="text-2xl mb-2">🔍</p>
+    <h1 class="text-xl font-bold mb-2">No Entity Selected</h1>
+    <p class="text-slate-600 dark:text-slate-400 mb-6">Search for a player or team to view mentions.</p>
+    <a href="/" class="btn btn-primary">Go to Search</a>
+  </div>
+
+  <!-- Content -->
+  <div id="mentions-content" class="hidden">
+    <!-- Header -->
+    <div class="mb-6">
+      <div class="flex items-center gap-3 mb-1">
+        <h1 id="entity-name" class="text-2xl font-bold"></h1>
+        <span id="sport-badge" class="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs uppercase font-medium"></span>
+      </div>
+      <a id="profile-link" href="/" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">
+        View Profile →
+      </a>
+    </div>
+
+    <!-- Mentions Card -->
+    <Card title="Recent Mentions">
+      <div id="mentions-list" class="divide-y divide-slate-200 dark:divide-slate-700"></div>
+      <div id="no-mentions" class="hidden py-8 text-center text-slate-500 dark:text-slate-400">
+        No recent mentions found.
+      </div>
+    </Card>
+  </div>
+</div>
+
+<script>
+  interface Mention {
+    id: string;
+    title: string;
+    url: string;
+    source: string;
+    published_at: string;
+    summary?: string;
+    sentiment?: 'positive' | 'neutral' | 'negative';
+  }
+
+  class MentionsPage {
+    private sport: string | null;
+    private type: string | null;
+    private id: string | null;
+
+    constructor() {
+      const params = new URLSearchParams(window.location.search);
+      this.sport = params.get('sport');
+      this.type = params.get('type');
+      this.id = params.get('id');
+      
+      this.init();
+    }
+
+    private async init() {
+      if (!this.sport || !this.type || !this.id) {
+        this.showEmpty();
+        return;
+      }
+
+      try {
+        await this.fetchMentions();
+      } catch (e) {
+        this.showError('Failed to load mentions.');
+      }
+    }
+
+    private async fetchMentions() {
+      // TODO: Connect to real API endpoint
+      // const res = await fetch(`/api/v1/mentions/${this.type}/${this.id}?sport=${this.sport}`);
+      await new Promise(r => setTimeout(r, 200));
+      
+      const entityName = `Entity ${this.id}`;
+      this.render(entityName, []);
+    }
+
+    private render(name: string, mentions: Mention[]) {
+      this.hide('mentions-loading');
+      this.show('mentions-content');
+      
+      document.getElementById('entity-name')!.textContent = `${name} Mentions`;
+      document.getElementById('sport-badge')!.textContent = this.sport!;
+      document.getElementById('profile-link')!.setAttribute('href', 
+        `/entity?sport=${this.sport}&type=${this.type}&id=${this.id}`
+      );
+
+      if (mentions.length === 0) {
+        this.show('no-mentions');
+        return;
+      }
+
+      document.getElementById('mentions-list')!.innerHTML = mentions.map(m => `
+        <article class="py-3 first:pt-0 last:pb-0">
+          <a href="${this.esc(m.url)}" target="_blank" rel="noopener noreferrer"
+             class="font-medium text-blue-600 dark:text-blue-400 hover:underline text-sm">
+            ${this.esc(m.title)}
+          </a>
+          <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <span>${this.esc(m.source)}</span>
+            <span>·</span>
+            <span>${this.esc(m.published_at)}</span>
+            ${m.sentiment ? `<span class="px-1.5 py-0.5 rounded ${this.sentimentClass(m.sentiment)}">${m.sentiment}</span>` : ''}
+          </div>
+          ${m.summary ? `<p class="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">${this.esc(m.summary)}</p>` : ''}
+        </article>
+      `).join('');
+    }
+
+    private sentimentClass(s: string): string {
+      return s === 'positive' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+           : s === 'negative' ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+           : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400';
+    }
+
+    private esc(str: string): string {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    private show(id: string) { document.getElementById(id)?.classList.remove('hidden'); }
+    private hide(id: string) { document.getElementById(id)?.classList.add('hidden'); }
+    private showError(msg: string) {
+      this.hide('mentions-loading');
+      this.show('mentions-error');
+      document.getElementById('error-message')!.textContent = msg;
+    }
+    private showEmpty() {
+      this.hide('mentions-loading');
+      this.show('mentions-empty');
+    }
+  }
+
+  new MentionsPage();
+</script>

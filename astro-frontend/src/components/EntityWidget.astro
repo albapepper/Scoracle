@@ -1,0 +1,232 @@
+---
+/**
+ * Entity Page Widget Container
+ * 
+ * Reads URL params and fetches entity data from API.
+ * Renders cards with hydrated widgets.
+ */
+import Card from './Card.astro';
+---
+
+<div id="entity-page">
+  <!-- Loading state -->
+  <div id="entity-loading">
+    <div class="mb-6 animate-pulse">
+      <div class="h-8 bg-slate-300 dark:bg-slate-700 rounded w-48 mb-2"></div>
+      <div class="h-4 bg-slate-300 dark:bg-slate-700 rounded w-32"></div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 space-y-6">
+        <Card title="Info">
+          <div class="animate-pulse space-y-3">
+            <div class="h-4 bg-slate-300 dark:bg-slate-700 rounded w-3/4"></div>
+            <div class="h-4 bg-slate-300 dark:bg-slate-700 rounded w-1/2"></div>
+          </div>
+        </Card>
+      </div>
+      <div>
+        <Card>
+          <div class="animate-pulse h-32 bg-slate-300 dark:bg-slate-700 rounded"></div>
+        </Card>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error state -->
+  <div id="entity-error" class="hidden text-center py-12">
+    <p class="text-2xl mb-2">😕</p>
+    <h1 class="text-xl font-bold text-red-600 dark:text-red-400 mb-2">Error</h1>
+    <p id="error-message" class="text-slate-600 dark:text-slate-400 mb-6"></p>
+    <a href="/" class="btn btn-primary">Back to Home</a>
+  </div>
+
+  <!-- Empty state -->
+  <div id="entity-empty" class="hidden text-center py-12">
+    <p class="text-2xl mb-2">🔍</p>
+    <h1 class="text-xl font-bold mb-2">No Entity Selected</h1>
+    <p class="text-slate-600 dark:text-slate-400 mb-6">Search for a player or team to view their profile.</p>
+    <a href="/" class="btn btn-primary">Go to Search</a>
+  </div>
+
+  <!-- Content -->
+  <div id="entity-content" class="hidden">
+    <!-- Header -->
+    <div class="mb-6">
+      <div class="flex items-center gap-3 mb-1">
+        <h1 id="entity-name" class="text-2xl font-bold"></h1>
+        <span id="sport-badge" class="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs uppercase font-medium"></span>
+      </div>
+      <a id="mentions-link" href="/" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">
+        ← View Mentions
+      </a>
+    </div>
+
+    <!-- Cards Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Main Content -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Entity Info Card -->
+        <Card title="Info">
+          <div id="widget-entity-info" data-widget="entity-info"></div>
+        </Card>
+
+        <!-- News Card -->
+        <div id="news-card" class="hidden">
+          <Card title="Latest News">
+            <div id="news-list" class="divide-y divide-slate-200 dark:divide-slate-700"></div>
+          </Card>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="space-y-6">
+        <!-- Photo/Logo Card -->
+        <div id="media-card" class="hidden">
+          <Card>
+            <div id="media-content"></div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { createWidget, type BaseWidget } from '../lib/widgets';
+
+  const API_BASE = '/api/v1';
+
+  interface EntityResponse {
+    entity: { name: string; sport?: string };
+    widget?: any;
+    news?: Array<{ id: string; title: string; url: string; source: string; published_at: string; summary?: string }>;
+  }
+
+  class EntityPage {
+    private sport: string | null;
+    private type: string | null;
+    private id: string | null;
+    private widgets: Map<string, BaseWidget> = new Map();
+
+    constructor() {
+      const params = new URLSearchParams(window.location.search);
+      this.sport = params.get('sport');
+      this.type = params.get('type');
+      this.id = params.get('id');
+      
+      this.init();
+    }
+
+    private async init() {
+      if (!this.sport || !this.type || !this.id) {
+        this.showEmpty();
+        return;
+      }
+
+      try {
+        await this.fetchEntity();
+      } catch (e) {
+        console.error('Failed to fetch entity:', e);
+        this.showError('Failed to load entity data.');
+      }
+    }
+
+    private async fetchEntity() {
+      const params = new URLSearchParams({
+        sport: this.sport!,
+        include: 'widget,news'
+      });
+      
+      const response = await fetch(`${API_BASE}/entity/${this.type}/${this.id}?${params}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data: EntityResponse = await response.json();
+      
+      if (!data.entity) {
+        this.showError('Entity not found');
+        return;
+      }
+
+      this.render(data);
+      document.title = `${data.entity.name} - Scoracle`;
+    }
+
+    private render(data: EntityResponse) {
+      this.hide('entity-loading');
+      this.show('entity-content');
+
+      // Header
+      document.getElementById('entity-name')!.textContent = data.entity.name;
+      document.getElementById('sport-badge')!.textContent = this.sport!;
+      document.getElementById('mentions-link')!.setAttribute('href', 
+        `/mentions?sport=${this.sport}&type=${this.type}&id=${this.id}`
+      );
+
+      // Entity Info Widget
+      if (data.widget) {
+        const container = document.getElementById('widget-entity-info')!;
+        const widget = createWidget('entity-info', container, data.widget);
+        if (widget) this.widgets.set('entity-info', widget);
+      }
+
+      // Media (photo/logo)
+      if (data.widget?.photo_url || data.widget?.logo_url) {
+        this.show('media-card');
+        const mediaEl = document.getElementById('media-content')!;
+        
+        if (data.widget.photo_url) {
+          mediaEl.innerHTML = `<img src="${this.esc(data.widget.photo_url)}" alt="${this.esc(data.entity.name)}" class="w-full h-auto rounded" />`;
+        } else if (data.widget.logo_url) {
+          mediaEl.innerHTML = `<img src="${this.esc(data.widget.logo_url)}" alt="${this.esc(data.entity.name)} logo" class="w-full h-auto max-h-24 object-contain mx-auto" />`;
+        }
+      }
+
+      // News
+      if (data.news && data.news.length > 0) {
+        this.show('news-card');
+        const newsEl = document.getElementById('news-list')!;
+        newsEl.innerHTML = data.news.map(n => `
+          <article class="py-3 first:pt-0 last:pb-0">
+            <a href="${this.esc(n.url)}" target="_blank" rel="noopener noreferrer" 
+               class="font-medium text-blue-600 dark:text-blue-400 hover:underline text-sm">
+              ${this.esc(n.title)}
+            </a>
+            <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              ${this.esc(n.source)} · ${this.esc(n.published_at)}
+            </div>
+          </article>
+        `).join('');
+      }
+    }
+
+    private esc(str: string): string {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    private show(id: string) {
+      document.getElementById(id)?.classList.remove('hidden');
+    }
+
+    private hide(id: string) {
+      document.getElementById(id)?.classList.add('hidden');
+    }
+
+    private showError(message: string) {
+      this.hide('entity-loading');
+      this.show('entity-error');
+      document.getElementById('error-message')!.textContent = message;
+    }
+
+    private showEmpty() {
+      this.hide('entity-loading');
+      this.show('entity-empty');
+    }
+  }
+
+  new EntityPage();
+</script>

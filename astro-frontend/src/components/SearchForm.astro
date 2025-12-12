@@ -1,0 +1,219 @@
+---
+// Pure Astro search form - zero React
+interface Props {
+  sport?: string;
+}
+
+const { sport = 'nba' } = Astro.props;
+---
+
+<div class="search-container relative w-full max-w-2xl" data-sport={sport}>
+  <form id="search-form" class="relative">
+    <div class="relative">
+      <input
+        id="search-input"
+        type="text"
+        placeholder={`Search for ${sport.toUpperCase()} players or teams...`}
+        class="input pr-12"
+        autocomplete="off"
+      />
+      <button
+        type="submit"
+        class="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+        aria-label="Search"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+      </button>
+    </div>
+  </form>
+
+  <div id="suggestions" class="hidden absolute z-10 w-full mt-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg shadow-lg max-h-96 overflow-y-auto">
+  </div>
+</div>
+
+<script>
+  interface AutocompleteEntity {
+    id: string;
+    name: string;
+    type: 'player' | 'team';
+    team?: string;
+  }
+
+  const CACHE_KEY = 'scoracle_autocomplete_cache';
+  const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
+
+  class SearchForm {
+    private input: HTMLInputElement;
+    private suggestionsEl: HTMLElement;
+    private form: HTMLFormElement;
+    private sport: string;
+    private allData: AutocompleteEntity[] = [];
+    private suggestions: AutocompleteEntity[] = [];
+
+    constructor(container: HTMLElement) {
+      this.input = container.querySelector('#search-input')!;
+      this.suggestionsEl = container.querySelector('#suggestions')!;
+      this.form = container.querySelector('#search-form')!;
+      this.sport = container.dataset.sport || 'nba';
+
+      this.init();
+    }
+
+    private async init() {
+      await this.loadData();
+      this.bindEvents();
+    }
+
+    private async loadData() {
+      try {
+        // Check cache first
+        const cache = localStorage.getItem(CACHE_KEY);
+        if (cache) {
+          const cachedData = JSON.parse(cache);
+          if (cachedData[this.sport]) {
+            const { data, timestamp } = cachedData[this.sport];
+            if (Date.now() - timestamp < CACHE_EXPIRY) {
+              this.allData = data;
+              return;
+            }
+          }
+        }
+
+        // Fetch fresh data
+        const response = await fetch(`/data/${this.sport}.json`);
+        if (!response.ok) throw new Error('Failed to fetch data');
+        
+        const json = await response.json();
+        const items: AutocompleteEntity[] = [];
+        
+        if (json.players?.items) {
+          items.push(...json.players.items.map((p: any) => ({
+            id: String(p.id),
+            name: p.name,
+            type: 'player' as const,
+            team: p.currentTeam || p.team,
+          })));
+        }
+        
+        if (json.teams?.items) {
+          items.push(...json.teams.items.map((t: any) => ({
+            id: String(t.id),
+            name: t.name,
+            type: 'team' as const,
+          })));
+        }
+        
+        this.allData = items;
+        
+        // Update cache
+        const newCache = cache ? JSON.parse(cache) : {};
+        newCache[this.sport] = { data: items, timestamp: Date.now() };
+        localStorage.setItem(CACHE_KEY, JSON.stringify(newCache));
+      } catch (error) {
+        console.error('Failed to load autocomplete data:', error);
+      }
+    }
+
+    private bindEvents() {
+      this.input.addEventListener('input', () => this.onInput());
+      this.input.addEventListener('focus', () => this.showSuggestions());
+      this.input.addEventListener('blur', () => setTimeout(() => this.hideSuggestions(), 200));
+      this.form.addEventListener('submit', (e) => this.onSubmit(e));
+    }
+
+    private onInput() {
+      const query = this.input.value.toLowerCase();
+      
+      if (query.length < 2) {
+        this.suggestions = [];
+        this.hideSuggestions();
+        return;
+      }
+
+      this.suggestions = this.allData
+        .filter(item => item.name.toLowerCase().includes(query))
+        .slice(0, 10);
+
+      this.renderSuggestions();
+    }
+
+    private renderSuggestions() {
+      if (this.suggestions.length === 0) {
+        this.hideSuggestions();
+        return;
+      }
+
+      this.suggestionsEl.innerHTML = this.suggestions.map((s, i) => `
+        <button
+          type="button"
+          data-index="${i}"
+          class="suggestion-item w-full text-left px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-200 dark:border-slate-700 last:border-b-0 transition-colors"
+        >
+          <div class="font-medium">${this.escapeHtml(s.name)}</div>
+          ${s.team ? `<div class="text-sm text-slate-500 dark:text-slate-400">${this.escapeHtml(s.team)}</div>` : ''}
+        </button>
+      `).join('');
+
+      // Bind click handlers
+      this.suggestionsEl.querySelectorAll('.suggestion-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const index = parseInt((e.currentTarget as HTMLElement).dataset.index || '0');
+          this.selectSuggestion(this.suggestions[index]);
+        });
+      });
+
+      this.showSuggestions();
+    }
+
+    private escapeHtml(str: string): string {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    private showSuggestions() {
+      if (this.suggestions.length > 0) {
+        this.suggestionsEl.classList.remove('hidden');
+      }
+    }
+
+    private hideSuggestions() {
+      this.suggestionsEl.classList.add('hidden');
+    }
+
+    private onSubmit(e: Event) {
+      e.preventDefault();
+      if (this.suggestions.length > 0) {
+        this.selectSuggestion(this.suggestions[0]);
+      }
+    }
+
+    private selectSuggestion(entity: AutocompleteEntity) {
+      window.location.href = `/mentions?sport=${this.sport}&type=${entity.type}&id=${entity.id}`;
+    }
+
+    public setSport(sport: string) {
+      if (this.sport !== sport) {
+        this.sport = sport;
+        this.input.placeholder = `Search for ${sport.toUpperCase()} players or teams...`;
+        this.allData = [];
+        this.suggestions = [];
+        this.input.value = '';
+        this.hideSuggestions();
+        this.loadData();
+      }
+    }
+  }
+
+  // Initialize all search forms on page
+  document.querySelectorAll('.search-container').forEach(container => {
+    const form = new SearchForm(container as HTMLElement);
+    
+    // Listen for sport changes from SportSelector
+    window.addEventListener('sportchange', ((e: CustomEvent) => {
+      form.setSport(e.detail.sport);
+    }) as EventListener);
+  });
+</script>

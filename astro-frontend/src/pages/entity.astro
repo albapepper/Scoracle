@@ -1,6 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import EntityWidget from '../components/EntityWidget';
+import EntityWidget from '../components/EntityWidget.astro';
 ---
 
 <Layout 
@@ -8,7 +8,7 @@ import EntityWidget from '../components/EntityWidget';
   description="View detailed statistics, news, and information about sports players and teams"
 >
   <div class="container-custom py-8">
-    <!-- Widget reads entity info from URL query params -->
-    <EntityWidget client:load />
+    <!-- Pure Astro widget - no React needed -->
+    <EntityWidget />
   </div>
 </Layout>

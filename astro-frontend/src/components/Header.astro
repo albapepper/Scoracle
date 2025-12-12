@@ -1,24 +1,175 @@
 ---
-import ThemeToggle from './ThemeToggle';
+// Header with hamburger menu - contains theme toggle and navigation
 ---
 
 <header class="sticky top-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-200 dark:border-slate-800">
   <div class="container-custom">
-    <div class="flex items-center justify-between py-4">
-      <div class="flex items-center gap-4">
-        <a href="/" class="text-2xl font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors" rel="home">
-          Scoracle
+    <div class="flex items-center justify-between h-14">
+      <!-- Logo -->
+      <a href="/" class="text-xl font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+        Scoracle
+      </a>
+
+      <!-- Hamburger Menu Button -->
+      <button
+        id="menu-toggle"
+        class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        aria-label="Toggle menu"
+        aria-expanded="false"
+      >
+        <!-- Hamburger icon -->
+        <svg id="menu-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+        <!-- Close icon (hidden by default) -->
+        <svg id="close-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Dropdown Menu -->
+  <div id="menu-dropdown" class="hidden border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+    <div class="container-custom py-4 space-y-4">
+      <!-- Navigation Links -->
+      <nav class="space-y-2">
+        <a href="/" class="block px-4 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          Home
         </a>
-        <span class="text-sm text-slate-500 dark:text-slate-400">
-          Sports News & Statistics
-        </span>
-      </div>
-      
-      <div class="flex items-center gap-4">
-        <!-- Prefetch common pages for faster navigation -->
-        <link rel="prefetch" href="/" />
-        <ThemeToggle client:idle />
+      </nav>
+
+      <!-- Divider -->
+      <hr class="border-slate-200 dark:border-slate-700" />
+
+      <!-- Theme Selector -->
+      <div class="px-4">
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">Theme</p>
+        <div class="flex gap-2">
+          <button data-theme="light" class="theme-btn flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+            </svg>
+            <span class="text-sm">Light</span>
+          </button>
+          <button data-theme="dark" class="theme-btn flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+            </svg>
+            <span class="text-sm">Dark</span>
+          </button>
+          <button data-theme="system" class="theme-btn flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+            </svg>
+            <span class="text-sm">Auto</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </header>
+
+<script>
+  const STORAGE_KEY = 'color-scheme';
+
+  class HeaderMenu {
+    private toggle: HTMLButtonElement;
+    private dropdown: HTMLElement;
+    private menuIcon: HTMLElement;
+    private closeIcon: HTMLElement;
+    private isOpen = false;
+
+    constructor() {
+      this.toggle = document.getElementById('menu-toggle') as HTMLButtonElement;
+      this.dropdown = document.getElementById('menu-dropdown')!;
+      this.menuIcon = document.getElementById('menu-icon')!;
+      this.closeIcon = document.getElementById('close-icon')!;
+
+      this.init();
+    }
+
+    private init() {
+      // Toggle menu
+      this.toggle.addEventListener('click', () => this.toggleMenu());
+
+      // Theme buttons
+      document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const theme = (btn as HTMLElement).dataset.theme!;
+          this.setTheme(theme);
+        });
+      });
+
+      // Update active theme button
+      this.updateActiveTheme();
+
+      // Close on outside click
+      document.addEventListener('click', (e) => {
+        if (this.isOpen && !this.toggle.contains(e.target as Node) && !this.dropdown.contains(e.target as Node)) {
+          this.closeMenu();
+        }
+      });
+
+      // Close on escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && this.isOpen) {
+          this.closeMenu();
+        }
+      });
+    }
+
+    private toggleMenu() {
+      this.isOpen ? this.closeMenu() : this.openMenu();
+    }
+
+    private openMenu() {
+      this.isOpen = true;
+      this.dropdown.classList.remove('hidden');
+      this.menuIcon.classList.add('hidden');
+      this.closeIcon.classList.remove('hidden');
+      this.toggle.setAttribute('aria-expanded', 'true');
+    }
+
+    private closeMenu() {
+      this.isOpen = false;
+      this.dropdown.classList.add('hidden');
+      this.menuIcon.classList.remove('hidden');
+      this.closeIcon.classList.add('hidden');
+      this.toggle.setAttribute('aria-expanded', 'false');
+    }
+
+    private setTheme(theme: string) {
+      localStorage.setItem(STORAGE_KEY, theme);
+      
+      let effective = theme;
+      if (theme === 'system') {
+        effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      
+      document.documentElement.classList.toggle('dark', effective === 'dark');
+      this.updateActiveTheme();
+    }
+
+    private updateActiveTheme() {
+      const current = localStorage.getItem(STORAGE_KEY) || 'system';
+      document.querySelectorAll('.theme-btn').forEach(btn => {
+        const isActive = (btn as HTMLElement).dataset.theme === current;
+        btn.classList.toggle('bg-blue-100', isActive);
+        btn.classList.toggle('dark:bg-blue-900', isActive);
+        btn.classList.toggle('border-blue-500', isActive);
+      });
+    }
+  }
+
+  new HeaderMenu();
+
+  // Listen for system theme changes
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === 'system' || !stored) {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.classList.toggle('dark', isDark);
+    }
+  });
+</script>

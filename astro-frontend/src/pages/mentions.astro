@@ -1,6 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import MentionsWidget from '../components/MentionsWidget';
+import MentionsWidget from '../components/MentionsWidget.astro';
 ---
 
 <Layout 
@@ -8,7 +8,7 @@ import MentionsWidget from '../components/MentionsWidget';
   description="View recent mentions and news about sports players and teams"
 >
   <div class="container-custom py-8">
-    <!-- Widget reads entity info from URL query params -->
-    <MentionsWidget client:load />
+    <!-- Pure Astro widget - no React needed -->
+    <MentionsWidget />
   </div>
 </Layout>

@@ -1,0 +1,32 @@
+---
+/**
+ * Card Component
+ * 
+ * A container for widget content. Can hold:
+ * - Static HTML content (via slot)
+ * - Dynamic widgets (via data-widget attribute)
+ * 
+ * Usage:
+ *   <Card title="Stats">
+ *     <div data-widget="entity-info" data-widget-data={JSON.stringify(data)}></div>
+ *   </Card>
+ */
+
+interface Props {
+  title?: string;
+  class?: string;
+}
+
+const { title, class: className = '' } = Astro.props;
+---
+
+<div class={`card bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden ${className}`}>
+  {title && (
+    <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+      <h2 class="font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+    </div>
+  )}
+  <div class="p-4">
+    <slot />
+  </div>
+</div>
