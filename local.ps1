@@ -10,7 +10,7 @@
 # Usage (from repo root):
 #   ./local.ps1 backend             # run API with reload on port 8000
 #   ./local.ps1 backend -Port 9000  # run API on a different port
-#   ./local.ps1 frontend            # run Svelte dev server (uses Bun if available)
+#   ./local.ps1 frontend            # run Astro dev server on port 3000
 #   ./local.ps1 up                  # run backend + frontend
 #   ./local.ps1 pip "install httpx==0.25.0"  # run pip within venv
 
@@ -97,46 +97,22 @@ function Start-Backend {
 }
 
 function Start-Frontend {
-  $frontendDir = Join-Path $RepoRoot 'scoracle-svelte'
+  $frontendDir = Join-Path $RepoRoot 'astro-frontend'
   Push-Location $frontendDir
   try {
-    # Check if Bun is available (check PATH first, then user profile)
-    $bunInPath = Get-Command bun -ErrorAction SilentlyContinue
-    $bunUserPath = Join-Path $env:USERPROFILE '.bun\bin\bun.exe'
-    
-    if ($bunInPath) {
-      $bunCmd = 'bun'
-      $useBun = $true
-    } elseif (Test-Path $bunUserPath) {
-      $bunCmd = $bunUserPath
-      $useBun = $true
-    } else {
-      $useBun = $false
+    if (-not (Test-Path 'node_modules')) { 
+      Write-Info 'Installing frontend deps with npm...'
+      npm install
     }
-    
-    if ($useBun) {
-      if (-not (Test-Path 'node_modules')) { 
-        Write-Info 'Installing frontend deps with Bun...'
-        & $bunCmd install
-      }
-      Write-Ok 'Starting Svelte dev server on http://localhost:5173 (Bun)'
-      & $bunCmd run dev
-    } else {
-      Write-Warn 'Bun not found. Install from https://bun.sh for faster builds'
-      if (-not (Test-Path 'node_modules')) { 
-        Write-Info 'Installing frontend deps with npm...'
-        npm install
-      }
-      Write-Ok 'Starting Svelte dev server on http://localhost:5173'
-      npm run dev
-    }
+    Write-Ok 'Starting Astro dev server on http://localhost:3000'
+    npm run dev
   }
   finally { Pop-Location }
 }
 
 function Invoke-OpenApiTypes {
-  Write-Warn 'OpenAPI types generation not yet configured for Svelte frontend'
-  Write-Info 'You can manually generate types or add api:types script to scoracle-svelte/package.json'
+  Write-Warn 'OpenAPI types generation not yet configured for Astro frontend'
+  Write-Info 'You can manually generate types or add an api:types script to astro-frontend/package.json'
 }
 
 switch ($Command) {
