@@ -22,11 +22,21 @@ scoracle/
 │   │   └── database/       # SQLite helpers
 │   └── instance/localdb/   # SQLite data files
 │
+├── astro-frontend/          # Astro frontend (NEW)
+│   ├── src/
+│   │   ├── pages/          # File-based routing
+│   │   ├── components/     # React & Astro components
+│   │   └── lib/            # API client, types, utilities
+│   └── public/data/        # Bundled JSON for autocomplete
+│
 ├── scoracle-svelte/         # SvelteKit frontend
 │   ├── src/
 │   │   ├── routes/         # Pages (file-based routing)
 │   │   └── lib/            # Components, stores, utilities
 │   └── static/data/        # Bundled JSON for autocomplete
+│
+├── frontend/                # React frontend (Vite)
+│   └── src/                # React components and pages
 │
 ├── api/index.py            # Vercel serverless entry
 ├── local.ps1               # Local dev helper (Windows)
@@ -53,12 +63,23 @@ scoracle/
 ./local.ps1 up
 ```
 
-Or run the frontend directly:
+Or run a frontend directly:
 
-```powershell
+```bash
+# Astro frontend (recommended - new)
+cd astro-frontend
+npm install
+npm run dev    # Runs on :4321
+
+# Svelte frontend
 cd scoracle-svelte
 bun install    # or: npm install
 bun run dev    # or: npm run dev
+
+# React frontend
+cd frontend
+npm install
+npm start
 ```
 
 ### API Docs
