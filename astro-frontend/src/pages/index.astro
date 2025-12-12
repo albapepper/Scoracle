@@ -1,0 +1,79 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SportSelector from '../components/SportSelector';
+import SearchForm from '../components/SearchForm';
+---
+
+<Layout title="Scoracle - Sports News & Statistics">
+  <div class="container-custom">
+    <div class="text-center py-12">
+      <h1 class="text-5xl font-bold mb-4">
+        Welcome to <span class="text-blue-600 dark:text-blue-400">Scoracle</span>
+      </h1>
+      <p class="text-xl text-slate-600 dark:text-slate-400 mb-8">
+        Your source for sports news and statistics
+      </p>
+    </div>
+
+    <div class="max-w-4xl mx-auto space-y-8">
+      <!-- Sport Selector -->
+      <div>
+        <h2 class="text-2xl font-semibold mb-4 text-center">Select a Sport</h2>
+        <div class="flex justify-center">
+          <SportSelector client:load />
+        </div>
+      </div>
+
+      <!-- Search Form -->
+      <div>
+        <h2 class="text-2xl font-semibold mb-4 text-center">Search</h2>
+        <div class="flex justify-center">
+          <SearchForm sport="nba" client:load />
+        </div>
+        <p class="text-center text-sm text-slate-500 dark:text-slate-400 mt-2">
+          Start typing to search for players or teams
+        </p>
+      </div>
+
+      <!-- Features -->
+      <div class="grid md:grid-cols-3 gap-6 mt-12">
+        <div class="card text-center">
+          <div class="text-4xl mb-4">🏀</div>
+          <h3 class="text-xl font-semibold mb-2">NBA</h3>
+          <p class="text-slate-600 dark:text-slate-400">
+            Basketball stats and news
+          </p>
+        </div>
+        
+        <div class="card text-center">
+          <div class="text-4xl mb-4">🏈</div>
+          <h3 class="text-xl font-semibold mb-2">NFL</h3>
+          <p class="text-slate-600 dark:text-slate-400">
+            American football coverage
+          </p>
+        </div>
+        
+        <div class="card text-center">
+          <div class="text-4xl mb-4">⚽</div>
+          <h3 class="text-xl font-semibold mb-2">Football</h3>
+          <p class="text-slate-600 dark:text-slate-400">
+            Soccer news worldwide
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  // Update search form when sport changes
+  document.addEventListener('DOMContentLoaded', () => {
+    const sportButtons = document.querySelectorAll('nav button');
+    sportButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        // The SearchForm component will handle the sport change via localStorage
+        window.location.reload();
+      });
+    });
+  });
+</script>

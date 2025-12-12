@@ -1,0 +1,38 @@
+---
+const currentYear = new Date().getFullYear();
+---
+
+<footer class="bg-slate-100 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 mt-auto">
+  <div class="container-custom">
+    <div class="py-8">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div>
+          <h3 class="font-bold text-lg mb-4">Scoracle</h3>
+          <p class="text-slate-600 dark:text-slate-400 text-sm">
+            Your source for sports news and statistics across NBA, NFL, and Football.
+          </p>
+        </div>
+        
+        <div>
+          <h3 class="font-bold text-lg mb-4">Sports</h3>
+          <ul class="space-y-2 text-sm">
+            <li><a href="/?sport=nba" class="text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400">NBA</a></li>
+            <li><a href="/?sport=nfl" class="text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400">NFL</a></li>
+            <li><a href="/?sport=football" class="text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400">Football</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h3 class="font-bold text-lg mb-4">About</h3>
+          <p class="text-slate-600 dark:text-slate-400 text-sm">
+            Built with Astro, React, and Tailwind CSS
+          </p>
+        </div>
+      </div>
+      
+      <div class="mt-8 pt-8 border-t border-slate-200 dark:border-slate-700 text-center text-sm text-slate-600 dark:text-slate-400">
+        <p>&copy; {currentYear} Scoracle. All rights reserved.</p>
+      </div>
+    </div>
+  </div>
+</footer>

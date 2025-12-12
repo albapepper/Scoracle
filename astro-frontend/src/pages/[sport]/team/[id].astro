@@ -1,0 +1,97 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import Widget from '../../../components/Widget.astro';
+import { getEntity } from '../../../lib/api/entities';
+import type { SportId } from '../../../lib/types';
+
+export const prerender = false;
+
+const { sport, id } = Astro.params;
+
+// Validate sport parameter
+const validSports = ['nba', 'nfl', 'football'];
+if (!sport || !validSports.includes(sport)) {
+  return Astro.redirect('/404');
+}
+
+let entityData;
+let error = null;
+
+try {
+  entityData = await getEntity('team', id as string, sport as SportId, {
+    includeWidget: true,
+    includeNews: true,
+  });
+} catch (e) {
+  error = e;
+  console.error('Failed to fetch team data:', e);
+}
+
+if (error || !entityData) {
+  return Astro.redirect('/404');
+}
+
+const { entity, widget, news } = entityData;
+const title = `${entity.name} - Scoracle`;
+---
+
+<Layout title={title} description={`Stats and news for ${entity.name}`}>
+  <div class="container-custom">
+    <!-- Widget -->
+    {widget && <Widget data={widget} />}
+
+    <!-- News Section -->
+    {news && news.length > 0 && (
+      <section class="mt-8">
+        <h2 class="text-3xl font-bold mb-6">Latest News</h2>
+        <div class="grid gap-6">
+          {news.map((article) => (
+            <article class="card">
+              <div class="flex flex-col md:flex-row gap-4">
+                {article.image_url && (
+                  <div class="flex-shrink-0">
+                    <img
+                      src={article.image_url}
+                      alt={article.title}
+                      class="w-full md:w-48 h-32 object-cover rounded-lg"
+                    />
+                  </div>
+                )}
+                <div class="flex-grow">
+                  <h3 class="text-xl font-semibold mb-2">
+                    <a
+                      href={article.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                    >
+                      {article.title}
+                    </a>
+                  </h3>
+                  {article.summary && (
+                    <p class="text-slate-600 dark:text-slate-400 mb-2">
+                      {article.summary}
+                    </p>
+                  )}
+                  <div class="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
+                    <span>{article.source}</span>
+                    <span>•</span>
+                    <time datetime={article.published_at}>
+                      {new Date(article.published_at).toLocaleDateString()}
+                    </time>
+                  </div>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    )}
+
+    {(!news || news.length === 0) && (
+      <div class="mt-8 text-center text-slate-500 dark:text-slate-400">
+        <p>No news articles available at this time.</p>
+      </div>
+    )}
+  </div>
+</Layout>
