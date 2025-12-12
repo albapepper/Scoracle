@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { SPORTS, type SportId } from '../lib/types';
 
 interface SportSelectorProps {
@@ -7,19 +6,7 @@ interface SportSelectorProps {
 }
 
 export default function SportSelector({ initialSport = 'nba', onSportChange }: SportSelectorProps) {
-  const [activeSport, setActiveSport] = useState<SportId>(initialSport);
-
-  useEffect(() => {
-    // Load from localStorage
-    const saved = localStorage.getItem('activeSport') as SportId | null;
-    if (saved && SPORTS.some(s => s.id === saved)) {
-      setActiveSport(saved);
-    }
-  }, []);
-
   const handleSportChange = (sportId: SportId) => {
-    setActiveSport(sportId);
-    localStorage.setItem('activeSport', sportId);
     if (onSportChange) {
       onSportChange(sportId);
     }
@@ -32,7 +19,7 @@ export default function SportSelector({ initialSport = 'nba', onSportChange }: S
           key={sport.id}
           onClick={() => handleSportChange(sport.id)}
           className={`btn ${
-            activeSport === sport.id ? 'btn-primary' : 'btn-secondary'
+            initialSport === sport.id ? 'btn-primary' : 'btn-secondary'
           }`}
         >
           {sport.display}

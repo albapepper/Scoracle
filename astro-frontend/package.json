@@ -16,12 +16,10 @@
   "license": "MIT",
   "description": "Scoracle Astro Frontend - Sports News & Statistics Platform",
   "dependencies": {
-    "@astrojs/node": "^9.5.1",
     "@astrojs/react": "^4.4.2",
     "@astrojs/tailwind": "^6.0.2",
     "@tabler/icons-react": "^3.35.0",
     "astro": "^5.16.5",
-    "axios": "^1.13.2",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "tailwindcss": "^3.4.19",
