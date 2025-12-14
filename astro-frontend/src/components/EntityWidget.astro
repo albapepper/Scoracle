@@ -1,270 +1,318 @@
 ---
 /**
- * Entity Page Widget Container
+ * Basic Entity Widget - Reusable card for displaying entity information
  * 
- * Reads URL params and fetches entity data from API.
- * Renders cards with hydrated widgets.
+ * Used on:
+ * - Mentions page (top card) - shows "Statistical Profile" button
+ * - Entity detail page (top card) - shows "Recent News" button
+ * 
+ * The widget automatically populates all content from the backend API
+ * based on URL parameters (sport, type, id)
+ * 
+ * Props:
+ * - page: 'mentions' | 'entity' - determines button text and destination
  */
-import Card from './Card.astro';
+
+interface Props {
+  page?: 'mentions' | 'entity';
+}
+
+const { page = 'mentions' } = Astro.props;
+
+const buttonText = page === 'mentions' ? 'Statistical Profile' : 'Recent News';
+const buttonDestination = page === 'mentions' ? 'entity' : 'mentions';
 ---
 
-<div id="entity-page">
-  <!-- Loading state -->
-  <div id="entity-loading">
-    <div class="mb-6 animate-pulse">
-      <div class="h-8 bg-slate-300 dark:bg-slate-700 rounded w-48 mb-2"></div>
-      <div class="h-4 bg-slate-300 dark:bg-slate-700 rounded w-32"></div>
-    </div>
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="lg:col-span-2 space-y-6">
-        <Card title="Info">
-          <div class="animate-pulse space-y-3">
-            <div class="h-4 bg-slate-300 dark:bg-slate-700 rounded w-3/4"></div>
-            <div class="h-4 bg-slate-300 dark:bg-slate-700 rounded w-1/2"></div>
-          </div>
-        </Card>
-      </div>
-      <div>
-        <Card>
-          <div class="animate-pulse h-32 bg-slate-300 dark:bg-slate-700 rounded"></div>
-        </Card>
-      </div>
-    </div>
+<div id="entity-widget" class="entity-widget card" data-page={page} data-button-destination={buttonDestination}>
+  <!-- Loading State -->
+  <div id="entity-loading" class="entity-loading">
+    <div class="skeleton-avatar"></div>
+    <div class="skeleton-text"></div>
+    <div class="skeleton-text" style="width: 60%;"></div>
   </div>
 
-  <!-- Error state -->
-  <div id="entity-error" class="hidden text-center py-12">
-    <p class="text-2xl mb-2">😕</p>
-    <h1 class="text-xl font-bold text-red-600 dark:text-red-400 mb-2">Error</h1>
-    <p id="error-message" class="text-slate-600 dark:text-slate-400 mb-6"></p>
-    <a href="/" class="btn btn-primary">Back to Home</a>
+  <!-- Content State -->
+  <div id="entity-content" class="entity-content hidden">
+    <div class="entity-header">
+      <h2 id="entity-name" class="entity-name"></h2>
+      <span id="sport-badge" class="sport-badge"></span>
+    </div>
+    <p id="entity-description" class="entity-description"></p>
+    <a id="entity-profile-link" href="#" class="profile-link">View Full Profile →</a>
   </div>
 
-  <!-- Empty state -->
-  <div id="entity-empty" class="hidden text-center py-12">
-    <p class="text-2xl mb-2">🔍</p>
-    <h1 class="text-xl font-bold mb-2">No Entity Selected</h1>
-    <p class="text-slate-600 dark:text-slate-400 mb-6">Search for a player or team to view their profile.</p>
-    <a href="/" class="btn btn-primary">Go to Search</a>
+  <!-- Error State -->
+  <div id="entity-error" class="entity-error hidden">
+    <p>Unable to load entity information</p>
   </div>
 
-  <!-- Content -->
-  <div id="entity-content" class="hidden">
-    <!-- Header -->
-    <div class="mb-6">
-      <div class="flex items-center gap-3 mb-1">
-        <h1 id="entity-name" class="text-2xl font-bold"></h1>
-        <span id="sport-badge" class="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs uppercase font-medium"></span>
-      </div>
-      <a id="mentions-link" href="/" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">
-        ← View Mentions
-      </a>
-    </div>
-
-    <!-- Cards Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Main Content -->
-      <div class="lg:col-span-2 space-y-6">
-        <!-- Entity Info Card -->
-        <Card title="Info">
-          <div id="widget-entity-info" data-widget="entity-info"></div>
-        </Card>
-
-        <!-- News Card -->
-        <div id="news-card" class="hidden">
-          <Card title="Latest News">
-            <div id="news-list" class="divide-y divide-slate-200 dark:divide-slate-700"></div>
-          </Card>
-        </div>
-      </div>
-
-      <!-- Sidebar -->
-      <div class="space-y-6">
-        <!-- Photo/Logo Card -->
-        <div id="media-card" class="hidden">
-          <Card>
-            <div id="media-content"></div>
-          </Card>
-        </div>
-      </div>
-    </div>
-
-    <!-- Advanced Stats Grid (2x2) -->
-    <div class="mt-6">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {['Offense', 'Defensive', 'Special Teams', 'Discipline'].map((title, i) => (
-          <div class="entity-flip-card-shell" data-key={String(i)}>
-            <div class="entity-flip-card-inner">
-              <div class="entity-flip-card-face entity-flip-card-front">
-                <Card title={title}>
-                  <div class="text-sm text-slate-500 dark:text-slate-400">Graph view coming soon</div>
-                  <div class="mt-3 flex justify-end">
-                    <button type="button" class="btn btn-primary toggle-flip">Toggle View</button>
-                  </div>
-                </Card>
-              </div>
-
-              <div class="entity-flip-card-face entity-flip-card-back">
-                <Card title={title}>
-                  <div class="text-sm text-slate-500 dark:text-slate-400">Table view coming soon</div>
-                  <div class="mt-3 flex justify-end">
-                    <button type="button" class="btn btn-primary toggle-flip">Toggle View</button>
-                  </div>
-                </Card>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
+  <!-- Button (persistent across all states) -->
+  <a id="entity-button" href="#" class="stats-button">{buttonText}</a>
 </div>
 
-<script>
-  import { createWidget, type BaseWidget } from '../lib/widgets';
-
-  const API_BASE = '/api/v1';
-
-  interface EntityResponse {
-    entity: { name: string; sport?: string };
-    widget?: any;
-    news?: Array<{ id: string; title: string; url: string; source: string; published_at: string; summary?: string }>;
+<style scoped>
+  .entity-widget {
+    width: 100%;
+    max-width: 600px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
-  class EntityPage {
+  .entity-loading {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .skeleton-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background-color: #e8e4db;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  :global(.dark) .skeleton-avatar {
+    background-color: #3e3e3e;
+  }
+
+  .skeleton-text {
+    width: 100%;
+    height: 12px;
+    border-radius: 4px;
+    background-color: #e8e4db;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  :global(.dark) .skeleton-text {
+    background-color: #3e3e3e;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .entity-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 2rem;
+  }
+
+  .entity-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .entity-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #3d3d3d;
+    margin: 0;
+  }
+
+  :global(.dark) .entity-name {
+    color: #e8e8e8;
+  }
+
+  .sport-badge {
+    display: inline-block;
+    padding: 0.375rem 0.75rem;
+    background-color: #d4a574;
+    color: white;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .entity-description {
+    font-size: 0.95rem;
+    color: #7a7a7a;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  :global(.dark) .entity-description {
+    color: #a0a0a0;
+  }
+
+  .profile-link {
+    display: inline-block;
+    font-size: 0.9rem;
+    color: #d4a574;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .profile-link:hover {
+    color: #c29560;
+    transform: translateX(4px);
+  }
+
+  :global(.dark) .profile-link {
+    color: #d4a574;
+  }
+
+  :global(.dark) .profile-link:hover {
+    color: #e6c393;
+  }
+
+  .stats-button {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background-color: #d4a574;
+    color: white;
+    text-decoration: none;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    border: 1px solid #d4a574;
+    cursor: pointer;
+    margin-top: 0.5rem;
+  }
+
+  .stats-button:hover {
+    background-color: #c29560;
+    border-color: #c29560;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(212, 165, 116, 0.3);
+  }
+
+  .stats-button:active {
+    transform: translateY(0);
+  }
+
+  :global(.dark) .stats-button {
+    background-color: #d4a574;
+    color: white;
+    border-color: #d4a574;
+  }
+
+  :global(.dark) .stats-button:hover {
+    background-color: #e6c393;
+    border-color: #e6c393;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(212, 165, 116, 0.3);
+  }
+
+  .entity-error {
+    padding: 2rem;
+    text-align: center;
+    color: #7a7a7a;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  :global(.dark) .entity-error {
+    color: #a0a0a0;
+  }
+
+  .hidden {
+    display: none;
+  }
+</style>
+
+<script>
+  class EntityWidgetManager {
+    private entityId: string | null;
     private sport: string | null;
-    private type: string | null;
-    private id: string | null;
-    private widgets: Map<string, BaseWidget> = new Map();
+    private entityType: string | null;
+    private buttonDestination: string | null;
+    private loadingEl: HTMLElement;
+    private contentEl: HTMLElement;
+    private errorEl: HTMLElement;
 
     constructor() {
       const params = new URLSearchParams(window.location.search);
       this.sport = params.get('sport');
-      this.type = params.get('type');
-      this.id = params.get('id');
-      
-      this.init();
+      this.entityType = params.get('type');
+      this.entityId = params.get('id');
+
+      const widgetEl = document.getElementById('entity-widget')!;
+      this.buttonDestination = widgetEl.getAttribute('data-button-destination');
+
+      this.loadingEl = document.getElementById('entity-loading')!;
+      this.contentEl = document.getElementById('entity-content')!;
+      this.errorEl = document.getElementById('entity-error')!;
+
+      // Set button href on load (before content is fetched)
+      this.setButtonHref();
+
+      if (this.entityId && this.sport && this.entityType) {
+        this.loadEntity();
+      } else {
+        this.showError();
+      }
     }
 
-    private async init() {
-      if (!this.sport || !this.type || !this.id) {
-        this.showEmpty();
-        return;
-      }
+    private setButtonHref() {
+      const buttonEl = document.getElementById('entity-button') as HTMLAnchorElement;
 
+      if (this.sport && this.entityType && this.entityId && buttonEl) {
+        const href = this.buttonDestination === 'entity'
+          ? `/entity?sport=${this.sport}&type=${this.entityType}&id=${this.entityId}`
+          : `/mentions?sport=${this.sport}&type=${this.entityType}&id=${this.entityId}`;
+
+        buttonEl.href = href;
+      }
+    }
+
+    private async loadEntity() {
       try {
-        await this.fetchEntity();
-      } catch (e) {
-        console.error('Failed to fetch entity:', e);
-        this.showError('Failed to load entity data.');
+        const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+        const response = await fetch(
+          `${apiUrl}/entities/${this.sport}/${this.entityType}/${this.entityId}`
+        );
+
+        if (!response.ok) throw new Error('Failed to load entity');
+
+        const entity = await response.json();
+        this.renderEntity(entity);
+      } catch (error) {
+        console.error('Error loading entity:', error);
+        this.showError();
       }
     }
 
-    private async fetchEntity() {
-      const params = new URLSearchParams({
-        sport: this.sport!,
-        include: 'widget,news'
-      });
+    private renderEntity(entity: any) {
+      const nameEl = document.getElementById('entity-name')!;
+      const badgeEl = document.getElementById('sport-badge')!;
+      const descEl = document.getElementById('entity-description')!;
+      const linkEl = document.getElementById('entity-profile-link') as HTMLAnchorElement;
+
+      nameEl.textContent = entity.name || 'Unknown Entity';
+      badgeEl.textContent = (this.entityType || '').toUpperCase();
+      descEl.textContent = entity.description || '';
+      linkEl.href = `/entity?sport=${this.sport}&type=${this.entityType}&id=${this.entityId}`;
       
-      const response = await fetch(`${API_BASE}/entity/${this.type}/${this.id}?${params}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+      this.setButtonHref();
 
-      const data: EntityResponse = await response.json();
-      
-      if (!data.entity) {
-        this.showError('Entity not found');
-        return;
-      }
-
-      this.render(data);
-      document.title = `${data.entity.name} - Scoracle`;
+      this.loadingEl.classList.add('hidden');
+      this.contentEl.classList.remove('hidden');
     }
 
-    private render(data: EntityResponse) {
-      this.hide('entity-loading');
-      this.show('entity-content');
-
-      // Header
-      document.getElementById('entity-name')!.textContent = data.entity.name;
-      document.getElementById('sport-badge')!.textContent = this.sport!;
-      document.getElementById('mentions-link')!.setAttribute('href', 
-        `/mentions?sport=${this.sport}&type=${this.type}&id=${this.id}`
-      );
-
-      // Entity Info Widget
-      if (data.widget) {
-        const container = document.getElementById('widget-entity-info')!;
-        const widget = createWidget('entity-info', container, data.widget);
-        if (widget) this.widgets.set('entity-info', widget);
-      }
-
-      // Media (photo/logo)
-      if (data.widget?.photo_url || data.widget?.logo_url) {
-        this.show('media-card');
-        const mediaEl = document.getElementById('media-content')!;
-        
-        if (data.widget.photo_url) {
-          mediaEl.innerHTML = `<img src="${this.esc(data.widget.photo_url)}" alt="${this.esc(data.entity.name)}" class="w-full h-auto rounded" />`;
-        } else if (data.widget.logo_url) {
-          mediaEl.innerHTML = `<img src="${this.esc(data.widget.logo_url)}" alt="${this.esc(data.entity.name)} logo" class="w-full h-auto max-h-24 object-contain mx-auto" />`;
-        }
-      }
-
-      // News
-      if (data.news && data.news.length > 0) {
-        this.show('news-card');
-        const newsEl = document.getElementById('news-list')!;
-        newsEl.innerHTML = data.news.map(n => `
-          <article class="py-3 first:pt-0 last:pb-0">
-            <a href="${this.esc(n.url)}" target="_blank" rel="noopener noreferrer" 
-               class="font-medium text-blue-600 dark:text-blue-400 hover:underline text-sm">
-              ${this.esc(n.title)}
-            </a>
-            <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              ${this.esc(n.source)} · ${this.esc(n.published_at)}
-            </div>
-          </article>
-        `).join('');
-      }
-    }
-
-    private esc(str: string): string {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
-
-    private show(id: string) {
-      document.getElementById(id)?.classList.remove('hidden');
-    }
-
-    private hide(id: string) {
-      document.getElementById(id)?.classList.add('hidden');
-    }
-
-    private showError(message: string) {
-      this.hide('entity-loading');
-      this.show('entity-error');
-      document.getElementById('error-message')!.textContent = message;
-    }
-
-    private showEmpty() {
-      this.hide('entity-loading');
-      this.show('entity-empty');
+    private showError() {
+      this.loadingEl.classList.add('hidden');
+      this.errorEl.classList.remove('hidden');
     }
   }
 
-  new EntityPage();
-
-  // Toggle flip cards (front/back) in the advanced stats grid
-  document.querySelectorAll('.toggle-flip').forEach(btn => {
-    btn.addEventListener('click', (ev) => {
-      const el = (ev.currentTarget as HTMLElement).closest('.entity-flip-card-shell');
-      if (!el) return;
-      el.classList.toggle('is-flipped');
-    });
-  });
+  new EntityWidgetManager();
 </script>

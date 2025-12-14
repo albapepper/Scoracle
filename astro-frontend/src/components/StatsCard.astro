@@ -1,0 +1,188 @@
+---
+/**
+ * Flipable Stats Card
+ * 
+ * Displays entity statistics with flip animation between:
+ * - Front: D3 graph visualization
+ * - Back: HTML table view
+ * 
+ * Props:
+ * - title: Card title (e.g., "Offense", "Defense")
+ * - stat: Stat key for backend data (e.g., "offense", "defense")
+ */
+
+interface Props {
+  title: string;
+  stat: string;
+}
+
+const { title, stat } = Astro.props;
+---
+
+<div class="stats-card-shell" data-stat={stat}>
+  <div class="stats-card-inner">
+    <!-- Front: Graph View -->
+    <div class="stats-card-face stats-card-front card">
+      <div class="stats-card-header">
+        <h3 class="stats-card-title">{title}</h3>
+        <button class="flip-indicator" aria-label="Flip to table view">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M19 12l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      <div id="graph-{stat}" class="stats-graph-container">
+        <!-- D3 graph will be rendered here by backend -->
+        <div class="placeholder">Graph loading...</div>
+      </div>
+    </div>
+
+    <!-- Back: Table View -->
+    <div class="stats-card-face stats-card-back card">
+      <div class="stats-card-header">
+        <h3 class="stats-card-title">{title}</h3>
+        <button class="flip-indicator" aria-label="Flip to graph view">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M19 12l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      <div id="table-{stat}" class="stats-table-container">
+        <!-- HTML table will be rendered here by backend -->
+        <div class="placeholder">Table loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style scoped>
+  .stats-card-shell {
+    perspective: 1000px;
+    height: 220px;
+  }
+
+  .stats-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s ease;
+    transform-style: preserve-3d;
+    transform-origin: center;
+  }
+
+  .stats-card-shell.is-flipped .stats-card-inner {
+    transform: rotateY(180deg);
+  }
+
+  .stats-card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    margin: 0;
+    border: none;
+    box-sizing: border-box;
+  }
+
+  .stats-card-back {
+    transform: rotateY(180deg);
+  }
+
+  .stats-card-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    min-height: 32px;
+    position: relative;
+  }
+
+  .stats-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #3d3d3d;
+    margin: 0;
+    text-align: center;
+  }
+
+  :global(.dark) .stats-card-title {
+    color: #e8e8e8;
+  }
+
+  .flip-indicator {
+    background: none;
+    border: none;
+    padding: 0.25rem;
+    cursor: pointer;
+    color: #d4a574;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    border-radius: 50%;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    position: absolute;
+    right: 0;
+    border: 2px solid #d4a574;
+  }
+
+  .flip-indicator:hover {
+    background-color: rgba(212, 165, 116, 0.1);
+    transform: scale(1.15);
+  }
+
+  :global(.dark) .flip-indicator:hover {
+    background-color: rgba(212, 165, 116, 0.2);
+  }
+
+  .stats-graph-container,
+  .stats-table-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+  }
+
+  .placeholder {
+    font-size: 0.9rem;
+    color: #a0a0a0;
+  }
+
+  :global(.dark) .placeholder {
+    color: #707070;
+  }
+</style>
+
+<script>
+  class StatsCardManager {
+    private shell: HTMLElement;
+
+    constructor(shell: HTMLElement) {
+      this.shell = shell;
+      this.init();
+    }
+
+    private init() {
+      const flipButtons = this.shell.querySelectorAll('.flip-indicator');
+      flipButtons.forEach(btn => {
+        btn.addEventListener('click', () => this.toggleFlip());
+      });
+    }
+
+    private toggleFlip() {
+      this.shell.classList.toggle('is-flipped');
+    }
+  }
+
+  // Initialize all stats cards on the page
+  document.querySelectorAll('.stats-card-shell').forEach(shell => {
+    new StatsCardManager(shell);
+  });
+</script>

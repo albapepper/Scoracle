@@ -1,14 +1,35 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import MentionsWidget from '../components/MentionsWidget.astro';
+import EntityWidget from '../components/EntityWidget.astro';
+import ContentCard from '../components/ContentCard.astro';
 ---
 
 <Layout 
-  title="Entity Mentions - Scoracle"
+  title="Mentions - Scoracle"
   description="View recent mentions and news about sports players and teams"
 >
-  <div class="container-custom py-8">
-    <!-- Pure Astro widget - no React needed -->
-    <MentionsWidget />
-  </div>
+  <main class="mentions-main">
+    <EntityWidget page="mentions" />
+    <ContentCard />
+  </main>
 </Layout>
+
+<style>
+  .mentions-main {
+    min-height: calc(100vh - 3.5rem);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 2rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-bottom: 2rem;
+    background: #f8f6f1;
+    gap: 2rem;
+  }
+
+  :global(.dark) .mentions-main {
+    background: #1a1a1a;
+  }
+</style>

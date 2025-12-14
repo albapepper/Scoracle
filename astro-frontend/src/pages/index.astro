@@ -7,7 +7,7 @@ import SearchForm from '../components/SearchForm.astro';
 <Layout title="Scoracle">
   <main class="home-main">
     <div class="central-card card">
-      <h1 class="welcome-title">Welcome to <span class="brand-accent">Scoracle</span></h1>
+      <h1 class="welcome-title">Welcome to Scoracle</h1>
       <p class="welcome-subtitle">Select a sport to get started</p>
       
       <div class="sport-selector-wrapper">
@@ -64,20 +64,6 @@ import SearchForm from '../components/SearchForm.astro';
 
   :global(.dark) .welcome-title {
     color: #e8e8e8;
-  }
-
-  .brand-accent {
-    background: linear-gradient(135deg, #8b7ba8 0%, #d4a574 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  :global(.dark) .brand-accent {
-    background: linear-gradient(135deg, #61afef 0%, #c678dd 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
   }
 
   .welcome-subtitle {
