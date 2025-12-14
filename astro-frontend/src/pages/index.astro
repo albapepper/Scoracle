@@ -4,63 +4,117 @@ import SportSelector from '../components/SportSelector.astro';
 import SearchForm from '../components/SearchForm.astro';
 ---
 
-<Layout title="Scoracle - Sports News & Statistics">
-  <div class="container-custom">
-    <div class="text-center py-12">
-      <h1 class="text-5xl font-bold mb-4">
-        Welcome to <span class="text-blue-600 dark:text-blue-400">Scoracle</span>
-      </h1>
-      <p class="text-xl text-slate-600 dark:text-slate-400 mb-8">
-        Your source for sports news and statistics
-      </p>
-    </div>
-
-    <div class="max-w-4xl mx-auto space-y-8">
-      <!-- Sport Selector -->
-      <div>
-        <h2 class="text-2xl font-semibold mb-4 text-center">Select a Sport</h2>
-        <div class="flex justify-center">
-          <SportSelector />
-        </div>
+<Layout title="Scoracle">
+  <main class="home-main">
+    <div class="central-card card">
+      <h1 class="welcome-title">Welcome to <span class="brand-accent">Scoracle</span></h1>
+      <p class="welcome-subtitle">Select a sport to get started</p>
+      
+      <div class="sport-selector-wrapper">
+        <SportSelector />
       </div>
 
-      <!-- Search Form -->
-      <div>
-        <h2 class="text-2xl font-semibold mb-4 text-center">Search</h2>
-        <div class="flex justify-center">
-          <SearchForm />
-        </div>
-        <p class="text-center text-sm text-slate-500 dark:text-slate-400 mt-2">
-          Start typing to search for players or teams
-        </p>
-      </div>
-
-      <!-- Features -->
-      <div class="grid md:grid-cols-3 gap-6 mt-12">
-        <div class="card text-center">
-          <div class="text-4xl mb-4">🏀</div>
-          <h3 class="text-xl font-semibold mb-2">NBA</h3>
-          <p class="text-slate-600 dark:text-slate-400">
-            Basketball stats and news
-          </p>
-        </div>
-        
-        <div class="card text-center">
-          <div class="text-4xl mb-4">🏈</div>
-          <h3 class="text-xl font-semibold mb-2">NFL</h3>
-          <p class="text-slate-600 dark:text-slate-400">
-            American football coverage
-          </p>
-        </div>
-        
-        <div class="card text-center">
-          <div class="text-4xl mb-4">⚽</div>
-          <h3 class="text-xl font-semibold mb-2">Football</h3>
-          <p class="text-slate-600 dark:text-slate-400">
-            Soccer news worldwide
-          </p>
-        </div>
+      <div class="search-wrapper">
+        <SearchForm />
       </div>
     </div>
-  </div>
+  </main>
 </Layout>
+
+<style scoped>
+  .home-main {
+    min-height: calc(100vh - 3.5rem);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: calc((100vh - 3.5rem) * 0.20);
+    padding-left: 2rem;
+    padding-right: 2rem;
+    padding-bottom: 2rem;
+    background: #f8f6f1;
+  }
+
+  :global(.dark) .home-main {
+    background: #1a1a1a;
+  }
+
+  .central-card {
+    width: 100%;
+    max-width: 500px;
+    padding: 3rem 2.5rem;
+    text-align: center;
+    background: #f8f6f1;
+    border: 1px solid #e8e4db;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+    border-radius: 8px;
+  }
+
+  :global(.dark) .central-card {
+    background: #2c2c2c;
+    border: 1px solid #3e3e3e;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  }
+
+  .welcome-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #3d3d3d;
+  }
+
+  :global(.dark) .welcome-title {
+    color: #e8e8e8;
+  }
+
+  .brand-accent {
+    background: linear-gradient(135deg, #8b7ba8 0%, #d4a574 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  :global(.dark) .brand-accent {
+    background: linear-gradient(135deg, #61afef 0%, #c678dd 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .welcome-subtitle {
+    font-size: 1rem;
+    color: #7a7a7a;
+    font-weight: 400;
+    margin-bottom: 2rem;
+  }
+
+  :global(.dark) .welcome-subtitle {
+    color: #a0a0a0;
+  }
+
+  .sport-selector-wrapper {
+    margin-bottom: 2rem;
+  }
+
+  .search-wrapper {
+    display: flex;
+    justify-content: center;
+  }
+
+  @media (max-width: 768px) {
+    .home-main {
+      padding: 1rem;
+    }
+
+    .central-card {
+      padding: 2rem 1.5rem;
+    }
+
+    .welcome-title {
+      font-size: 1.5rem;
+    }
+
+    .welcome-subtitle {
+      font-size: 0.9rem;
+    }
+  }
+</style>

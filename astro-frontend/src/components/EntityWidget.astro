@@ -88,6 +88,35 @@ import Card from './Card.astro';
         </div>
       </div>
     </div>
+
+    <!-- Advanced Stats Grid (2x2) -->
+    <div class="mt-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {['Offense', 'Defensive', 'Special Teams', 'Discipline'].map((title, i) => (
+          <div class="entity-flip-card-shell" data-key={String(i)}>
+            <div class="entity-flip-card-inner">
+              <div class="entity-flip-card-face entity-flip-card-front">
+                <Card title={title}>
+                  <div class="text-sm text-slate-500 dark:text-slate-400">Graph view coming soon</div>
+                  <div class="mt-3 flex justify-end">
+                    <button type="button" class="btn btn-primary toggle-flip">Toggle View</button>
+                  </div>
+                </Card>
+              </div>
+
+              <div class="entity-flip-card-face entity-flip-card-back">
+                <Card title={title}>
+                  <div class="text-sm text-slate-500 dark:text-slate-400">Table view coming soon</div>
+                  <div class="mt-3 flex justify-end">
+                    <button type="button" class="btn btn-primary toggle-flip">Toggle View</button>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   </div>
 </div>
 
@@ -229,4 +258,13 @@ import Card from './Card.astro';
   }
 
   new EntityPage();
+
+  // Toggle flip cards (front/back) in the advanced stats grid
+  document.querySelectorAll('.toggle-flip').forEach(btn => {
+    btn.addEventListener('click', (ev) => {
+      const el = (ev.currentTarget as HTMLElement).closest('.entity-flip-card-shell');
+      if (!el) return;
+      el.classList.toggle('is-flipped');
+    });
+  });
 </script>

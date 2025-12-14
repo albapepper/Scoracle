@@ -56,6 +56,11 @@ import Card from './Card.astro';
     </div>
 
     <!-- Mentions Card -->
+    <div class="tabs">
+      <button class="tab active" data-tab="articles">Articles</button>
+      <button class="tab" data-tab="tweets">Tweets</button>
+      <button class="tab" data-tab="reddit">Reddit</button>
+    </div>
     <Card title="Recent Mentions">
       <div id="mentions-list" class="divide-y divide-slate-200 dark:divide-slate-700"></div>
       <div id="no-mentions" class="hidden py-8 text-center text-slate-500 dark:text-slate-400">
@@ -170,4 +175,14 @@ import Card from './Card.astro';
   }
 
   new MentionsPage();
+
+  // Simple tab switcher to improve visuals
+  document.querySelectorAll('.tabs .tab').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      const target = (e.currentTarget as HTMLElement).dataset.tab;
+      document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+      (e.currentTarget as HTMLElement).classList.add('active');
+      // For now toggle content areas if needed
+    });
+  });
 </script>

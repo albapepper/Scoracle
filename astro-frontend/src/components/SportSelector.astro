@@ -13,7 +13,7 @@ const sports = [
 ];
 ---
 
-<nav id="sport-selector" class="flex gap-2 flex-wrap" data-initial={initialSport}>
+<nav id="sport-selector" class="sport-selector" data-initial={initialSport}>
   {sports.map((sport) => (
     <button
       data-sport={sport.id}
@@ -23,6 +23,48 @@ const sports = [
     </button>
   ))}
 </nav>
+
+<style scoped>
+  .sport-selector {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  :global(.sport-btn) {
+    min-width: 100px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  :global(.sport-btn)::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+
+  :global(.sport-btn):active::before {
+    width: 300px;
+    height: 300px;
+  }
+
+  :global(.btn-primary.sport-btn) {
+    box-shadow: 0 4px 12px rgba(97, 175, 239, 0.4);
+    font-weight: 600;
+  }
+
+  :global(.btn-secondary.sport-btn) {
+    font-weight: 500;
+  }
+</style>
 
 <script>
   const STORAGE_KEY = 'activeSport';
