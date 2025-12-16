@@ -412,7 +412,9 @@ const { sport = 'nba' } = Astro.props;
     }
 
     private selectSuggestion(entity: AutocompleteEntity) {
-      window.location.href = `/mentions?sport=${this.sport}&type=${entity.type}&id=${entity.id}`;
+      // Sport is stored uppercase in backend, use lowercase for URL consistency with how sport selector works
+      const sportParam = this.sport.toUpperCase();
+      window.location.href = `/mentions?sport=${sportParam}&type=${entity.type}&id=${entity.id}`;
     }
 
     public setSport(sport: string) {

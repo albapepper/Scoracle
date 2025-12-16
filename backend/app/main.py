@@ -1,10 +1,11 @@
 """Canonical FastAPI application entrypoint.
 
-Mounts all routers and configures lifespan resources.
+Minimal routers: widgets (entity data), news (articles).
 """
 from contextlib import asynccontextmanager
 import logging
 import os
+import httpx
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,13 +14,16 @@ from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
 
 from app.config import settings
-from app.routers import entities, catalog, sports, twitter, reddit
+from app.routers import widgets, news, twitter, reddit
 from app.utils.middleware import CorrelationIdMiddleware, RateLimitMiddleware
 from app.utils.errors import build_error_payload, map_status_to_code
 
 # Configure logging if not already configured
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+# Shared HTTP client to reduce per-request connection churn
+timeout = httpx.Timeout(connect=3.0, read=10.0, write=10.0, pool=3.0)
+limits = httpx.Limits(max_keepalive_connections=20, max_connections=50)
 
 # Detect Vercel environment for CORS configuration
 IS_VERCEL = os.getenv("VERCEL") == "1"
@@ -28,7 +32,11 @@ IS_VERCEL = os.getenv("VERCEL") == "1"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting application")
+    app.state.http_client = httpx.AsyncClient(timeout=timeout, limits=limits)
     yield
+    client = getattr(app.state, "http_client", None)
+    if client is not None:
+        await client.aclose()
     logger.info("Stopping application")
 
 
@@ -49,12 +57,13 @@ app.add_middleware(CorrelationIdMiddleware)
 if not IS_VERCEL:
     app.add_middleware(RateLimitMiddleware)
 
-# CORS: In Vercel, allow all origins for preview deployments; otherwise use config
-cors_origins = ["*"] if IS_VERCEL else settings.BACKEND_CORS_ORIGINS
+# CORS: prefer explicit origins or an origin regex; avoid '*' by default.
+cors_origins = ["*"] if settings.BACKEND_CORS_ALLOW_ALL else settings.BACKEND_CORS_ORIGINS
 app.add_middleware(
     CORSMiddleware,
+    allow_origin_regex=settings.BACKEND_CORS_ORIGIN_REGEX,
     allow_origins=cors_origins,
-    allow_credentials=not IS_VERCEL,  # credentials not supported with "*"
+    allow_credentials=False,  # keep hydration simple; enable only when needed
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -66,12 +75,11 @@ app.state.rate_limit = (
     int(settings.RATE_LIMIT_BURST),
 )
 
-# Routers
-app.include_router(entities.router, prefix=settings.API_V1_STR)  # Unified entity API
-app.include_router(catalog.router, prefix=settings.API_V1_STR)   # Static data/sync
-app.include_router(sports.router, prefix=settings.API_V1_STR)    # Sport switching
-app.include_router(twitter.router, prefix=settings.API_V1_STR)   # Twitter integration
-app.include_router(reddit.router, prefix=settings.API_V1_STR)    # Reddit integration
+# Routers - only what we need
+app.include_router(widgets.router, prefix=settings.API_V1_STR)   # /widget/{type}/{id}?sport=X
+app.include_router(news.router, prefix=settings.API_V1_STR)      # /news/{entity_name}
+app.include_router(twitter.router, prefix=settings.API_V1_STR)   # Twitter (future)
+app.include_router(reddit.router, prefix=settings.API_V1_STR)    # Reddit (future)
 
 
 @app.get("/health")
@@ -84,16 +92,11 @@ async def root_index():
     return {
         "name": settings.PROJECT_NAME,
         "version": settings.PROJECT_VERSION,
-        "routers": [
-            "entities - unified player/team/widget/news API",
-            "catalog - static data download",
-            "sports - sport configuration",
-            "twitter - Twitter integration",
-            "reddit - Reddit integration",
-        ],
-        "api_base": settings.API_V1_STR,
+        "endpoints": {
+            "widget": "/api/v1/widget/{type}/{id}?sport=FOOTBALL|NBA|NFL",
+            "news": "/api/v1/news/{entity_name}",
+        },
         "docs": "/api/docs",
-        "openapi": "/api/openapi.json",
         "health": "/health",
     }
 

@@ -11,9 +11,12 @@
  * Used on the mentions page below the entity widget
  * Tab content is populated from the backend API
  */
+
+// Get API URL at build time and pass to client
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 ---
 
-<div id="content-card" class="content-card card">
+<div id="content-card" class="content-card card" data-api-url={apiUrl}>
   <!-- Tab Navigation -->
   <div class="tabs-nav">
     <button class="tab-btn active" data-tab="articles">Articles</button>
@@ -256,213 +259,153 @@
 </style>
 
 <script>
-  class ContentCardManager {
-    private sport: string | null;
-    private entityType: string | null;
-    private entityId: string | null;
-    private currentTab: string = 'articles';
+  // Simple IIFE - plain JavaScript for maximum compatibility
+  (function initContentCard() {
+    const card = document.getElementById('content-card');
+    if (!card) return;
 
-    constructor() {
-      const params = new URLSearchParams(window.location.search);
-      this.sport = params.get('sport');
-      this.entityType = params.get('type');
-      this.entityId = params.get('id');
+    const apiUrl = card.getAttribute('data-api-url') || 'http://localhost:8000/api/v1';
 
-      this.initTabs();
+    // Parse URL params
+    const params = new URLSearchParams(window.location.search);
+    const sport = params.get('sport');
+    const type = params.get('type');
+    const id = params.get('id');
 
-      if (this.sport && this.entityType && this.entityId) {
-        this.loadTabContent('articles');
-      }
-    }
+    // Elements
+    const loadingEl = document.getElementById('articles-loading');
+    const contentEl = document.getElementById('articles-content');
+    const listEl = document.getElementById('articles-list');
+    const emptyEl = document.getElementById('articles-empty');
 
-    private initTabs() {
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const tab = (e.target as HTMLElement).getAttribute('data-tab');
-          if (tab) this.switchTab(tab);
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const tab = this.getAttribute('data-tab');
+        
+        // Update buttons
+        document.querySelectorAll('.tab-btn').forEach(function(b) {
+          b.classList.remove('active');
         });
+        this.classList.add('active');
+        
+        // Update panels
+        document.querySelectorAll('.tab-content').forEach(function(p) {
+          p.classList.remove('active');
+        });
+        const panel = document.getElementById(tab + '-tab');
+        if (panel) panel.classList.add('active');
       });
+    });
+
+    // Validate params
+    if (!sport || !type || !id) {
+      showEmpty();
+      return;
     }
 
-    private switchTab(tabName: string) {
-      // Update active button
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-      });
-      document.querySelector(`[data-tab="${tabName}"]`)?.classList.add('active');
+    // Step 1: Get entity name from widget endpoint (cached for 30 days, so fast)
+    // Step 2: Use entity name to fetch news
+    var widgetUrl = apiUrl + '/widget/' + type + '/' + id + '?sport=' + sport.toUpperCase();
+    console.log('[ContentCard] Fetching widget for name:', widgetUrl);
 
-      // Update active content
-      document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-      });
-      document.getElementById(`${tabName}-tab`)?.classList.add('active');
-
-      // Load content if not already loaded
-      this.currentTab = tabName;
-      this.loadTabContent(tabName);
-    }
-
-    private async loadTabContent(tabName: string) {
-      const loadingEl = document.getElementById(`${tabName}-loading`);
-      const contentEl = document.getElementById(`${tabName}-content`);
-      const emptyEl = document.getElementById(`${tabName}-empty`);
-      const listEl = document.getElementById(`${tabName}-list`);
-
-      if (!loadingEl || !contentEl || !emptyEl || !listEl) return;
-
-      // Already loaded
-      if (!loadingEl.classList.contains('hidden')) {
-        try {
-          const data = await this.fetchTabData(tabName);
-
-          if (data && data.length > 0) {
-            listEl.innerHTML = this.renderContent(tabName, data);
-            loadingEl.classList.add('hidden');
-            contentEl.classList.remove('hidden');
-          } else {
-            loadingEl.classList.add('hidden');
-            emptyEl.classList.remove('hidden');
-          }
-        } catch (error) {
-          console.error(`Error loading ${tabName}:`, error);
-          loadingEl.classList.add('hidden');
-          emptyEl.classList.remove('hidden');
+    fetch(widgetUrl)
+      .then(function(res) {
+        if (!res.ok) throw new Error('Widget HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function(widgetData) {
+        // Get entity name from widget response
+        var entityName = '';
+        if (widgetData.team) {
+          entityName = widgetData.team.name;
+        } else if (widgetData.player) {
+          entityName = widgetData.player.name;
+        } else {
+          entityName = widgetData.name;
         }
-      }
+        
+        if (!entityName) {
+          showEmpty();
+          return;
+        }
+
+        // Fetch news using entity name
+        var newsUrl = apiUrl + '/news/' + encodeURIComponent(entityName);
+        console.log('[ContentCard] Fetching news:', newsUrl);
+
+        return fetch(newsUrl);
+      })
+      .then(function(res) {
+        if (!res) return null;
+        console.log('[ContentCard] News response status:', res.status);
+        if (!res.ok) throw new Error('News HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function(data) {
+        if (!data) return;
+        console.log('[ContentCard] News data:', data);
+        var articles = data.articles || [];
+        
+        if (articles.length === 0) {
+          showEmpty();
+          return;
+        }
+
+        // Render articles as simple HTML
+        var html = '';
+        for (var i = 0; i < articles.length; i++) {
+          html += renderArticle(articles[i]);
+        }
+        listEl.innerHTML = html;
+        showContent();
+      })
+      .catch(function(err) {
+        console.error('[ContentCard] Error:', err);
+        showEmpty();
+      });
+
+    function renderArticle(article) {
+      var title = escapeHtml(article.title || 'Untitled');
+      var link = article.link || '#';
+      var source = escapeHtml(article.source || '');
+      var date = formatDate(article.pub_date);
+      
+      return '<div class="content-item">' +
+        '<h3 class="content-title">' +
+          '<a href="' + link + '" target="_blank" rel="noopener">' + title + '</a>' +
+        '</h3>' +
+        '<div class="content-meta">' + source + (source && date ? ' · ' : '') + date + '</div>' +
+      '</div>';
     }
 
-    private async fetchTabData(tabName: string) {
-      const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
-      const endpoint = this.getEndpoint(tabName);
-
-      try {
-        const response = await fetch(
-          `${apiUrl}/${endpoint}?sport=${this.sport}&type=${this.entityType}&id=${this.entityId}`
-        );
-
-        if (!response.ok) return [];
-        return await response.json();
-      } catch {
-        return [];
-      }
-    }
-
-    private getEndpoint(tabName: string): string {
-      switch (tabName) {
-        case 'articles':
-          return 'content/articles';
-        case 'co-mentions':
-          return 'content/co-mentions';
-        case 'tweets':
-          return 'content/tweets';
-        case 'reddit':
-          return 'content/reddit';
-        default:
-          return 'content/articles';
-      }
-    }
-
-    private renderContent(tabName: string, items: any[]): string {
-      return items
-        .map(item => {
-          switch (tabName) {
-            case 'articles':
-              return this.renderArticle(item);
-            case 'co-mentions':
-              return this.renderCoMention(item);
-            case 'tweets':
-              return this.renderTweet(item);
-            case 'reddit':
-              return this.renderReddit(item);
-            default:
-              return '';
-          }
-        })
-        .join('');
-    }
-
-    private renderArticle(article: any): string {
-      return `
-        <div class="content-item">
-          <h3 class="content-title">
-            <a href="${this.esc(article.url)}" target="_blank" rel="noopener noreferrer">
-              ${this.esc(article.title)}
-            </a>
-          </h3>
-          <div class="content-meta">
-            ${this.esc(article.source)} · ${this.formatDate(article.published_at)}
-          </div>
-          ${article.excerpt ? `<div class="content-excerpt">${this.esc(article.excerpt)}</div>` : ''}
-        </div>
-      `;
-    }
-
-    private renderCoMention(mention: any): string {
-      return `
-        <div class="content-item">
-          <h3 class="content-title">
-            <a href="?sport=${this.sport}&type=${mention.entity_type}&id=${mention.entity_id}">
-              ${this.esc(mention.entity_name)}
-            </a>
-          </h3>
-          <div class="content-meta">
-            ${this.esc(mention.mentions_count)} mentions
-          </div>
-        </div>
-      `;
-    }
-
-    private renderTweet(tweet: any): string {
-      return `
-        <div class="content-item">
-          <h3 class="content-title">
-            <a href="${this.esc(tweet.url)}" target="_blank" rel="noopener noreferrer">
-              @${this.esc(tweet.author)}
-            </a>
-          </h3>
-          <div class="content-excerpt">${this.esc(tweet.text)}</div>
-          <div class="content-meta">
-            ${this.formatDate(tweet.created_at)}
-          </div>
-        </div>
-      `;
-    }
-
-    private renderReddit(post: any): string {
-      return `
-        <div class="content-item">
-          <h3 class="content-title">
-            <a href="${this.esc(post.url)}" target="_blank" rel="noopener noreferrer">
-              ${this.esc(post.title)}
-            </a>
-          </h3>
-          <div class="content-meta">
-            r/${this.esc(post.subreddit)} · ${this.formatDate(post.created_at)}
-          </div>
-          ${post.excerpt ? `<div class="content-excerpt">${this.esc(post.excerpt)}</div>` : ''}
-        </div>
-      `;
-    }
-
-    private formatDate(dateStr: string): string {
-      try {
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
-        });
-      } catch {
-        return dateStr;
-      }
-    }
-
-    private esc(str: string): string {
-      const div = document.createElement('div');
+    function escapeHtml(str) {
+      if (!str) return '';
+      var div = document.createElement('div');
       div.textContent = str;
       return div.innerHTML;
     }
-  }
 
-  new ContentCardManager();
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      try {
+        var d = new Date(dateStr);
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function showContent() {
+      if (loadingEl) loadingEl.classList.add('hidden');
+      if (contentEl) contentEl.classList.remove('hidden');
+      if (emptyEl) emptyEl.classList.add('hidden');
+    }
+
+    function showEmpty() {
+      if (loadingEl) loadingEl.classList.add('hidden');
+      if (contentEl) contentEl.classList.add('hidden');
+      if (emptyEl) emptyEl.classList.remove('hidden');
+    }
+  })();
 </script>

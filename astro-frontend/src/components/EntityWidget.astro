@@ -1,16 +1,9 @@
 ---
 /**
- * Basic Entity Widget - Reusable card for displaying entity information
+ * Entity Widget Island
  * 
- * Used on:
- * - Mentions page (top card) - shows "Statistical Profile" button
- * - Entity detail page (top card) - shows "Recent News" button
- * 
- * The widget automatically populates all content from the backend API
- * based on URL parameters (sport, type, id)
- * 
- * Props:
- * - page: 'mentions' | 'entity' - determines button text and destination
+ * Lightweight component hydrated by backend JSON.
+ * Fetches: GET /api/v1/entity/{type}/{id}?sport={sport}&include=widget
  */
 
 interface Props {
@@ -18,49 +11,46 @@ interface Props {
 }
 
 const { page = 'mentions' } = Astro.props;
-
 const buttonText = page === 'mentions' ? 'Statistical Profile' : 'Recent News';
-const buttonDestination = page === 'mentions' ? 'entity' : 'mentions';
+const buttonDest = page === 'mentions' ? 'entity' : 'mentions';
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 ---
 
-<div id="entity-widget" class="entity-widget card" data-page={page} data-button-destination={buttonDestination}>
-  <!-- Loading State -->
-  <div id="entity-loading" class="entity-loading">
-    <div class="skeleton-avatar"></div>
-    <div class="skeleton-text"></div>
-    <div class="skeleton-text" style="width: 60%;"></div>
+<div 
+  id="entity-widget" 
+  class="entity-widget card"
+  data-api={apiUrl}
+  data-dest={buttonDest}
+>
+  <!-- Loading -->
+  <div id="ew-loading" class="ew-loading">
+    <div class="skeleton-circle"></div>
+    <div class="skeleton-line"></div>
+    <div class="skeleton-line short"></div>
   </div>
 
-  <!-- Content State -->
-  <div id="entity-content" class="entity-content hidden">
-    <div class="entity-header">
-      <h2 id="entity-name" class="entity-name"></h2>
-      <span id="sport-badge" class="sport-badge"></span>
-    </div>
-    <p id="entity-description" class="entity-description"></p>
-    <a id="entity-profile-link" href="#" class="profile-link">View Full Profile →</a>
+  <!-- Content -->
+  <div id="ew-content" class="ew-content">
+    <img id="ew-logo" class="ew-logo" src="" alt="" style="display: none;" />
+    <h2 id="ew-name" class="ew-name"></h2>
+    <span id="ew-badge" class="ew-badge"></span>
+    <p id="ew-subtitle" class="ew-subtitle"></p>
   </div>
 
-  <!-- Error State -->
-  <div id="entity-error" class="entity-error hidden">
-    <p>Unable to load entity information</p>
+  <!-- Error -->
+  <div id="ew-error" class="ew-error">
+    <p>Unable to load entity</p>
   </div>
 
-  <!-- Button (persistent across all states) -->
-  <a id="entity-button" href="#" class="stats-button">{buttonText}</a>
+  <!-- Button -->
+  <a id="ew-button" href="#" class="ew-button">{buttonText}</a>
 </div>
 
-<style scoped>
+<style>
   .entity-widget {
     width: 100%;
     max-width: 600px;
     text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .entity-loading {
     padding: 2rem;
     display: flex;
     flex-direction: column;
@@ -68,65 +58,69 @@ const buttonDestination = page === 'mentions' ? 'entity' : 'mentions';
     gap: 1rem;
   }
 
-  .skeleton-avatar {
-    width: 80px;
-    height: 80px;
+  .ew-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .ew-content, .ew-error {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .skeleton-circle {
+    width: 64px;
+    height: 64px;
     border-radius: 50%;
-    background-color: #e8e4db;
-    animation: pulse 2s ease-in-out infinite;
+    background: #e8e4db;
+    animation: pulse 1.5s ease-in-out infinite;
   }
 
-  :global(.dark) .skeleton-avatar {
-    background-color: #3e3e3e;
-  }
-
-  .skeleton-text {
-    width: 100%;
-    height: 12px;
+  .skeleton-line {
+    height: 14px;
+    width: 180px;
     border-radius: 4px;
-    background-color: #e8e4db;
-    animation: pulse 2s ease-in-out infinite;
+    background: #e8e4db;
+    animation: pulse 1.5s ease-in-out infinite;
   }
 
-  :global(.dark) .skeleton-text {
-    background-color: #3e3e3e;
+  .skeleton-line.short {
+    width: 120px;
+  }
+
+  :global(.dark) .skeleton-circle,
+  :global(.dark) .skeleton-line {
+    background: #3e3e3e;
   }
 
   @keyframes pulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.5;
-    }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
   }
 
-  .entity-content {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    padding: 2rem;
+  .ew-logo {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    margin-bottom: 0.5rem;
   }
 
-  .entity-header {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    align-items: center;
-  }
-
-  .entity-name {
+  .ew-name {
     font-size: 1.5rem;
     font-weight: 700;
     color: #3d3d3d;
     margin: 0;
   }
 
-  :global(.dark) .entity-name {
+  :global(.dark) .ew-name {
     color: #e8e8e8;
   }
 
-  .sport-badge {
+  .ew-badge {
     display: inline-block;
     padding: 0.375rem 0.75rem;
     background-color: #d4a574;
@@ -135,184 +129,155 @@ const buttonDestination = page === 'mentions' ? 'entity' : 'mentions';
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
   }
 
-  .entity-description {
+  .ew-subtitle {
     font-size: 0.95rem;
     color: #7a7a7a;
-    line-height: 1.6;
     margin: 0;
   }
 
-  :global(.dark) .entity-description {
+  :global(.dark) .ew-subtitle {
     color: #a0a0a0;
   }
 
-  .profile-link {
-    display: inline-block;
-    font-size: 0.9rem;
-    color: #d4a574;
-    text-decoration: none;
-    font-weight: 500;
-    transition: all 0.2s ease;
+  .ew-error p {
+    color: #7a7a7a;
   }
 
-  .profile-link:hover {
-    color: #c29560;
-    transform: translateX(4px);
+  :global(.dark) .ew-error p {
+    color: #a0a0a0;
   }
 
-  :global(.dark) .profile-link {
-    color: #d4a574;
-  }
-
-  :global(.dark) .profile-link:hover {
-    color: #e6c393;
-  }
-
-  .stats-button {
-    display: inline-block;
-    padding: 0.5rem 1rem;
+  .ew-button {
+    margin-top: 1rem;
+    padding: 0.625rem 1.25rem;
     background-color: #d4a574;
     color: white;
     text-decoration: none;
     border-radius: 0.5rem;
     font-weight: 500;
     font-size: 0.9rem;
-    transition: all 0.2s ease;
-    border: 1px solid #d4a574;
-    cursor: pointer;
-    margin-top: 0.5rem;
   }
 
-  .stats-button:hover {
+  .ew-button:hover {
     background-color: #c29560;
-    border-color: #c29560;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(212, 165, 116, 0.3);
-  }
-
-  .stats-button:active {
-    transform: translateY(0);
-  }
-
-  :global(.dark) .stats-button {
-    background-color: #d4a574;
-    color: white;
-    border-color: #d4a574;
-  }
-
-  :global(.dark) .stats-button:hover {
-    background-color: #e6c393;
-    border-color: #e6c393;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(212, 165, 116, 0.3);
-  }
-
-  .entity-error {
-    padding: 2rem;
-    text-align: center;
-    color: #7a7a7a;
-    min-height: 200px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  :global(.dark) .entity-error {
-    color: #a0a0a0;
-  }
-
-  .hidden {
-    display: none;
   }
 </style>
 
 <script>
-  class EntityWidgetManager {
-    private entityId: string | null;
-    private sport: string | null;
-    private entityType: string | null;
-    private buttonDestination: string | null;
-    private loadingEl: HTMLElement;
-    private contentEl: HTMLElement;
-    private errorEl: HTMLElement;
+  // Simple IIFE - plain JavaScript, no TypeScript
+  (function initEntityWidget() {
+    var widget = document.getElementById('entity-widget');
+    if (!widget) return;
 
-    constructor() {
-      const params = new URLSearchParams(window.location.search);
-      this.sport = params.get('sport');
-      this.entityType = params.get('type');
-      this.entityId = params.get('id');
+    var apiUrl = widget.getAttribute('data-api') || 'http://localhost:8000/api/v1';
+    var buttonDest = widget.getAttribute('data-dest') || 'mentions';
 
-      const widgetEl = document.getElementById('entity-widget')!;
-      this.buttonDestination = widgetEl.getAttribute('data-button-destination');
+    // Parse URL params
+    var params = new URLSearchParams(window.location.search);
+    var sport = params.get('sport');
+    var type = params.get('type');
+    var id = params.get('id');
 
-      this.loadingEl = document.getElementById('entity-loading')!;
-      this.contentEl = document.getElementById('entity-content')!;
-      this.errorEl = document.getElementById('entity-error')!;
+    // Elements
+    var loadingEl = document.getElementById('ew-loading');
+    var contentEl = document.getElementById('ew-content');
+    var errorEl = document.getElementById('ew-error');
+    var nameEl = document.getElementById('ew-name');
+    var badgeEl = document.getElementById('ew-badge');
+    var subtitleEl = document.getElementById('ew-subtitle');
+    var logoEl = document.getElementById('ew-logo');
+    var buttonEl = document.getElementById('ew-button');
 
-      // Set button href on load (before content is fetched)
-      this.setButtonHref();
-
-      if (this.entityId && this.sport && this.entityType) {
-        this.loadEntity();
-      } else {
-        this.showError();
-      }
+    // Set button href immediately
+    if (sport && type && id && buttonEl) {
+      buttonEl.href = '/' + buttonDest + '?sport=' + sport + '&type=' + type + '&id=' + id;
     }
 
-    private setButtonHref() {
-      const buttonEl = document.getElementById('entity-button') as HTMLAnchorElement;
-
-      if (this.sport && this.entityType && this.entityId && buttonEl) {
-        const href = this.buttonDestination === 'entity'
-          ? `/entity?sport=${this.sport}&type=${this.entityType}&id=${this.entityId}`
-          : `/mentions?sport=${this.sport}&type=${this.entityType}&id=${this.entityId}`;
-
-        buttonEl.href = href;
-      }
+    // Validate params
+    if (!sport || !type || !id) {
+      showError();
+      return;
     }
 
-    private async loadEntity() {
-      try {
-        const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
-        const response = await fetch(
-          `${apiUrl}/entities/${this.sport}/${this.entityType}/${this.entityId}`
-        );
+    // Fetch from simple widget endpoint
+    var url = apiUrl + '/widget/' + type + '/' + id + '?sport=' + sport.toUpperCase();
+    console.log('[EntityWidget] Fetching:', url);
 
-        if (!response.ok) throw new Error('Failed to load entity');
+    fetch(url)
+      .then(function(res) {
+        console.log('[EntityWidget] Response status:', res.status);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function(data) {
+        console.log('[EntityWidget] Data:', data);
+        
+        if (data.error) {
+          showError();
+          return;
+        }
+        
+        // API returns EXACTLY what API-Sports returns:
+        // Teams: { team: { id, name, logo, ... }, venue: { name, city, ... } }
+        // Players: { player: { id, name, photo, ... }, statistics: [...] }
+        var name = '';
+        var logo = '';
+        var subtitle = '';
+        
+        if (type === 'team') {
+          // Team response from API-Sports
+          var teamData = data.team || {};
+          var venueData = data.venue || {};
+          
+          name = teamData.name || 'Unknown';
+          logo = teamData.logo || '';
+          subtitle = venueData.name || venueData.city || teamData.country || '';
+        } else {
+          // Player response from API-Sports
+          var playerData = data.player || {};
+          var stats = data.statistics || [];
+          var teamInfo = stats[0] ? stats[0].team : null;
+          
+          name = playerData.name || ((playerData.firstname || '') + ' ' + (playerData.lastname || '')).trim() || 'Unknown';
+          logo = playerData.photo || '';
+          subtitle = teamInfo ? teamInfo.name : '';
+        }
+        
+        // Display name
+        if (nameEl) nameEl.textContent = name;
+        
+        // Badge (type from URL param)
+        if (badgeEl) badgeEl.textContent = type.toUpperCase();
+        
+        // Subtitle
+        if (subtitleEl) subtitleEl.textContent = subtitle;
+        
+        // Logo/photo
+        if (logoEl && logo) {
+          logoEl.src = logo;
+          logoEl.alt = name;
+          logoEl.style.display = 'block';
+        }
+        
+        showContent();
+      })
+      .catch(function(err) {
+        console.error('[EntityWidget] Error:', err);
+        showError();
+      });
 
-        const entity = await response.json();
-        this.renderEntity(entity);
-      } catch (error) {
-        console.error('Error loading entity:', error);
-        this.showError();
-      }
+    function showContent() {
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (contentEl) contentEl.style.display = 'flex';
+      if (errorEl) errorEl.style.display = 'none';
     }
 
-    private renderEntity(entity: any) {
-      const nameEl = document.getElementById('entity-name')!;
-      const badgeEl = document.getElementById('sport-badge')!;
-      const descEl = document.getElementById('entity-description')!;
-      const linkEl = document.getElementById('entity-profile-link') as HTMLAnchorElement;
-
-      nameEl.textContent = entity.name || 'Unknown Entity';
-      badgeEl.textContent = (this.entityType || '').toUpperCase();
-      descEl.textContent = entity.description || '';
-      linkEl.href = `/entity?sport=${this.sport}&type=${this.entityType}&id=${this.entityId}`;
-      
-      this.setButtonHref();
-
-      this.loadingEl.classList.add('hidden');
-      this.contentEl.classList.remove('hidden');
+    function showError() {
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (contentEl) contentEl.style.display = 'none';
+      if (errorEl) errorEl.style.display = 'flex';
     }
-
-    private showError() {
-      this.loadingEl.classList.add('hidden');
-      this.errorEl.classList.remove('hidden');
-    }
-  }
-
-  new EntityWidgetManager();
+  })();
 </script>

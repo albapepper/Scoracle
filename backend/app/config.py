@@ -1,6 +1,6 @@
-import os
 from typing import List, Union
-from pydantic import AnyHttpUrl, validator
+
+from pydantic import AnyHttpUrl, field_validator, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,17 +20,27 @@ class Settings(BaseSettings):
 	# CORS Configuration
 	# Set BACKEND_CORS_ORIGINS env var as comma-separated URLs for production
 	# e.g., "https://scoracle.vercel.app,https://your-domain.com"
+	# For preview deployments where origins vary, you can set BACKEND_CORS_ORIGIN_REGEX
+	# e.g., "^https://.*\\.vercel\\.app$"
+	BACKEND_CORS_ORIGIN_REGEX: str | None = None
+	# Emergency escape hatch. Prefer explicit origins/regex.
+	BACKEND_CORS_ALLOW_ALL: bool = False
 	BACKEND_CORS_ORIGINS: List[Union[str, AnyHttpUrl]] = [
 		"http://localhost:3000",
+		"http://localhost:4321",  # Astro dev server
+		"http://localhost:4322",  # Astro dev server (fallback port)
 		"http://localhost:8000",
 		"http://localhost:5173",
 	]
 
-	@validator("BACKEND_CORS_ORIGINS", pre=True)
-	def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
+	@field_validator("BACKEND_CORS_ORIGINS", mode="before")
+	@classmethod
+	def assemble_cors_origins(cls, v: Union[str, List[str]]):
 		# Default origins for development
 		defaults = [
 			"http://localhost:3000",
+			"http://localhost:4321",  # Astro dev server
+			"http://localhost:4322",  # Astro dev server (fallback port)
 			"http://localhost:8000",
 			"http://localhost:5173",
 		]
@@ -44,32 +54,41 @@ class Settings(BaseSettings):
 		return defaults
 
 	# API-Sports.com key (required provider)
-	API_SPORTS_KEY: str = os.getenv("API_SPORTS_KEY", "")
-	# Default seasons/leagues for API-Sports where applicable
-	API_SPORTS_DEFAULTS: dict = {
-		# Football (soccer)
-		"FOOTBALL": {
-			"sport": "football",
-			"league": int(os.getenv("API_SPORTS_FOOTBALL_LEAGUE", "39")),
-			"season": os.getenv("API_SPORTS_FOOTBALL_SEASON", "2025"),
-		},
-		# Basketball – NBA
-		"NBA": {
-			"sport": "basketball",
-			"league": os.getenv("API_SPORTS_NBA_LEAGUE", "standard"),
-			"season": os.getenv("API_SPORTS_NBA_SEASON", "2024"),
-		},
-		# American Football – NFL
-		"NFL": {
-			"sport": "american-football",
-			"league": int(os.getenv("API_SPORTS_NFL_LEAGUE", "1")),
-			"season": os.getenv("API_SPORTS_NFL_SEASON", "2025"),
-		},
-	}
+	API_SPORTS_KEY: str = ""
+	# API-Sports defaults (override via env)
+	API_SPORTS_FOOTBALL_LEAGUE: int = 39
+	API_SPORTS_FOOTBALL_SEASON: str = "2024"
+	API_SPORTS_NBA_LEAGUE: str = "standard"
+	API_SPORTS_NBA_SEASON: str = "2024"
+	API_SPORTS_NFL_LEAGUE: int = 1
+	API_SPORTS_NFL_SEASON: str = "2025"
+
+	@computed_field
+	@property
+	def API_SPORTS_DEFAULTS(self) -> dict:
+		# Football (soccer) - season is the year the season STARTED (2024-25 season = "2024")
+		return {
+			"FOOTBALL": {
+				"sport": "football",
+				"league": int(self.API_SPORTS_FOOTBALL_LEAGUE),
+				"season": str(self.API_SPORTS_FOOTBALL_SEASON),
+			},
+			"NBA": {
+				"sport": "basketball",
+				"league": str(self.API_SPORTS_NBA_LEAGUE),
+				"season": str(self.API_SPORTS_NBA_SEASON),
+			},
+			"NFL": {
+				"sport": "american-football",
+				"league": int(self.API_SPORTS_NFL_LEAGUE),
+				"season": str(self.API_SPORTS_NFL_SEASON),
+			},
+		}
+
 	# Rate limiting (simple in-memory token bucket)
-	RATE_LIMIT_ENABLED: bool = os.getenv("RATE_LIMIT_ENABLED", "false").lower() in ("1", "true", "yes")
-	RATE_LIMIT_RPS: float = float(os.getenv("RATE_LIMIT_RPS", "5"))  # tokens per second
-	RATE_LIMIT_BURST: int = int(os.getenv("RATE_LIMIT_BURST", "10"))
+	RATE_LIMIT_ENABLED: bool = False
+	RATE_LIMIT_RPS: float = 5.0  # tokens per second
+	RATE_LIMIT_BURST: int = 10
 
 
 settings = Settings()

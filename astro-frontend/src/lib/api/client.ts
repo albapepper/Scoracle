@@ -1,4 +1,14 @@
-const API_BASE = import.meta.env.PUBLIC_API_URL || '/api/v1';
+/**
+ * API Client for Scoracle Backend
+ * 
+ * Endpoints:
+ * - GET /api/v1/entity/{type}/{id}?sport={sport}&include={widget,news,enhanced,stats}
+ * - GET /api/v1/entity/search?query={q}&sport={sport}
+ * - GET /api/v1/entity/{type}/{id}/mentions?sport={sport} (legacy)
+ */
+
+// Default to localhost:8000 for development, can be overridden via PUBLIC_API_URL
+const API_BASE = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 export interface ApiError {
   message: string;

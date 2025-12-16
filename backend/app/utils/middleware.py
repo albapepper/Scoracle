@@ -41,6 +41,24 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             self.buckets[key] = (tokens, now)
             return False
 
+    @staticmethod
+    def _client_ip(request: Request) -> str:
+        """Best-effort client IP extraction.
+
+        In production this app is commonly behind proxies/CDNs.
+        We prefer the first IP in X-Forwarded-For when present.
+        """
+        xff = request.headers.get("x-forwarded-for")
+        if xff:
+            # XFF can be a comma-separated list: "client, proxy1, proxy2"
+            first = xff.split(",")[0].strip()
+            if first:
+                return first
+        xri = request.headers.get("x-real-ip")
+        if xri:
+            return xri.strip()
+        return request.client.host if request.client else "unknown"
+
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         cfg = getattr(request.app.state, "rate_limit", None)
         if not cfg:
@@ -48,7 +66,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         enabled, rps, burst = cfg
         if not enabled:
             return await call_next(request)
-        ip = request.client.host if request.client else "unknown"
+        ip = self._client_ip(request)
         if self._allow(ip, float(rps), int(burst)):
             return await call_next(request)
         # 429 Too Many Requests
