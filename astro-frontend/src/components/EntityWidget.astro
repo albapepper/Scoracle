@@ -51,7 +51,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     width: 100%;
     max-width: 600px;
     text-align: center;
-    padding: 2rem;
+    padding: 2rem 2rem 0 2rem;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -151,13 +151,15 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
   .ew-button {
     margin-top: 1rem;
-    padding: 0.625rem 1.25rem;
+    padding: 0.875rem 1.25rem;
     background-color: #d4a574;
     color: white;
     text-decoration: none;
-    border-radius: 0.5rem;
+    border-radius: 0 0 0.5rem 0.5rem;
     font-weight: 500;
     font-size: 0.9rem;
+    width: calc(100% + 4rem);
+    text-align: center;
   }
 
   .ew-button:hover {
