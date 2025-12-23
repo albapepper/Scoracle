@@ -1,22 +1,12 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import SportSelector from '../components/SportSelector.astro';
-import SearchForm from '../components/SearchForm.astro';
+import CrystalBallSelector from '../components/CrystalBallSelector.astro';
 ---
 
 <Layout title="Scoracle">
   <main class="home-main">
-    <div class="central-card card">
-      <h1 class="welcome-title">Welcome to Scoracle</h1>
-      <p class="welcome-subtitle">Select a sport to get started</p>
-      
-      <div class="sport-selector-wrapper">
-        <SportSelector />
-      </div>
-
-      <div class="search-wrapper">
-        <SearchForm />
-      </div>
+    <div class="central-card">
+      <CrystalBallSelector />
     </div>
   </main>
 </Layout>
@@ -27,7 +17,7 @@ import SearchForm from '../components/SearchForm.astro';
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding-top: calc((100vh - 3.5rem) * 0.20);
+    padding-top: calc((100vh - 3.5rem) * 0.15);
     padding-left: 2rem;
     padding-right: 2rem;
     padding-bottom: 2rem;
@@ -40,67 +30,19 @@ import SearchForm from '../components/SearchForm.astro';
 
   .central-card {
     width: 100%;
-    max-width: 500px;
-    padding: 3rem 2.5rem;
+    max-width: 900px;
+    padding: 4.5rem;
     text-align: center;
-    background: #f8f6f1;
-    border: 1px solid #e8e4db;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
-    border-radius: 8px;
-  }
-
-  :global(.dark) .central-card {
-    background: #2c2c2c;
-    border: 1px solid #3e3e3e;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  }
-
-  .welcome-title {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-    color: #3d3d3d;
-  }
-
-  :global(.dark) .welcome-title {
-    color: #e8e8e8;
-  }
-
-  .welcome-subtitle {
-    font-size: 1rem;
-    color: #7a7a7a;
-    font-weight: 400;
-    margin-bottom: 2rem;
-  }
-
-  :global(.dark) .welcome-subtitle {
-    color: #a0a0a0;
-  }
-
-  .sport-selector-wrapper {
-    margin-bottom: 2rem;
-  }
-
-  .search-wrapper {
-    display: flex;
-    justify-content: center;
   }
 
   @media (max-width: 768px) {
     .home-main {
       padding: 1rem;
+      padding-top: calc((100vh - 3.5rem) * 0.1);
     }
 
     .central-card {
-      padding: 2rem 1.5rem;
-    }
-
-    .welcome-title {
-      font-size: 1.5rem;
-    }
-
-    .welcome-subtitle {
-      font-size: 0.9rem;
+      padding: 1.5rem 1rem;
     }
   }
 </style>

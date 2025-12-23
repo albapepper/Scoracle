@@ -5,6 +5,18 @@ interface Props {
 }
 
 const { sport = 'nba' } = Astro.props;
+
+// Helper function to get display name for sports
+function getSportDisplay(sportId: string): string {
+  const sportMap: Record<string, string> = {
+    'nba': 'NBA',
+    'nfl': 'NFL',
+    'football': 'Football'
+  };
+  return sportMap[sportId.toLowerCase()] || sportId.toUpperCase();
+}
+
+const sportDisplay = getSportDisplay(sport);
 ---
 
 <div class="search-container" data-sport={sport}>
@@ -13,7 +25,7 @@ const { sport = 'nba' } = Astro.props;
       <input
         id="search-input"
         type="text"
-        placeholder={`Search for ${sport.toUpperCase()} players or teams...`}
+        placeholder={`Search for ${sportDisplay} players or teams...`}
         class="input search-input"
         autocomplete="off"
       />
@@ -36,7 +48,9 @@ const { sport = 'nba' } = Astro.props;
   .search-container {
     position: relative;
     width: 100%;
-    max-width: 500px;
+    max-width: 375px;
+    margin: 0 auto;
+    display: block;
   }
 
   .search-form {
@@ -49,7 +63,7 @@ const { sport = 'nba' } = Astro.props;
     align-items: center;
     background-color: #ffffff;
     border-radius: 24px;
-    padding: 0.5rem 1rem;
+    padding: 0.75rem 1rem;
     border: 1px solid #e8e4db;
     transition: all 0.2s ease;
     width: 100%;
@@ -108,7 +122,7 @@ const { sport = 'nba' } = Astro.props;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0.5rem;
+    padding: 0.75rem;
     background: transparent;
     border: none;
     cursor: pointer;
@@ -417,10 +431,19 @@ const { sport = 'nba' } = Astro.props;
       window.location.href = `/mentions?sport=${sportParam}&type=${entity.type}&id=${entity.id}`;
     }
 
+    private getSportDisplay(sportId: string): string {
+      const sportMap: Record<string, string> = {
+        'nba': 'NBA',
+        'nfl': 'NFL',
+        'football': 'Football'
+      };
+      return sportMap[sportId.toLowerCase()] || sportId.toUpperCase();
+    }
+
     public setSport(sport: string) {
       if (this.sport !== sport) {
         this.sport = sport;
-        this.input.placeholder = `Search for ${sport.toUpperCase()} players or teams...`;
+        this.input.placeholder = `Search for ${this.getSportDisplay(sport)} players or teams...`;
         this.allData = [];
         this.suggestions = [];
         this.input.value = '';

@@ -57,9 +57,9 @@ class Settings(BaseSettings):
 	API_SPORTS_KEY: str = ""
 	# API-Sports defaults (override via env)
 	API_SPORTS_FOOTBALL_LEAGUE: int = 39
-	API_SPORTS_FOOTBALL_SEASON: str = "2024"
+	API_SPORTS_FOOTBALL_SEASON: str = "2025"
 	API_SPORTS_NBA_LEAGUE: str = "standard"
-	API_SPORTS_NBA_SEASON: str = "2024"
+	API_SPORTS_NBA_SEASON: str = "2025"
 	API_SPORTS_NFL_LEAGUE: int = 1
 	API_SPORTS_NFL_SEASON: str = "2025"
 
@@ -67,6 +67,7 @@ class Settings(BaseSettings):
 	@property
 	def API_SPORTS_DEFAULTS(self) -> dict:
 		# Football (soccer) - season is the year the season STARTED (2024-25 season = "2024")
+		# NBA/NFL - using 2025 for current season
 		return {
 			"FOOTBALL": {
 				"sport": "football",

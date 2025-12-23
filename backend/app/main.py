@@ -32,7 +32,8 @@ IS_VERCEL = os.getenv("VERCEL") == "1"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting application")
-    app.state.http_client = httpx.AsyncClient(timeout=timeout, limits=limits)
+    # follow_redirects=True is needed for Google News RSS which returns 302
+    app.state.http_client = httpx.AsyncClient(timeout=timeout, limits=limits, follow_redirects=True)
     yield
     client = getattr(app.state, "http_client", None)
     if client is not None:

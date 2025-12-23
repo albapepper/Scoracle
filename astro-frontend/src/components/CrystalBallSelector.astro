@@ -1,0 +1,342 @@
+---
+// Crystal Ball Sport Selector - Sports carousel inside the crystal ball
+interface Props {
+  initialSport?: string;
+}
+
+const { initialSport = 'nba' } = Astro.props;
+
+const sports = [
+  { id: 'nba', display: 'NBA' },
+  { id: 'nfl', display: 'NFL' },
+  { id: 'football', display: 'Football' },
+];
+---
+
+<div class="crystal-ball-container">
+  <!-- The logo with hands around crystal ball -->
+  <div class="logo-wrapper">
+    <img src="/new_logo_cleared.png" alt="Scoracle" class="crystal-logo" />
+    
+    <!-- Sport selector overlay positioned inside the ball -->
+    <div id="crystal-selector" class="crystal-selector" data-initial={initialSport}>
+      <button 
+        id="prev-sport" 
+        class="nav-arrow nav-arrow-left" 
+        aria-label="Previous sport"
+      >
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+        </svg>
+      </button>
+      
+      <div class="sport-display">
+        {sports.map((sport, index) => (
+          <span 
+            data-sport={sport.id}
+            class={`sport-name ${initialSport === sport.id ? 'active' : ''}`}
+          >
+            {sport.display}
+          </span>
+        ))}
+      </div>
+      
+      <button 
+        id="next-sport" 
+        class="nav-arrow nav-arrow-right" 
+        aria-label="Next sport"
+      >
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+  
+  <!-- Subtitle below -->
+  <p class="crystal-subtitle">Select your sport to get started</p>
+</div>
+
+<style>
+  .crystal-ball-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .logo-wrapper {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .crystal-logo {
+    width: 693px;
+    height: auto;
+    filter: drop-shadow(0 10px 30px rgba(139, 123, 168, 0.3));
+    transition: filter 0.3s ease;
+    margin-left: 15.75px;
+  }
+
+  :global(.dark) .crystal-logo {
+    filter: drop-shadow(0 10px 30px rgba(97, 175, 239, 0.3));
+  }
+
+  /* Position the selector inside the crystal ball */
+  .crystal-selector {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    padding: 0.5rem;
+    /* Adjust these values to position within your specific logo's ball area */
+    margin-top: 1.5rem;
+  }
+
+  .nav-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    background: rgba(139, 123, 168, 0.15);
+    border: none;
+    border-radius: 50%;
+    color: #8b7ba8;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(4px);
+  }
+
+  :global(.dark) .nav-arrow {
+    background: rgba(97, 175, 239, 0.15);
+    color: #61afef;
+  }
+
+  .nav-arrow:hover {
+    background: rgba(139, 123, 168, 0.3);
+    color: #6b5b95;
+    transform: scale(1.1);
+  }
+
+  :global(.dark) .nav-arrow:hover {
+    background: rgba(97, 175, 239, 0.3);
+    color: #8fd4ff;
+  }
+
+  .nav-arrow:active {
+    transform: scale(0.95);
+  }
+
+  .nav-arrow svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .sport-display {
+    position: relative;
+    min-width: 120px;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sport-name {
+    position: absolute;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #000000;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
+  }
+
+  :global(.dark) .sport-name {
+    color: #ffffff;
+    text-shadow: 0 2px 10px rgba(255, 255, 255, 0.2);
+  }
+
+  .sport-name.active {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .sport-name.exit-up {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  .sport-name.exit-down {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  .sport-name.enter-up {
+    transform: translateX(-20px);
+  }
+
+  .sport-name.enter-down {
+    transform: translateX(20px);
+  }
+
+  .crystal-subtitle {
+    font-size: 1rem;
+    color: #7a7a7a;
+    font-weight: 400;
+    font-style: italic;
+    text-align: center;
+  }
+
+  :global(.dark) .crystal-subtitle {
+    color: #a0a0a0;
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .crystal-logo {
+      width: 544.5px;
+      margin-left: 12.375px;
+    }
+
+    .nav-arrow {
+      width: 1.75rem;
+      height: 1.75rem;
+    }
+
+    .nav-arrow svg {
+      width: 0.875rem;
+      height: 0.875rem;
+    }
+
+    .sport-name {
+      font-size: 1rem;
+    }
+
+    .sport-display {
+      min-width: 100px;
+    }
+  }
+</style>
+
+<script>
+  const STORAGE_KEY = 'activeSport';
+
+  class CrystalBallSelector {
+    private container: HTMLElement;
+    private sportNames: NodeListOf<HTMLElement>;
+    private prevBtn: HTMLButtonElement;
+    private nextBtn: HTMLButtonElement;
+    private sports: string[];
+    private currentIndex: number;
+    private isAnimating: boolean = false;
+
+    constructor() {
+      this.container = document.getElementById('crystal-selector')!;
+      this.sportNames = this.container.querySelectorAll('.sport-name');
+      this.prevBtn = document.getElementById('prev-sport') as HTMLButtonElement;
+      this.nextBtn = document.getElementById('next-sport') as HTMLButtonElement;
+      
+      // Build sports array from DOM
+      this.sports = Array.from(this.sportNames).map(el => el.dataset.sport!);
+      
+      // Load from localStorage or use initial
+      const stored = localStorage.getItem(STORAGE_KEY);
+      const initial = this.container.dataset.initial || 'nba';
+      const savedSport = stored || initial;
+      
+      this.currentIndex = this.sports.indexOf(savedSport);
+      if (this.currentIndex === -1) this.currentIndex = 0;
+
+      this.init();
+    }
+
+    private init() {
+      // Set initial active state
+      this.updateDisplay();
+      
+      // Bind events
+      this.prevBtn.addEventListener('click', () => this.navigate(-1));
+      this.nextBtn.addEventListener('click', () => this.navigate(1));
+      
+      // Keyboard support
+      this.container.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') this.navigate(-1);
+        if (e.key === 'ArrowRight') this.navigate(1);
+      });
+
+      // Dispatch initial event
+      this.dispatchChange();
+    }
+
+    private navigate(direction: number) {
+      if (this.isAnimating) return;
+      
+      this.isAnimating = true;
+      const oldIndex = this.currentIndex;
+      
+      // Calculate new index with wrap-around
+      this.currentIndex = (this.currentIndex + direction + this.sports.length) % this.sports.length;
+      
+      // Animate transition
+      this.animateTransition(oldIndex, this.currentIndex, direction);
+      
+      // Save to localStorage
+      localStorage.setItem(STORAGE_KEY, this.sports[this.currentIndex]);
+      
+      // Dispatch change event
+      this.dispatchChange();
+    }
+
+    private animateTransition(oldIndex: number, newIndex: number, direction: number) {
+      const oldEl = this.sportNames[oldIndex];
+      const newEl = this.sportNames[newIndex];
+      
+      // Set exit animation
+      oldEl.classList.remove('active');
+      oldEl.classList.add(direction > 0 ? 'exit-up' : 'exit-down');
+      
+      // Set enter animation
+      newEl.classList.add(direction > 0 ? 'enter-down' : 'enter-up');
+      
+      // Small delay then activate new element
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          newEl.classList.remove('enter-up', 'enter-down');
+          newEl.classList.add('active');
+          
+          // Clean up old element after transition
+          setTimeout(() => {
+            oldEl.classList.remove('exit-up', 'exit-down');
+            this.isAnimating = false;
+          }, 300);
+        });
+      });
+    }
+
+    private updateDisplay() {
+      this.sportNames.forEach((el, index) => {
+        el.classList.toggle('active', index === this.currentIndex);
+      });
+    }
+
+    private dispatchChange() {
+      window.dispatchEvent(new CustomEvent('sportchange', { 
+        detail: { sport: this.sports[this.currentIndex] } 
+      }));
+    }
+  }
+
+  // Initialize
+  new CrystalBallSelector();
+</script>
