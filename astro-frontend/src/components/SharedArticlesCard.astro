@@ -1,0 +1,356 @@
+---
+/**
+ * Shared Articles Card
+ *
+ * Displays articles where both entities are mentioned together.
+ * Used on the co-mentions comparison page.
+ */
+
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+---
+
+<div id="shared-articles-card" class="shared-articles-card card" data-api-url={apiUrl}>
+  <div class="card-header">
+    <h3 class="card-title">Shared Articles</h3>
+    <p class="card-subtitle">Articles mentioning both entities</p>
+  </div>
+
+  <div class="card-body">
+    <div id="shared-loading" class="loading-skeleton">
+      <div class="skeleton-item"></div>
+      <div class="skeleton-item"></div>
+      <div class="skeleton-item"></div>
+    </div>
+    <div id="shared-content" class="hidden">
+      <div id="shared-list" class="content-list"></div>
+    </div>
+    <div id="shared-empty" class="empty-state hidden">
+      No shared articles found
+    </div>
+  </div>
+</div>
+
+<style>
+  .shared-articles-card {
+    width: 100%;
+    max-width: 600px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0.375rem;
+  }
+
+  .card-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  :global(.dark) .card-header {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+  }
+
+  :global(.dark) .card-title {
+    color: var(--text-dark);
+  }
+
+  .card-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 0.25rem 0 0 0;
+  }
+
+  :global(.dark) .card-subtitle {
+    color: var(--text-secondary-dark);
+  }
+
+  .card-body {
+    padding: 1.5rem;
+  }
+
+  .loading-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .skeleton-item {
+    height: 80px;
+    border-radius: 4px;
+    background-color: var(--border);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  :global(.dark) .skeleton-item {
+    background-color: var(--border-dark);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .content-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .content-item {
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  :global(.dark) .content-item {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .content-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .content-title {
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 0.5rem 0;
+    line-height: 1.4;
+    font-size: 0.95rem;
+  }
+
+  :global(.dark) .content-title {
+    color: var(--text-dark);
+  }
+
+  .content-title a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: var(--text-tertiary);
+    text-underline-offset: 2px;
+  }
+
+  :global(.dark) .content-title a {
+    text-decoration-color: var(--text-tertiary-dark);
+  }
+
+  .content-meta {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+  }
+
+  :global(.dark) .content-meta {
+    color: var(--text-secondary-dark);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+  }
+
+  :global(.dark) .empty-state {
+    color: var(--text-secondary-dark);
+  }
+
+  .hidden {
+    display: none;
+  }
+</style>
+
+<script>
+  import { escapeHtml } from '../lib/utils/dom';
+
+  interface Article {
+    title?: string;
+    link?: string;
+    source?: string;
+    pub_date?: string;
+  }
+
+  function parseCoMentionsParams() {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      sport: params.get('sport'),
+      type: params.get('type'),
+      id: params.get('id'),
+      coType: params.get('coType'),
+      coId: params.get('coId'),
+    };
+  }
+
+  class SharedArticlesCard {
+    private card: HTMLElement | null = null;
+    private apiUrl = '';
+    private params: ReturnType<typeof parseCoMentionsParams>;
+
+    private loadingEl: HTMLElement | null = null;
+    private contentEl: HTMLElement | null = null;
+    private listEl: HTMLElement | null = null;
+    private emptyEl: HTMLElement | null = null;
+
+    constructor() {
+      const card = document.getElementById('shared-articles-card');
+      if (!card) return;
+
+      this.card = card;
+      this.apiUrl = card.dataset.apiUrl || 'http://localhost:8000/api/v1';
+      this.params = parseCoMentionsParams();
+
+      this.loadingEl = document.getElementById('shared-loading');
+      this.contentEl = document.getElementById('shared-content');
+      this.listEl = document.getElementById('shared-list');
+      this.emptyEl = document.getElementById('shared-empty');
+
+      this.init();
+    }
+
+    private init() {
+      if (!this.params.sport || !this.params.type || !this.params.id) {
+        this.showEmpty();
+        return;
+      }
+
+      this.fetchSharedArticles();
+    }
+
+    private async fetchSharedArticles() {
+      // First get both entity names
+      const [primaryName, secondaryName] = await Promise.all([
+        this.getEntityName(this.params.type!, this.params.id!),
+        this.params.coType && this.params.coId
+          ? this.getEntityName(this.params.coType, this.params.coId)
+          : Promise.resolve(null),
+      ]);
+
+      if (!primaryName || !secondaryName) {
+        this.showEmpty();
+        return;
+      }
+
+      // Fetch news for primary entity
+      try {
+        const newsUrl = `${this.apiUrl}/news/${encodeURIComponent(primaryName)}`;
+        const res = await fetch(newsUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+        const articles: Article[] = data.articles || [];
+
+        // Build search terms for the secondary entity
+        // Include full name and last name (for players)
+        const searchTerms = this.getSearchTerms(secondaryName);
+
+        // Filter articles that mention any of the search terms
+        const sharedArticles = articles.filter(article => {
+          const title = (article.title || '').toLowerCase();
+          return searchTerms.some(term => title.includes(term));
+        });
+
+        if (sharedArticles.length === 0) {
+          this.showEmpty();
+          return;
+        }
+
+        this.renderArticles(sharedArticles);
+      } catch {
+        this.showEmpty();
+      }
+    }
+
+    private getSearchTerms(name: string): string[] {
+      const terms: string[] = [];
+      const lowerName = name.toLowerCase();
+
+      // Add full name
+      terms.push(lowerName);
+
+      // Extract and add last name (for players with multi-word names)
+      const parts = lowerName.split(/\s+/);
+      if (parts.length > 1) {
+        let lastName = parts[parts.length - 1];
+
+        // Handle suffixes
+        const suffixes = ['jr', 'jr.', 'sr', 'sr.', 'ii', 'iii', 'iv', 'v'];
+        if (suffixes.includes(lastName.replace('.', '')) && parts.length >= 3) {
+          lastName = parts[parts.length - 2];
+        }
+
+        // Only add last name if it's at least 4 characters
+        if (lastName.length >= 4) {
+          terms.push(lastName);
+        }
+      }
+
+      return terms;
+    }
+
+    private async getEntityName(type: string, id: string): Promise<string | null> {
+      try {
+        const url = `${this.apiUrl}/widget/${type}/${id}?sport=${this.params.sport!.toUpperCase()}`;
+        const res = await fetch(url);
+        if (!res.ok) return null;
+
+        const data = await res.json();
+        if (type === 'team') {
+          return data.team?.name || null;
+        } else {
+          const player = data.player || {};
+          return player.name || `${player.firstname || ''} ${player.lastname || ''}`.trim() || null;
+        }
+      } catch {
+        return null;
+      }
+    }
+
+    private renderArticles(articles: Article[]) {
+      const html = articles.map(article => this.renderArticle(article)).join('');
+      if (this.listEl) this.listEl.innerHTML = html;
+      this.showContent();
+    }
+
+    private renderArticle(article: Article): string {
+      const title = escapeHtml(article.title || 'Untitled');
+      const link = article.link || '#';
+      const source = escapeHtml(article.source || '');
+      const date = this.formatDate(article.pub_date);
+
+      return `<div class="content-item">
+        <h3 class="content-title">
+          <a href="${link}" target="_blank" rel="noopener">${title}</a>
+        </h3>
+        <div class="content-meta">${source}${source && date ? ' · ' : ''}${date}</div>
+      </div>`;
+    }
+
+    private formatDate(dateStr?: string): string {
+      if (!dateStr) return '';
+      try {
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      } catch {
+        return '';
+      }
+    }
+
+    private showContent() {
+      this.loadingEl?.classList.add('hidden');
+      this.contentEl?.classList.remove('hidden');
+      this.emptyEl?.classList.add('hidden');
+    }
+
+    private showEmpty() {
+      this.loadingEl?.classList.add('hidden');
+      this.contentEl?.classList.add('hidden');
+      this.emptyEl?.classList.remove('hidden');
+    }
+  }
+
+  new SharedArticlesCard();
+</script>

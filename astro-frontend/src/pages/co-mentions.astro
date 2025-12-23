@@ -1,21 +1,21 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import EntityWidget from '../components/EntityWidget.astro';
-import ContentCard from '../components/ContentCard.astro';
+import EntityWidgetPair from '../components/EntityWidgetPair.astro';
+import SharedArticlesCard from '../components/SharedArticlesCard.astro';
 ---
 
-<Layout 
-  title="Mentions - Scoracle"
-  description="View recent mentions and news about sports players and teams"
+<Layout
+  title="Co-mentions - Scoracle"
+  description="Compare two entities mentioned together in sports news"
 >
-  <main class="mentions-main">
-    <EntityWidget page="mentions" />
-    <ContentCard />
+  <main class="co-mentions-main">
+    <EntityWidgetPair />
+    <SharedArticlesCard />
   </main>
 </Layout>
 
 <style>
-  .mentions-main {
+  .co-mentions-main {
     min-height: calc(100vh - 3.5rem);
     display: flex;
     flex-direction: column;
@@ -29,7 +29,7 @@ import ContentCard from '../components/ContentCard.astro';
     gap: 2rem;
   }
 
-  :global(.dark) .mentions-main {
+  :global(.dark) .co-mentions-main {
     background-color: var(--bg-dark);
   }
 </style>

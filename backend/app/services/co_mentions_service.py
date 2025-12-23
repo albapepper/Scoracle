@@ -27,6 +27,26 @@ logger = logging.getLogger(__name__)
 CO_MENTIONS_CACHE_TTL = 10 * 60
 
 
+def _get_last_name(name: str) -> Optional[str]:
+    """Extract the last name from a player's full name.
+
+    Handles common suffixes like Jr., Sr., II, III, etc.
+    Returns None if the name is a single word (to avoid false positives).
+    """
+    if not name:
+        return None
+    parts = name.split()
+    if len(parts) <= 1:
+        return None  # Single word names - don't match on just the name
+
+    last = parts[-1]
+    suffixes = {"jr", "jr.", "sr", "sr.", "ii", "iii", "iv", "v"}
+    if last.lower().strip(". ") in suffixes and len(parts) >= 3:
+        last = parts[-2]
+
+    return last if len(last) >= 4 else None  # Require at least 4 chars for last name
+
+
 def _build_entity_patterns(
     players: List[Tuple[int, str]], teams: List[Tuple[int, str]]
 ) -> Dict[str, Tuple[str, int, str]]:
@@ -34,6 +54,9 @@ def _build_entity_patterns(
     Build a lookup dictionary for entity matching.
 
     Returns a dict mapping normalized name -> (entity_type, entity_id, display_name)
+
+    For players, also adds last name as a pattern for better matching since
+    news articles often use just last names (e.g., "Semenyo" instead of "Antoine Semenyo").
     """
     patterns: Dict[str, Tuple[str, int, str]] = {}
 
@@ -43,6 +66,14 @@ def _build_entity_patterns(
         norm = normalize_text(player_name)
         if norm and len(norm) >= 3:  # Skip very short names to avoid false matches
             patterns[norm] = ("player", player_id, player_name)
+
+        # Also add last name as a pattern for players
+        last_name = _get_last_name(player_name)
+        if last_name:
+            norm_last = normalize_text(last_name)
+            # Only add if not already taken by another entity (avoid collisions)
+            if norm_last and norm_last not in patterns:
+                patterns[norm_last] = ("player", player_id, player_name)
 
     for team_id, team_name in teams:
         if not team_name:

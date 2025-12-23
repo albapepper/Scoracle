@@ -7,9 +7,9 @@ interface Props {
 const { initialSport = 'nba' } = Astro.props;
 
 const sports = [
-  { id: 'nba', display: 'NBA' },
-  { id: 'nfl', display: 'NFL' },
-  { id: 'football', display: 'Football' },
+  { id: 'nba', display: 'NBA', logo: '/NBA logo.png' },
+  { id: 'nfl', display: 'NFL', logo: '/NFL logo.png' },
+  { id: 'football', display: 'Football', logo: '/fifa logo.png' },
 ];
 ---
 
@@ -31,13 +31,13 @@ const sports = [
       </button>
       
       <div class="sport-display">
-        {sports.map((sport, index) => (
-          <span 
+        {sports.map((sport) => (
+          <div
             data-sport={sport.id}
-            class={`sport-name ${initialSport === sport.id ? 'active' : ''}`}
+            class={`sport-option ${initialSport === sport.id ? 'active' : ''}`}
           >
-            {sport.display}
-          </span>
+            <img src={sport.logo} alt={sport.display} class="sport-logo" />
+          </div>
         ))}
       </div>
       
@@ -117,50 +117,49 @@ const sports = [
 
   .sport-display {
     position: relative;
-    min-width: 120px;
-    height: 2rem;
+    width: 120px;
+    height: 120px;
     display: flex;
     align-items: center;
     justify-content: center;
   }
 
-  .sport-name {
+  .sport-option {
     position: absolute;
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--text);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     opacity: 0;
     transform: translateX(20px);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    white-space: nowrap;
   }
 
-  :global(.dark) .sport-name {
-    color: var(--text-dark);
+  .sport-logo {
+    width: 105px;
+    height: 105px;
+    object-fit: contain;
   }
 
-  .sport-name.active {
+  .sport-option.active {
     opacity: 1;
     transform: translateX(0);
   }
 
-  .sport-name.exit-up {
+  .sport-option.exit-up {
     opacity: 0;
     transform: translateX(-20px);
   }
 
-  .sport-name.exit-down {
+  .sport-option.exit-down {
     opacity: 0;
     transform: translateX(20px);
   }
 
-  .sport-name.enter-up {
+  .sport-option.enter-up {
     transform: translateX(-20px);
   }
 
-  .sport-name.enter-down {
+  .sport-option.enter-down {
     transform: translateX(20px);
   }
 
@@ -193,12 +192,14 @@ const sports = [
       height: 0.875rem;
     }
 
-    .sport-name {
-      font-size: 1rem;
+    .sport-display {
+      width: 90px;
+      height: 90px;
     }
 
-    .sport-display {
-      min-width: 100px;
+    .sport-logo {
+      width: 75px;
+      height: 75px;
     }
   }
 </style>
@@ -208,7 +209,7 @@ const sports = [
 
   class CrystalBallSelector {
     private container: HTMLElement;
-    private sportNames: NodeListOf<HTMLElement>;
+    private sportOptions: NodeListOf<HTMLElement>;
     private prevBtn: HTMLButtonElement;
     private nextBtn: HTMLButtonElement;
     private sports: string[];
@@ -217,12 +218,12 @@ const sports = [
 
     constructor() {
       this.container = document.getElementById('crystal-selector')!;
-      this.sportNames = this.container.querySelectorAll('.sport-name');
+      this.sportOptions = this.container.querySelectorAll('.sport-option');
       this.prevBtn = document.getElementById('prev-sport') as HTMLButtonElement;
       this.nextBtn = document.getElementById('next-sport') as HTMLButtonElement;
-      
+
       // Build sports array from DOM
-      this.sports = Array.from(this.sportNames).map(el => el.dataset.sport!);
+      this.sports = Array.from(this.sportOptions).map(el => el.dataset.sport!);
       
       // Load from localStorage or use initial
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -273,8 +274,8 @@ const sports = [
     }
 
     private animateTransition(oldIndex: number, newIndex: number, direction: number) {
-      const oldEl = this.sportNames[oldIndex];
-      const newEl = this.sportNames[newIndex];
+      const oldEl = this.sportOptions[oldIndex];
+      const newEl = this.sportOptions[newIndex];
       
       // Set exit animation
       oldEl.classList.remove('active');
@@ -299,7 +300,7 @@ const sports = [
     }
 
     private updateDisplay() {
-      this.sportNames.forEach((el, index) => {
+      this.sportOptions.forEach((el, index) => {
         el.classList.toggle('active', index === this.currentIndex);
       });
     }

@@ -2,28 +2,83 @@
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout 
+<Layout
   title="Page Not Found - Scoracle"
   description="The page you're looking for could not be found."
 >
-  <div class="container-custom">
-    <div class="text-center py-20">
-      <h1 class="text-6xl font-bold text-slate-800 dark:text-slate-200 mb-4">404</h1>
-      <h2 class="text-3xl font-semibold mb-4">Page Not Found</h2>
-      <p class="text-xl text-slate-600 dark:text-slate-400 mb-8">
+  <main class="not-found-main">
+    <div class="not-found-content">
+      <h1 class="not-found-code">404</h1>
+      <h2 class="not-found-title">Page Not Found</h2>
+      <p class="not-found-message">
         The page you're looking for doesn't exist or has been moved.
       </p>
-      <div class="flex gap-4 justify-center">
-        <a href="/" class="btn btn-primary inline-block">
-          Go Home
-        </a>
-        <button 
-          onclick="window.history.back()"
-          class="btn btn-secondary inline-block"
-        >
+      <div class="not-found-actions">
+        <a href="/" class="btn btn-primary">Go Home</a>
+        <button onclick="window.history.back()" class="btn btn-secondary">
           Go Back
         </button>
       </div>
     </div>
-  </div>
+  </main>
 </Layout>
+
+<style>
+  .not-found-main {
+    min-height: calc(100vh - 3.5rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background-color: var(--bg);
+  }
+
+  :global(.dark) .not-found-main {
+    background-color: var(--bg-dark);
+  }
+
+  .not-found-content {
+    text-align: center;
+    max-width: 400px;
+  }
+
+  .not-found-code {
+    font-size: 4rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 0.5rem 0;
+    line-height: 1;
+  }
+
+  :global(.dark) .not-found-code {
+    color: var(--text-dark);
+  }
+
+  .not-found-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 1rem 0;
+  }
+
+  :global(.dark) .not-found-title {
+    color: var(--text-dark);
+  }
+
+  .not-found-message {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin: 0 0 2rem 0;
+    line-height: 1.5;
+  }
+
+  :global(.dark) .not-found-message {
+    color: var(--text-secondary-dark);
+  }
+
+  .not-found-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+  }
+</style>

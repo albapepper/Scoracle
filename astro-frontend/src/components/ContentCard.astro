@@ -43,7 +43,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     </div>
 
     <!-- Co-mentions Tab -->
-    <div id="co-mentions-tab" class="tab-content hidden">
+    <div id="co-mentions-tab" class="tab-content">
       <div id="co-mentions-loading" class="loading-skeleton">
         <div class="skeleton-item"></div>
         <div class="skeleton-item"></div>
@@ -58,7 +58,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     </div>
 
     <!-- Tweets Tab -->
-    <div id="tweets-tab" class="tab-content hidden">
+    <div id="tweets-tab" class="tab-content">
       <div id="tweets-loading" class="loading-skeleton">
         <div class="skeleton-item"></div>
         <div class="skeleton-item"></div>
@@ -73,7 +73,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     </div>
 
     <!-- Reddit Tab -->
-    <div id="reddit-tab" class="tab-content hidden">
+    <div id="reddit-tab" class="tab-content">
       <div id="reddit-loading" class="loading-skeleton">
         <div class="skeleton-item"></div>
         <div class="skeleton-item"></div>
@@ -502,8 +502,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       const count = cm.mention_count;
       const countLabel = count === 1 ? 'mention' : 'mentions';
 
-      // Build link to the entity's mentions page
-      const link = `/mentions?sport=${this.sport}&type=${cm.entity_type}&id=${cm.entity_id}`;
+      // Build link to the co-mentions comparison page
+      const link = `/co-mentions?sport=${this.sport}&type=${this.type}&id=${this.id}&coType=${cm.entity_type}&coId=${cm.entity_id}`;
 
       return `<div class="content-item co-mention-item">
         <div class="co-mention-header">
