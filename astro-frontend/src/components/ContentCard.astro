@@ -96,55 +96,47 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     padding: 0;
     display: flex;
     flex-direction: column;
+    border-radius: 0.375rem;
   }
 
   .tabs-nav {
     display: flex;
-    border-bottom: 1px solid #e8e4db;
+    border-bottom: 1px solid var(--border);
     background-color: transparent;
   }
 
   :global(.dark) .tabs-nav {
-    border-bottom-color: #3e3e3e;
+    border-bottom-color: var(--border-dark);
   }
 
   .tab-btn {
     flex: 1;
-    padding: 1rem;
+    padding: 0.875rem 1rem;
     background: none;
     border: none;
-    color: #7a7a7a;
+    color: var(--text-secondary);
     font-weight: 500;
     font-size: 0.9rem;
     cursor: pointer;
     border-bottom: 2px solid transparent;
-    transition: all 0.2s ease;
   }
 
   :global(.dark) .tab-btn {
-    color: #a0a0a0;
-  }
-
-  .tab-btn:hover {
-    color: #3d3d3d;
-  }
-
-  :global(.dark) .tab-btn:hover {
-    color: #e8e8e8;
+    color: var(--text-secondary-dark);
   }
 
   .tab-btn.active {
-    color: #3d3d3d;
-    border-bottom-color: #d4a574;
+    color: var(--text);
+    border-bottom-color: var(--text);
   }
 
   :global(.dark) .tab-btn.active {
-    color: #e8e8e8;
-    border-bottom-color: #d4a574;
+    color: var(--text-dark);
+    border-bottom-color: var(--text-dark);
   }
 
   .tabs-content {
-    padding: 2rem;
+    padding: 1.5rem;
   }
 
   .tab-content {
@@ -163,13 +155,13 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
   .skeleton-item {
     height: 80px;
-    border-radius: 6px;
-    background-color: #e8e4db;
+    border-radius: 4px;
+    background-color: var(--border);
     animation: pulse 2s ease-in-out infinite;
   }
 
   :global(.dark) .skeleton-item {
-    background-color: #3e3e3e;
+    background-color: var(--border-dark);
   }
 
   @keyframes pulse {
@@ -189,11 +181,11 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
   .content-item {
     padding-bottom: 1.5rem;
-    border-bottom: 1px solid #e8e4db;
+    border-bottom: 1px solid var(--border);
   }
 
   :global(.dark) .content-item {
-    border-bottom-color: #3e3e3e;
+    border-bottom-color: var(--border-dark);
   }
 
   .content-item:last-child {
@@ -202,55 +194,56 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
   .content-title {
     font-weight: 600;
-    color: #3d3d3d;
+    color: var(--text);
     margin: 0 0 0.5rem 0;
     line-height: 1.4;
     font-size: 0.95rem;
   }
 
   :global(.dark) .content-title {
-    color: #e8e8e8;
+    color: var(--text-dark);
   }
 
   .content-title a {
     color: inherit;
-    text-decoration: none;
-    transition: color 0.2s ease;
+    text-decoration: underline;
+    text-decoration-color: var(--text-tertiary);
+    text-underline-offset: 2px;
   }
 
-  .content-title a:hover {
-    color: #d4a574;
+  :global(.dark) .content-title a {
+    text-decoration-color: var(--text-tertiary-dark);
   }
 
   .content-meta {
     font-size: 0.8rem;
-    color: #7a7a7a;
+    color: var(--text-secondary);
     margin-top: 0.5rem;
   }
 
   :global(.dark) .content-meta {
-    color: #a0a0a0;
+    color: var(--text-secondary-dark);
   }
 
   .content-excerpt {
     font-size: 0.85rem;
-    color: #7a7a7a;
+    color: var(--text-secondary);
     line-height: 1.5;
     margin-top: 0.5rem;
   }
 
   :global(.dark) .content-excerpt {
-    color: #a0a0a0;
+    color: var(--text-secondary-dark);
   }
 
   .empty-state {
     text-align: center;
     padding: 2rem;
-    color: #7a7a7a;
+    color: var(--text-secondary);
   }
 
   :global(.dark) .empty-state {
-    color: #a0a0a0;
+    color: var(--text-secondary-dark);
   }
 
   .hidden {
@@ -273,35 +266,36 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
   .co-mention-name {
     font-weight: 600;
-    color: #3d3d3d;
-    text-decoration: none;
-    transition: color 0.2s ease;
+    color: var(--text);
+    text-decoration: underline;
+    text-decoration-color: var(--text-tertiary);
+    text-underline-offset: 2px;
   }
 
   :global(.dark) .co-mention-name {
-    color: #e8e8e8;
-  }
-
-  .co-mention-name:hover {
-    color: #d4a574;
+    color: var(--text-dark);
+    text-decoration-color: var(--text-tertiary-dark);
   }
 
   .co-mention-count {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 500;
-    color: #fff;
-    background-color: #d4a574;
-    padding: 0.2rem 0.6rem;
-    border-radius: 12px;
+    color: var(--text-secondary);
+    background-color: var(--border);
+    padding: 0.2rem 0.5rem;
+    border-radius: 2px;
     white-space: nowrap;
   }
 
   :global(.dark) .co-mention-count {
-    background-color: #b8956a;
+    color: var(--text-secondary-dark);
+    background-color: var(--border-dark);
   }
 </style>
 
 <script>
+  import { escapeHtml, parseEntityParams } from '../lib/utils/dom';
+
   interface Article {
     title?: string;
     link?: string;
@@ -343,10 +337,10 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.card = card;
       this.apiUrl = card.dataset.apiUrl || 'http://localhost:8000/api/v1';
 
-      const params = new URLSearchParams(window.location.search);
-      this.sport = params.get('sport');
-      this.type = params.get('type');
-      this.id = params.get('id');
+      const params = parseEntityParams();
+      this.sport = params.sport;
+      this.type = params.type;
+      this.id = params.id;
 
       this.loadingEl = document.getElementById('articles-loading');
       this.contentEl = document.getElementById('articles-content');
@@ -397,7 +391,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
     private async fetchData() {
       const widgetUrl = `${this.apiUrl}/widget/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
-      console.log('[ContentCard] Fetching widget for name:', widgetUrl);
 
       try {
         const widgetRes = await fetch(widgetUrl);
@@ -411,15 +404,10 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         }
 
         const newsUrl = `${this.apiUrl}/news/${encodeURIComponent(entityName)}`;
-        console.log('[ContentCard] Fetching news:', newsUrl);
-
         const newsRes = await fetch(newsUrl);
-        console.log('[ContentCard] News response status:', newsRes.status);
         if (!newsRes.ok) throw new Error(`News HTTP ${newsRes.status}`);
 
         const data = await newsRes.json();
-        console.log('[ContentCard] News data:', data);
-
         const articles: Article[] = data.articles || [];
         if (articles.length === 0) {
           this.showEmpty();
@@ -427,8 +415,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         }
 
         this.renderArticles(articles);
-      } catch (err) {
-        console.error('[ContentCard] Error:', err);
+      } catch {
         this.showEmpty();
       }
     }
@@ -440,9 +427,9 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private renderArticle(article: Article): string {
-      const title = this.escapeHtml(article.title || 'Untitled');
+      const title = escapeHtml(article.title || 'Untitled');
       const link = article.link || '#';
-      const source = this.escapeHtml(article.source || '');
+      const source = escapeHtml(article.source || '');
       const date = this.formatDate(article.pub_date);
 
       return `<div class="content-item">
@@ -451,13 +438,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         </h3>
         <div class="content-meta">${source}${source && date ? ' · ' : ''}${date}</div>
       </div>`;
-    }
-
-    private escapeHtml(str: string): string {
-      if (!str) return '';
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
     }
 
     private formatDate(dateStr?: string): string {
@@ -490,16 +470,12 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       }
 
       const url = `${this.apiUrl}/co-mentions/${this.type}/${this.id}?sport=${this.sport.toUpperCase()}`;
-      console.log('[ContentCard] Fetching co-mentions:', url);
 
       try {
         const res = await fetch(url);
-        console.log('[ContentCard] Co-mentions response status:', res.status);
         if (!res.ok) throw new Error(`Co-mentions HTTP ${res.status}`);
 
         const data = await res.json();
-        console.log('[ContentCard] Co-mentions data:', data);
-
         const coMentions: CoMention[] = data.co_mentions || [];
         this.coMentionsLoaded = true;
 
@@ -509,8 +485,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         }
 
         this.renderCoMentions(coMentions);
-      } catch (err) {
-        console.error('[ContentCard] Co-mentions error:', err);
+      } catch {
         this.showCoMentionsEmpty();
       }
     }
@@ -522,7 +497,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private renderCoMention(cm: CoMention): string {
-      const name = this.escapeHtml(cm.name);
+      const name = escapeHtml(cm.name);
       const type = cm.entity_type === 'player' ? 'Player' : 'Team';
       const count = cm.mention_count;
       const countLabel = count === 1 ? 'mention' : 'mentions';

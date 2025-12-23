@@ -1,11 +1,11 @@
 ---
 /**
  * Card Component
- * 
+ *
  * A container for widget content. Can hold:
  * - Static HTML content (via slot)
  * - Dynamic widgets (via data-widget attribute)
- * 
+ *
  * Usage:
  *   <Card title="Stats">
  *     <div data-widget="entity-info" data-widget-data={JSON.stringify(data)}></div>
@@ -20,13 +20,53 @@ interface Props {
 const { title, class: className = '' } = Astro.props;
 ---
 
-<div class={`card bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden ${className}`}>
+<div class={`card-container ${className}`}>
   {title && (
-    <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-      <h2 class="font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+    <div class="card-header">
+      <h2 class="card-title">{title}</h2>
     </div>
   )}
-  <div class="p-4">
+  <div class="card-body">
     <slot />
   </div>
 </div>
+
+<style>
+  .card-container {
+    background-color: white;
+    border-radius: 0.5rem;
+    border: 1px solid #e8e4db;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+
+  :global(.dark) .card-container {
+    background-color: #2c2c2c;
+    border-color: #3e3e3e;
+  }
+
+  .card-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e8e4db;
+    background-color: #f8f6f1;
+  }
+
+  :global(.dark) .card-header {
+    border-bottom-color: #3e3e3e;
+    background-color: rgba(44, 44, 44, 0.5);
+  }
+
+  .card-title {
+    font-weight: 600;
+    color: #3d3d3d;
+    margin: 0;
+  }
+
+  :global(.dark) .card-title {
+    color: #e8e8e8;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+</style>

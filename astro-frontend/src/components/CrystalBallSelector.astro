@@ -75,13 +75,7 @@ const sports = [
   .crystal-logo {
     width: 693px;
     height: auto;
-    filter: drop-shadow(0 10px 30px rgba(139, 123, 168, 0.3));
-    transition: filter 0.3s ease;
     margin-left: 15.75px;
-  }
-
-  :global(.dark) .crystal-logo {
-    filter: drop-shadow(0 10px 30px rgba(97, 175, 239, 0.3));
   }
 
   /* Position the selector inside the crystal ball */
@@ -95,7 +89,6 @@ const sports = [
     justify-content: center;
     gap: 2rem;
     padding: 0.5rem;
-    /* Adjust these values to position within your specific logo's ball area */
     margin-top: 1.5rem;
   }
 
@@ -105,33 +98,16 @@ const sports = [
     justify-content: center;
     width: 2rem;
     height: 2rem;
-    background: rgba(139, 123, 168, 0.15);
-    border: none;
+    background: transparent;
+    border: 1px solid var(--border);
     border-radius: 50%;
-    color: #8b7ba8;
+    color: var(--text-secondary);
     cursor: pointer;
-    transition: all 0.2s ease;
-    backdrop-filter: blur(4px);
   }
 
   :global(.dark) .nav-arrow {
-    background: rgba(97, 175, 239, 0.15);
-    color: #61afef;
-  }
-
-  .nav-arrow:hover {
-    background: rgba(139, 123, 168, 0.3);
-    color: #6b5b95;
-    transform: scale(1.1);
-  }
-
-  :global(.dark) .nav-arrow:hover {
-    background: rgba(97, 175, 239, 0.3);
-    color: #8fd4ff;
-  }
-
-  .nav-arrow:active {
-    transform: scale(0.95);
+    border-color: var(--border-dark);
+    color: var(--text-secondary-dark);
   }
 
   .nav-arrow svg {
@@ -152,19 +128,17 @@ const sports = [
     position: absolute;
     font-size: 1.25rem;
     font-weight: 700;
-    color: #000000;
+    color: var(--text);
     text-transform: uppercase;
     letter-spacing: 0.1em;
     opacity: 0;
     transform: translateX(20px);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     white-space: nowrap;
   }
 
   :global(.dark) .sport-name {
-    color: #ffffff;
-    text-shadow: 0 2px 10px rgba(255, 255, 255, 0.2);
+    color: var(--text-dark);
   }
 
   .sport-name.active {
@@ -192,14 +166,14 @@ const sports = [
 
   .crystal-subtitle {
     font-size: 1rem;
-    color: #7a7a7a;
+    color: var(--text-secondary);
     font-weight: 400;
     font-style: italic;
     text-align: center;
   }
 
   :global(.dark) .crystal-subtitle {
-    color: #a0a0a0;
+    color: var(--text-secondary-dark);
   }
 
   /* Responsive */

@@ -61,29 +61,16 @@ const sportDisplay = getSportDisplay(sport);
   .search-input-wrapper {
     display: flex;
     align-items: center;
-    background-color: #ffffff;
-    border-radius: 24px;
+    background-color: var(--bg-card);
+    border-radius: 0.25rem;
     padding: 0.75rem 1rem;
-    border: 1px solid #e8e4db;
-    transition: all 0.2s ease;
+    border: 1px solid var(--border);
     width: 100%;
   }
 
   :global(.dark) .search-input-wrapper {
-    background-color: #1e1e1e;
-    border-color: #444;
-  }
-
-  .search-input-wrapper:focus-within {
-    border-color: #e8e4db;
-    box-shadow: none;
-    background-color: #ffffff;
-  }
-
-  :global(.dark) .search-input-wrapper:focus-within {
-    border-color: #444;
-    box-shadow: none;
-    background-color: #1e1e1e;
+    background-color: var(--bg-card-dark);
+    border-color: var(--border-dark);
   }
 
   .search-input {
@@ -91,63 +78,38 @@ const sportDisplay = getSportDisplay(sport);
     background: transparent;
     border: none;
     outline: none;
-    color: #3d3d3d;
+    color: var(--text);
     font-size: 0.95rem;
-    padding-right: 0.5rem;
-  }
-
-  .search-input:focus {
-    outline: none;
-    box-shadow: none;
+    padding: 0;
   }
 
   :global(.dark) .search-input {
-    color: #e8e8e8;
-  }
-
-  :global(.dark) .search-input:focus {
-    outline: none;
-    box-shadow: none;
+    color: var(--text-dark);
   }
 
   .search-input::placeholder {
-    color: #a0a0a0;
+    color: var(--text-tertiary);
   }
 
   :global(.dark) .search-input::placeholder {
-    color: #666666;
+    color: var(--text-tertiary-dark);
   }
 
   .search-button {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0.75rem;
+    padding: 0.5rem;
+    margin-left: 0.5rem;
     background: transparent;
     border: none;
     cursor: pointer;
-    color: #a0a0a0;
-    transition: all 0.2s ease;
+    color: var(--text-tertiary);
     flex-shrink: 0;
   }
 
   :global(.dark) .search-button {
-    color: #666666;
-  }
-
-  .search-button:hover {
-    color: #d4a574;
-    transform: scale(1.1);
-  }
-
-  :global(.dark) .search-button:hover {
-    color: #61afef;
-    transform: scale(1.1);
-  }
-
-
-  .search-button:active {
-    transform: scale(0.95);
+    color: var(--text-tertiary-dark);
   }
 
   .suggestions-dropdown {
@@ -156,31 +118,17 @@ const sportDisplay = getSportDisplay(sport);
     left: 0;
     right: 0;
     margin-top: 0.5rem;
-    background-color: #ffffff;
-    border: 1px solid #eee8d5;
-    border-radius: 8px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
     max-height: 384px;
     overflow-y: auto;
     z-index: 10;
-    animation: slideDown 0.15s ease;
   }
 
   :global(.dark) .suggestions-dropdown {
-    background-color: #2c2c2c;
-    border: 1px solid #3e3e3e;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-  }
-
-  @keyframes slideDown {
-    from {
-      opacity: 0;
-      transform: translateY(-4px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    background-color: var(--bg-card-dark);
+    border-color: var(--border-dark);
   }
 
   .suggestions-dropdown.hidden {
@@ -193,51 +141,38 @@ const sportDisplay = getSportDisplay(sport);
     padding: 0.75rem 1rem;
     background: transparent;
     border: none;
-    border-bottom: 1px solid #eee8d5;
-    color: #657b83;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
     cursor: pointer;
-    transition: all 0.15s ease;
     font-size: 0.9375rem;
   }
 
   :global(.dark) .suggestion-item {
-    border-bottom: 1px solid #3e3e3e;
-    color: #e8e8e8;
+    border-bottom-color: var(--border-dark);
+    color: var(--text-dark);
   }
 
   :global(.suggestion-item:last-child) {
     border-bottom: none;
   }
 
-  :global(.suggestion-item:hover) {
-    background-color: rgba(38, 139, 210, 0.08);
-    color: #268bd2;
-    padding-left: 1.25rem;
-  }
-
-  :global(.dark) .suggestion-item:hover {
-    background-color: rgba(97, 175, 239, 0.1);
-    color: #61afef;
-    padding-left: 1.25rem;
-  }
-
   :global(.suggestion-item div:first-child) {
     font-weight: 500;
-    color: #657b83;
+    color: var(--text);
     margin-bottom: 0.25rem;
   }
 
   :global(.dark) .suggestion-item div:first-child {
-    color: #e8e8e8;
+    color: var(--text-dark);
   }
 
   :global(.suggestion-item div:last-child) {
     font-size: 0.8125rem;
-    color: #93a1a1;
+    color: var(--text-secondary);
   }
 
   :global(.dark) .suggestion-item div:last-child {
-    color: #5c6370;
+    color: var(--text-secondary-dark);
   }
 
   /* Scrollbar styling */
@@ -250,216 +185,56 @@ const sportDisplay = getSportDisplay(sport);
   }
 
   :global(.suggestions-dropdown::-webkit-scrollbar-thumb) {
-    background: #eee8d5;
+    background: var(--border);
     border-radius: 3px;
-  }
-
-  :global(.suggestions-dropdown::-webkit-scrollbar-thumb:hover) {
-    background: #268bd2;
   }
 
   :global(.dark) .suggestions-dropdown::-webkit-scrollbar-thumb {
-    background: #3e3e3e;
-    border-radius: 3px;
-  }
-
-  :global(.dark) .suggestions-dropdown::-webkit-scrollbar-thumb:hover {
-    background: #56b6c2;
+    background: var(--border-dark);
   }
 </style>
 
 <script>
-  interface AutocompleteEntity {
-    id: string;
-    name: string;
-    type: 'player' | 'team';
-    team?: string;
-  }
-
-  const CACHE_KEY = 'scoracle_autocomplete_cache';
-  const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
-
-  class SearchForm {
-    private input: HTMLInputElement;
-    private suggestionsEl: HTMLElement;
-    private form: HTMLFormElement;
-    private sport: string;
-    private allData: AutocompleteEntity[] = [];
-    private suggestions: AutocompleteEntity[] = [];
-
-    constructor(container: HTMLElement) {
-      this.input = container.querySelector('#search-input')!;
-      this.suggestionsEl = container.querySelector('#suggestions')!;
-      this.form = container.querySelector('#search-form')!;
-      this.sport = container.dataset.sport || 'nba';
-
-      this.init();
-    }
-
-    private async init() {
-      await this.loadData();
-      this.bindEvents();
-    }
-
-    private async loadData() {
-      try {
-        // Check cache first
-        const cache = localStorage.getItem(CACHE_KEY);
-        if (cache) {
-          const cachedData = JSON.parse(cache);
-          if (cachedData[this.sport]) {
-            const { data, timestamp } = cachedData[this.sport];
-            if (Date.now() - timestamp < CACHE_EXPIRY) {
-              this.allData = data;
-              return;
-            }
-          }
-        }
-
-        // Fetch fresh data
-        const response = await fetch(`/data/${this.sport}.json`);
-        if (!response.ok) throw new Error('Failed to fetch data');
-        
-        const json = await response.json();
-        const items: AutocompleteEntity[] = [];
-        
-        if (json.players?.items) {
-          items.push(...json.players.items.map((p: any) => ({
-            id: String(p.id),
-            name: p.name,
-            type: 'player' as const,
-            team: p.currentTeam || p.team,
-          })));
-        }
-        
-        if (json.teams?.items) {
-          items.push(...json.teams.items.map((t: any) => ({
-            id: String(t.id),
-            name: t.name,
-            type: 'team' as const,
-          })));
-        }
-        
-        this.allData = items;
-        
-        // Update cache
-        const newCache = cache ? JSON.parse(cache) : {};
-        newCache[this.sport] = { data: items, timestamp: Date.now() };
-        localStorage.setItem(CACHE_KEY, JSON.stringify(newCache));
-      } catch (error) {
-        console.error('Failed to load autocomplete data:', error);
-      }
-    }
-
-    private bindEvents() {
-      this.input.addEventListener('input', () => this.onInput());
-      this.input.addEventListener('focus', () => this.showSuggestions());
-      this.input.addEventListener('blur', () => setTimeout(() => this.hideSuggestions(), 200));
-      this.form.addEventListener('submit', (e) => this.onSubmit(e));
-    }
-
-    private onInput() {
-      const query = this.input.value.toLowerCase();
-      
-      if (query.length < 2) {
-        this.suggestions = [];
-        this.hideSuggestions();
-        return;
-      }
-
-      this.suggestions = this.allData
-        .filter(item => item.name.toLowerCase().includes(query))
-        .slice(0, 10);
-
-      this.renderSuggestions();
-    }
-
-    private renderSuggestions() {
-      if (this.suggestions.length === 0) {
-        this.hideSuggestions();
-        return;
-      }
-
-      this.suggestionsEl.innerHTML = this.suggestions.map((s, i) => `
-        <button
-          type="button"
-          data-index="${i}"
-          class="suggestion-item"
-        >
-          <div>${this.escapeHtml(s.name)}</div>
-          ${s.team ? `<div>${this.escapeHtml(s.team)}</div>` : ''}
-        </button>
-      `).join('');
-
-      // Bind click handlers
-      this.suggestionsEl.querySelectorAll('.suggestion-item').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const index = parseInt((e.currentTarget as HTMLElement).dataset.index || '0');
-          this.selectSuggestion(this.suggestions[index]);
-        });
-      });
-
-      this.showSuggestions();
-    }
-
-    private escapeHtml(str: string): string {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
-
-    private showSuggestions() {
-      if (this.suggestions.length > 0) {
-        this.suggestionsEl.classList.remove('hidden');
-      }
-    }
-
-    private hideSuggestions() {
-      this.suggestionsEl.classList.add('hidden');
-    }
-
-    private onSubmit(e: Event) {
-      e.preventDefault();
-      if (this.suggestions.length > 0) {
-        this.selectSuggestion(this.suggestions[0]);
-      }
-    }
-
-    private selectSuggestion(entity: AutocompleteEntity) {
-      // Sport is stored uppercase in backend, use lowercase for URL consistency with how sport selector works
-      const sportParam = this.sport.toUpperCase();
-      window.location.href = `/mentions?sport=${sportParam}&type=${entity.type}&id=${entity.id}`;
-    }
-
-    private getSportDisplay(sportId: string): string {
-      const sportMap: Record<string, string> = {
-        'nba': 'NBA',
-        'nfl': 'NFL',
-        'football': 'Football'
-      };
-      return sportMap[sportId.toLowerCase()] || sportId.toUpperCase();
-    }
-
-    public setSport(sport: string) {
-      if (this.sport !== sport) {
-        this.sport = sport;
-        this.input.placeholder = `Search for ${this.getSportDisplay(sport)} players or teams...`;
-        this.allData = [];
-        this.suggestions = [];
-        this.input.value = '';
-        this.hideSuggestions();
-        this.loadData();
-      }
-    }
-  }
+  import { AutocompleteManager } from '../lib/utils/autocomplete';
+  import { escapeHtml } from '../lib/utils/dom';
 
   // Initialize all search forms on page
   document.querySelectorAll('.search-container').forEach(container => {
-    const form = new SearchForm(container as HTMLElement);
-    
-    // Listen for sport changes from SportSelector
+    const input = container.querySelector('#search-input') as HTMLInputElement;
+    const suggestions = container.querySelector('#suggestions') as HTMLElement;
+    const initialSport = (container as HTMLElement).dataset.sport || 'nba';
+
+    if (!input || !suggestions) return;
+
+    const autocomplete = new AutocompleteManager({
+      inputEl: input,
+      suggestionsEl: suggestions,
+      initialSport,
+      itemClass: 'suggestion-item',
+      onSelect: (entity) => {
+        const sportParam = autocomplete.getSport().toUpperCase();
+        window.location.href = `/mentions?sport=${sportParam}&type=${entity.type}&id=${entity.id}`;
+      },
+      renderItem: (entity, index) => `
+        <button
+          type="button"
+          data-index="${index}"
+          class="suggestion-item"
+        >
+          <div>${escapeHtml(entity.name)}</div>
+          ${entity.team ? `<div>${escapeHtml(entity.team)}</div>` : ''}
+        </button>
+      `,
+    });
+
+    // Listen for sport changes
     window.addEventListener('sportchange', ((e: CustomEvent) => {
-      form.setSport(e.detail.sport);
+      autocomplete.setSport(e.detail.sport);
     }) as EventListener);
+
+    // Handle form submit
+    container.querySelector('#search-form')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+    });
   });
 </script>

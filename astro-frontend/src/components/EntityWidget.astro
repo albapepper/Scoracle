@@ -11,7 +11,7 @@ interface Props {
 }
 
 const { page = 'mentions' } = Astro.props;
-const buttonText = page === 'mentions' ? 'Statistical Profile' : 'Recent News';
+const buttonText = page === 'mentions' ? 'Statistical Profile' : 'Recent Mentions';
 const buttonDest = page === 'mentions' ? 'entity' : 'mentions';
 const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 ---
@@ -22,24 +22,26 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   data-api={apiUrl}
   data-dest={buttonDest}
 >
-  <!-- Loading -->
-  <div id="ew-loading" class="ew-loading">
-    <div class="skeleton-circle"></div>
-    <div class="skeleton-line"></div>
-    <div class="skeleton-line short"></div>
-  </div>
+  <div class="ew-body">
+    <!-- Loading -->
+    <div id="ew-loading" class="ew-loading">
+      <div class="skeleton-circle"></div>
+      <div class="skeleton-line"></div>
+      <div class="skeleton-line short"></div>
+    </div>
 
-  <!-- Content -->
-  <div id="ew-content" class="ew-content">
-    <img id="ew-logo" class="ew-logo" src="" alt="" style="display: none;" />
-    <h2 id="ew-name" class="ew-name"></h2>
-    <span id="ew-badge" class="ew-badge"></span>
-    <p id="ew-subtitle" class="ew-subtitle"></p>
-  </div>
+    <!-- Content -->
+    <div id="ew-content" class="ew-content">
+      <img id="ew-logo" class="ew-logo" src="" alt="" style="display: none;" />
+      <h2 id="ew-name" class="ew-name"></h2>
+      <p id="ew-subtitle" class="ew-subtitle"></p>
+      <div id="ew-details" class="ew-details"></div>
+    </div>
 
-  <!-- Error -->
-  <div id="ew-error" class="ew-error">
-    <p>Unable to load entity</p>
+    <!-- Error -->
+    <div id="ew-error" class="ew-error">
+      <p>Unable to load entity</p>
+    </div>
   </div>
 
   <!-- Button -->
@@ -51,11 +53,21 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     width: 100%;
     max-width: 600px;
     text-align: center;
-    padding: 2rem 2rem 0 2rem;
+    padding: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
+    border-radius: 0.375rem;
+    overflow: hidden;
+  }
+
+  .ew-body {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
   }
 
   .ew-loading {
@@ -76,7 +88,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     width: 64px;
     height: 64px;
     border-radius: 50%;
-    background: #e8e4db;
+    background: var(--border);
     animation: pulse 1.5s ease-in-out infinite;
   }
 
@@ -84,7 +96,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     height: 14px;
     width: 180px;
     border-radius: 4px;
-    background: #e8e4db;
+    background: var(--border);
     animation: pulse 1.5s ease-in-out infinite;
   }
 
@@ -94,7 +106,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
   :global(.dark) .skeleton-circle,
   :global(.dark) .skeleton-line {
-    background: #3e3e3e;
+    background: var(--border-dark);
   }
 
   @keyframes pulse {
@@ -112,62 +124,94 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   .ew-name {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #3d3d3d;
+    color: var(--text);
     margin: 0;
   }
 
   :global(.dark) .ew-name {
-    color: #e8e8e8;
-  }
-
-  .ew-badge {
-    display: inline-block;
-    padding: 0.375rem 0.75rem;
-    background-color: #d4a574;
-    color: white;
-    border-radius: 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
+    color: var(--text-dark);
   }
 
   .ew-subtitle {
     font-size: 0.95rem;
-    color: #7a7a7a;
+    color: var(--text-secondary);
     margin: 0;
   }
 
   :global(.dark) .ew-subtitle {
-    color: #a0a0a0;
+    color: var(--text-secondary-dark);
+  }
+
+  .ew-details {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem 1.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  :global(.dark) .ew-details {
+    color: var(--text-secondary-dark);
+  }
+
+  .ew-detail-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+  }
+
+  .ew-detail-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-tertiary);
+  }
+
+  :global(.dark) .ew-detail-label {
+    color: var(--text-tertiary-dark);
+  }
+
+  .ew-detail-value {
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  :global(.dark) .ew-detail-value {
+    color: var(--text-dark);
   }
 
   .ew-error p {
-    color: #7a7a7a;
+    color: var(--text-secondary);
   }
 
   :global(.dark) .ew-error p {
-    color: #a0a0a0;
+    color: var(--text-secondary-dark);
   }
 
   .ew-button {
-    margin-top: 1rem;
+    display: block;
     padding: 0.875rem 1.25rem;
-    background-color: #d4a574;
-    color: white;
+    background-color: var(--accent);
+    color: var(--bg);
     text-decoration: none;
-    border-radius: 0 0 0.5rem 0.5rem;
     font-weight: 500;
     font-size: 0.9rem;
-    width: calc(100% + 4rem);
+    width: 100%;
     text-align: center;
   }
 
-  .ew-button:hover {
-    background-color: #c29560;
+  :global(.dark) .ew-button {
+    background-color: var(--accent-dark);
+    color: var(--bg-dark);
   }
 </style>
 
 <script>
+  import { escapeHtml, parseEntityParams } from '../lib/utils/dom';
+
   class EntityWidget {
     private widget: HTMLElement | null = null;
     private apiUrl = '';
@@ -180,8 +224,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     private contentEl: HTMLElement | null = null;
     private errorEl: HTMLElement | null = null;
     private nameEl: HTMLElement | null = null;
-    private badgeEl: HTMLElement | null = null;
     private subtitleEl: HTMLElement | null = null;
+    private detailsEl: HTMLElement | null = null;
     private logoEl: HTMLImageElement | null = null;
     private buttonEl: HTMLAnchorElement | null = null;
 
@@ -193,17 +237,17 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.apiUrl = widget.dataset.api || 'http://localhost:8000/api/v1';
       this.buttonDest = widget.dataset.dest || 'mentions';
 
-      const params = new URLSearchParams(window.location.search);
-      this.sport = params.get('sport');
-      this.type = params.get('type');
-      this.id = params.get('id');
+      const params = parseEntityParams();
+      this.sport = params.sport;
+      this.type = params.type;
+      this.id = params.id;
 
       this.loadingEl = document.getElementById('ew-loading');
       this.contentEl = document.getElementById('ew-content');
       this.errorEl = document.getElementById('ew-error');
       this.nameEl = document.getElementById('ew-name');
-      this.badgeEl = document.getElementById('ew-badge');
       this.subtitleEl = document.getElementById('ew-subtitle');
+      this.detailsEl = document.getElementById('ew-details');
       this.logoEl = document.getElementById('ew-logo') as HTMLImageElement;
       this.buttonEl = document.getElementById('ew-button') as HTMLAnchorElement;
 
@@ -225,24 +269,19 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
     private async fetchData() {
       const url = `${this.apiUrl}/widget/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
-      console.log('[EntityWidget] Fetching:', url);
 
       try {
         const res = await fetch(url);
-        console.log('[EntityWidget] Response status:', res.status);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
         const data = await res.json();
-        console.log('[EntityWidget] Data:', data);
-
         if (data.error) {
           this.showError();
           return;
         }
 
         this.renderData(data);
-      } catch (err) {
-        console.error('[EntityWidget] Error:', err);
+      } catch {
         this.showError();
       }
     }
@@ -251,13 +290,28 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       let name = '';
       let logo = '';
       let subtitle = '';
+      let details: { label: string; value: string }[] = [];
 
       if (this.type === 'team') {
         const teamData = data.team || {};
         const venueData = data.venue || {};
         name = teamData.name || 'Unknown';
         logo = teamData.logo || '';
-        subtitle = venueData.name || venueData.city || teamData.country || '';
+        subtitle = venueData.name || teamData.city || '';
+
+        // Add team details
+        if (teamData.country) {
+          details.push({ label: 'Country', value: teamData.country });
+        }
+        if (teamData.founded) {
+          details.push({ label: 'Founded', value: String(teamData.founded) });
+        }
+        if (venueData.capacity) {
+          details.push({ label: 'Capacity', value: venueData.capacity.toLocaleString() });
+        }
+        if (teamData.coach) {
+          details.push({ label: 'Coach', value: teamData.coach });
+        }
       } else {
         const playerData = data.player || {};
         const stats = data.statistics || [];
@@ -265,11 +319,40 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         name = playerData.name || `${playerData.firstname || ''} ${playerData.lastname || ''}`.trim() || 'Unknown';
         logo = playerData.photo || '';
         subtitle = teamInfo?.name || '';
+
+        // Add player details
+        if (playerData.position) {
+          details.push({ label: 'Position', value: playerData.position });
+        }
+        if (playerData.number) {
+          details.push({ label: 'Number', value: `#${playerData.number}` });
+        }
+        if (playerData.age) {
+          details.push({ label: 'Age', value: String(playerData.age) });
+        }
+        if (playerData.height) {
+          details.push({ label: 'Height', value: playerData.height });
+        }
+        if (playerData.weight) {
+          details.push({ label: 'Weight', value: playerData.weight });
+        }
+        if (playerData.nationality) {
+          details.push({ label: 'Nationality', value: playerData.nationality });
+        }
       }
 
       if (this.nameEl) this.nameEl.textContent = name;
-      if (this.badgeEl) this.badgeEl.textContent = this.type!.toUpperCase();
       if (this.subtitleEl) this.subtitleEl.textContent = subtitle;
+
+      // Render details
+      if (this.detailsEl && details.length > 0) {
+        this.detailsEl.innerHTML = details.map(d => `
+          <div class="ew-detail-item">
+            <span class="ew-detail-label">${escapeHtml(d.label)}</span>
+            <span class="ew-detail-value">${escapeHtml(d.value)}</span>
+          </div>
+        `).join('');
+      }
 
       if (this.logoEl && logo) {
         this.logoEl.src = logo;
