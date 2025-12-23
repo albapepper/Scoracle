@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
 
 from app.config import settings
-from app.routers import widgets, news, twitter, reddit
+from app.routers import widgets, news, twitter, reddit, co_mentions
 from app.utils.middleware import CorrelationIdMiddleware, RateLimitMiddleware
 from app.utils.errors import build_error_payload, map_status_to_code
 
@@ -80,6 +80,7 @@ app.include_router(widgets.router, prefix=settings.API_V1_STR)   # /widget/{type
 app.include_router(news.router, prefix=settings.API_V1_STR)      # /news/{entity_name}
 app.include_router(twitter.router, prefix=settings.API_V1_STR)   # Twitter (future)
 app.include_router(reddit.router, prefix=settings.API_V1_STR)    # Reddit (future)
+app.include_router(co_mentions.router, prefix=settings.API_V1_STR)  # Co-mentions
 
 
 @app.get("/health")
@@ -95,6 +96,7 @@ async def root_index():
         "endpoints": {
             "widget": "/api/v1/widget/{type}/{id}?sport=FOOTBALL|NBA|NFL",
             "news": "/api/v1/news/{entity_name}",
+            "co_mentions": "/api/v1/co-mentions/{type}/{id}?sport=FOOTBALL|NBA|NFL",
         },
         "docs": "/api/docs",
         "health": "/health",
