@@ -1,188 +1,345 @@
 ---
 /**
- * Flipable Stats Card
+ * Stats Card
  * 
- * Displays entity statistics with flip animation between:
- * - Front: D3 graph visualization
- * - Back: HTML table view
+ * Displays entity statistics in a clean table format.
+ * Matches the aesthetic of EntityWidget and ContentCard.
  * 
  * Props:
- * - title: Card title (e.g., "Offense", "Defense")
- * - stat: Stat key for backend data (e.g., "offense", "defense")
+ * - title: Card title (defaults to "Statistics")
  */
 
 interface Props {
-  title: string;
-  stat: string;
+  title?: string;
 }
 
-const { title, stat } = Astro.props;
+const { title = "Statistics" } = Astro.props;
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 ---
 
-<div class="stats-card-shell" data-stat={stat}>
-  <div class="stats-card-inner">
-    <!-- Front: Graph View -->
-    <div class="stats-card-face stats-card-front card">
-      <div class="stats-card-header">
-        <h3 class="stats-card-title">{title}</h3>
-        <button class="flip-indicator" aria-label="Flip to table view">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 5v14M19 12l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
+<div class="stats-card card" data-api-url={apiUrl}>
+  <!-- Header -->
+  <div class="stats-card-header">
+    <h3 class="stats-card-title">{title}</h3>
+    <span id="stats-season" class="stats-card-season"></span>
+  </div>
+
+  <!-- Content -->
+  <div class="stats-card-body">
+    <!-- Loading State -->
+    <div id="stats-loading" class="stats-loading">
+      <div class="skeleton-row">
+        <div class="skeleton-cell label"></div>
+        <div class="skeleton-cell value"></div>
       </div>
-      <div id="graph-{stat}" class="stats-graph-container">
-        <!-- D3 graph will be rendered here by backend -->
-        <div class="placeholder">Graph loading...</div>
+      <div class="skeleton-row">
+        <div class="skeleton-cell label"></div>
+        <div class="skeleton-cell value"></div>
+      </div>
+      <div class="skeleton-row">
+        <div class="skeleton-cell label"></div>
+        <div class="skeleton-cell value"></div>
+      </div>
+      <div class="skeleton-row">
+        <div class="skeleton-cell label"></div>
+        <div class="skeleton-cell value"></div>
+      </div>
+      <div class="skeleton-row">
+        <div class="skeleton-cell label"></div>
+        <div class="skeleton-cell value"></div>
       </div>
     </div>
 
-    <!-- Back: Table View -->
-    <div class="stats-card-face stats-card-back card">
-      <div class="stats-card-header">
-        <h3 class="stats-card-title">{title}</h3>
-        <button class="flip-indicator" aria-label="Flip to graph view">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 5v14M19 12l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-      </div>
-      <div id="table-{stat}" class="stats-table-container">
-        <!-- HTML table will be rendered here by backend -->
-        <div class="placeholder">Table loading...</div>
-      </div>
+    <!-- Data Table -->
+    <table id="stats-table" class="stats-table hidden">
+      <tbody id="stats-tbody">
+        <!-- Rows populated by JavaScript -->
+      </tbody>
+    </table>
+
+    <!-- Empty State -->
+    <div id="stats-empty" class="stats-empty hidden">
+      <p>No statistics available</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="stats-error" class="stats-error hidden">
+      <p>Unable to load statistics</p>
     </div>
   </div>
 </div>
 
-<style scoped>
-  .stats-card-shell {
-    perspective: 1000px;
-    height: 220px;
-  }
-
-  .stats-card-inner {
-    position: relative;
+<style>
+  .stats-card {
     width: 100%;
-    height: 100%;
-    transition: transform 0.6s ease;
-    transform-style: preserve-3d;
-    transform-origin: center;
-  }
-
-  .stats-card-shell.is-flipped .stats-card-inner {
-    transform: rotateY(180deg);
-  }
-
-  .stats-card-face {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    backface-visibility: hidden;
+    max-width: 600px;
     display: flex;
     flex-direction: column;
-    padding: 1.5rem;
-    margin: 0;
-    border: none;
-    box-sizing: border-box;
-  }
-
-  .stats-card-back {
-    transform: rotateY(180deg);
+    border-radius: 0.375rem;
+    overflow: hidden;
   }
 
   .stats-card-header {
+    padding: 1.25rem 1.5rem 1rem;
+    border-bottom: 1px solid var(--border);
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
-    min-height: 32px;
-    position: relative;
+  }
+
+  :global(.dark) .stats-card-header {
+    border-bottom-color: var(--border-dark);
   }
 
   .stats-card-title {
+    margin: 0;
     font-size: 1rem;
     font-weight: 600;
-    color: #3d3d3d;
-    margin: 0;
-    text-align: center;
+    color: var(--text);
+    line-height: 1.4;
   }
 
   :global(.dark) .stats-card-title {
-    color: #e8e8e8;
+    color: var(--text-dark);
   }
 
-  .flip-indicator {
-    background: none;
-    border: none;
-    padding: 0.25rem;
-    cursor: pointer;
-    color: #d4a574;
+  .stats-card-season {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  :global(.dark) .stats-card-season {
+    color: var(--text-secondary-dark);
+  }
+
+  .stats-card-body {
+    padding: 1rem 1.5rem 1.25rem;
+  }
+
+  /* Loading Skeleton */
+  .stats-loading {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    border-radius: 50%;
-    flex-shrink: 0;
-    width: 32px;
-    height: 32px;
-    position: absolute;
-    right: 0;
-    border: 2px solid #d4a574;
+    flex-direction: column;
+    gap: 0.75rem;
   }
 
-  .flip-indicator:hover {
-    background-color: rgba(212, 165, 116, 0.1);
-    transform: scale(1.15);
-  }
-
-  :global(.dark) .flip-indicator:hover {
-    background-color: rgba(212, 165, 116, 0.2);
-  }
-
-  .stats-graph-container,
-  .stats-table-container {
-    flex: 1;
+  .skeleton-row {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    justify-content: center;
-    min-height: 0;
+    padding: 0.5rem 0;
   }
 
-  .placeholder {
+  .skeleton-cell {
+    height: 14px;
+    border-radius: 3px;
+    background-color: var(--border);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .skeleton-cell.label {
+    width: 40%;
+  }
+
+  .skeleton-cell.value {
+    width: 20%;
+  }
+
+  :global(.dark) .skeleton-cell {
+    background-color: var(--border-dark);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Stats Table */
+  .stats-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .stats-table tr {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stats-table tr:last-child {
+    border-bottom: none;
+  }
+
+  :global(.dark) .stats-table tr {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .stats-table td {
+    padding: 0.625rem 0;
     font-size: 0.9rem;
-    color: #a0a0a0;
+    line-height: 1.4;
   }
 
-  :global(.dark) .placeholder {
-    color: #707070;
+  .stats-table td:first-child {
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .stats-table td:last-child {
+    text-align: right;
+    color: var(--text);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :global(.dark) .stats-table td:first-child {
+    color: var(--text-secondary-dark);
+  }
+
+  :global(.dark) .stats-table td:last-child {
+    color: var(--text-dark);
+  }
+
+  /* Empty & Error States */
+  .stats-empty,
+  .stats-error {
+    padding: 1.5rem 0;
+    text-align: center;
+  }
+
+  .stats-empty p,
+  .stats-error p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-tertiary);
+  }
+
+  :global(.dark) .stats-empty p,
+  :global(.dark) .stats-error p {
+    color: var(--text-tertiary-dark);
+  }
+
+  /* Utility */
+  .hidden {
+    display: none !important;
   }
 </style>
 
 <script>
+  /**
+   * StatsCard Manager
+   * 
+   * Handles loading statistics from the backend API
+   * and populating the table with data.
+   */
   class StatsCardManager {
-    private shell: HTMLElement;
+    private card: HTMLElement;
+    private apiUrl: string;
 
-    constructor(shell: HTMLElement) {
-      this.shell = shell;
+    constructor(card: HTMLElement) {
+      this.card = card;
+      this.apiUrl = card.dataset.apiUrl || '';
       this.init();
     }
 
-    private init() {
-      const flipButtons = this.shell.querySelectorAll('.flip-indicator');
-      flipButtons.forEach(btn => {
-        btn.addEventListener('click', () => this.toggleFlip());
-      });
+    private async init() {
+      // Get entity info from URL
+      const params = new URLSearchParams(window.location.search);
+      const sport = params.get('sport');
+      const type = params.get('type');
+      const id = params.get('id');
+
+      if (!sport || !type || !id) {
+        this.showError();
+        return;
+      }
+
+      try {
+        await this.loadStats(sport, type, id);
+      } catch (error) {
+        console.error('Failed to load stats:', error);
+        this.showError();
+      }
     }
 
-    private toggleFlip() {
-      this.shell.classList.toggle('is-flipped');
+    private async loadStats(sport: string, type: string, id: string) {
+      // No category parameter - API returns all stats for the entity
+      const url = `${this.apiUrl}/stats/${type}/${id}?sport=${sport}`;
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          this.showEmpty();
+          return;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data || !data.stats || data.stats.length === 0) {
+        this.showEmpty();
+        return;
+      }
+
+      // Display season if available
+      if (data.season) {
+        const seasonEl = this.card.querySelector('#stats-season');
+        if (seasonEl) {
+          seasonEl.textContent = `${data.season} Season`;
+        }
+      }
+
+      this.renderTable(data.stats);
+    }
+
+    private renderTable(stats: Array<{ label: string; value: string | number }>) {
+      const tbody = this.card.querySelector('#stats-tbody');
+      if (!tbody) return;
+
+      tbody.innerHTML = stats
+        .map(({ label, value }) => `
+          <tr>
+            <td>${this.escapeHtml(label)}</td>
+            <td>${this.escapeHtml(String(value))}</td>
+          </tr>
+        `)
+        .join('');
+
+      this.showContent();
+    }
+
+    private showContent() {
+      this.card.querySelector('#stats-loading')?.classList.add('hidden');
+      this.card.querySelector('#stats-table')?.classList.remove('hidden');
+      this.card.querySelector('#stats-empty')?.classList.add('hidden');
+      this.card.querySelector('#stats-error')?.classList.add('hidden');
+    }
+
+    private showEmpty() {
+      this.card.querySelector('#stats-loading')?.classList.add('hidden');
+      this.card.querySelector('#stats-table')?.classList.add('hidden');
+      this.card.querySelector('#stats-empty')?.classList.remove('hidden');
+      this.card.querySelector('#stats-error')?.classList.add('hidden');
+    }
+
+    private showError() {
+      this.card.querySelector('#stats-loading')?.classList.add('hidden');
+      this.card.querySelector('#stats-table')?.classList.add('hidden');
+      this.card.querySelector('#stats-empty')?.classList.add('hidden');
+      this.card.querySelector('#stats-error')?.classList.remove('hidden');
+    }
+
+    private escapeHtml(text: string): string {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
   }
 
-  // Initialize all stats cards on the page
-  document.querySelectorAll<HTMLElement>('.stats-card-shell').forEach(shell => {
-    new StatsCardManager(shell);
-  });
+  // Initialize stats card on page load
+  const statsCard = document.querySelector<HTMLElement>('.stats-card');
+  if (statsCard) {
+    new StatsCardManager(statsCard);
+  }
 </script>

@@ -30,11 +30,11 @@ async def seed_football_api():
 			rows = await apisports_service.list_football_teams(league_id, season="2025")
 			print(f"FOOTBALL teams raw rows league {league_id}: {len(rows)}")
 			league_name = LEAGUE_NAMES.get(league_id, f"League {league_id}")
-			teams: List[Tuple[int, str, str]] = []
+			teams: List[Tuple[int, str, str, int]] = []
 			for r in rows:
 				name = r.get("name") or r.get("abbreviation") or str(r.get("id"))
 				if r.get("id") is not None:
-					teams.append((int(r["id"]), name, league_name))
+					teams.append((int(r["id"]), name, league_name, league_id))
 			if teams:
 				print(f"FOOTBALL teams upserting {len(teams)} from league {league_id} ({league_name})")
 				upsert_teams("FOOTBALL", teams)
@@ -47,7 +47,7 @@ async def seed_football_api():
 				for r in rows2:
 					name = r.get("name") or r.get("abbreviation") or str(r.get("id"))
 					if r.get("id") is not None:
-						teams2.append((int(r["id"]), name, league_name))
+						teams2.append((int(r["id"]), name, league_name, league_id))
 				if teams2:
 					print(f"FOOTBALL teams upserting {len(teams2)} from league {league_id} ({league_name}) (fallback)")
 					upsert_teams("FOOTBALL", teams2)
@@ -66,7 +66,12 @@ async def seed_football_api():
 					break
 				players: List[Tuple[int, str, str]] = []
 				for r in rows:
-					name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip() or str(r.get('id'))
+					# Prefer full 'name' field, fall back to first_name + last_name
+					name = r.get('name')
+					if not name:
+						name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip()
+					if not name:
+						name = str(r.get('id'))
 					team = r.get("team_abbr") or None
 					if r.get("id") is not None:
 						players.append((int(r["id"]), name, team))
@@ -142,7 +147,12 @@ async def seed_nba_api():
 				break
 			players: List[Tuple[int, str, str]] = []
 			for r in rows:
-				name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip() or str(r.get('id'))
+				# Prefer full 'name' field, fall back to first_name + last_name
+				name = r.get('name')
+				if not name:
+					name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip()
+				if not name:
+					name = str(r.get('id'))
 				team = r.get("team_abbr") or None
 				if r.get("id") is not None:
 					players.append((int(r["id"]), name, team))
@@ -180,7 +190,12 @@ async def seed_nba_api():
 							break
 					players: List[Tuple[int, str, str]] = []
 					for r in roster:
-						name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip() or str(r.get('id'))
+						# Prefer full 'name' field, fall back to first_name + last_name
+						name = r.get('name')
+						if not name:
+							name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip()
+						if not name:
+							name = str(r.get('id'))
 						team = r.get("team_abbr") or None
 						if r.get("id") is not None:
 							players.append((int(r["id"]), name, team))
@@ -198,7 +213,12 @@ async def seed_nba_api():
 				rows = await apisports_service.search_players(ch, "NBA", season_override="2024")
 				players: List[Tuple[int, str, str]] = []
 				for r in rows:
-					name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip() or str(r.get('id'))
+					# Prefer full 'name' field, fall back to first_name + last_name
+					name = r.get('name')
+					if not name:
+						name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip()
+					if not name:
+						name = str(r.get('id'))
 					team = r.get("team_abbr") or None
 					if r.get("id") is not None:
 						players.append((int(r["id"]), name, team))
@@ -215,13 +235,15 @@ async def seed_nfl_api():
 	print("Seeding NFL teams via API...")
 	teams_upserted = False
 	team_rows: List[dict] = []
+	# NFL league ID is always 1
+	NFL_LEAGUE_ID = 1
 	# 1) Try listing
 	try:
 		rows = await apisports_service.list_nfl_teams(league=None)
 	except Exception as e:
 		print("nfl teams list warn:", e)
 		rows = []
-	teams: List[Tuple[int, str, str]] = []
+	teams: List[Tuple[int, str, str, int]] = []
 	# Fetch division info for each team
 	for r in rows:
 		name = r.get("name") or r.get("abbreviation") or str(r.get("id"))
@@ -239,7 +261,7 @@ async def seed_nfl_api():
 			except Exception as e:
 				print(f"Warning: Could not fetch division for NFL team {team_id}: {e}")
 				division = None
-			teams.append((int(team_id), name, division or "NFL"))
+			teams.append((int(team_id), name, division or "NFL", NFL_LEAGUE_ID))
 			team_rows.append(r)  # Keep original row for player seeding
 	print(f"NFL teams raw rows: {len(rows)}; filtered: {len(teams)}")
 	if teams:
@@ -250,7 +272,7 @@ async def seed_nfl_api():
 	if not teams_upserted:
 		from string import ascii_lowercase
 		seen = set()
-		teams2: List[Tuple[int, str, str]] = []
+		teams2: List[Tuple[int, str, str, int]] = []
 		found_dicts: List[dict] = []
 		for ch in ascii_lowercase:
 			try:
@@ -272,7 +294,7 @@ async def seed_nfl_api():
 							division = f"{division} Division"
 					except Exception:
 						division = None
-					teams2.append((int(tid), name, division or "NFL"))
+					teams2.append((int(tid), name, division or "NFL", NFL_LEAGUE_ID))
 					found_dicts.append({"id": tid, "name": name})
 			await asyncio.sleep(0.05)
 		if teams2:
@@ -311,7 +333,12 @@ async def seed_nfl_api():
 				break
 			players: List[Tuple[int, str, str]] = []
 			for r in rows:
-				name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip() or str(r.get('id'))
+				# Prefer full 'name' field, fall back to first_name + last_name
+				name = r.get('name')
+				if not name:
+					name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip()
+				if not name:
+					name = str(r.get('id'))
 				team = r.get("team_abbr") or None
 				if r.get("id") is not None:
 					players.append((int(r["id"]), name, team))
@@ -349,7 +376,12 @@ async def seed_nfl_api():
 							break
 					players: List[Tuple[int, str, str]] = []
 					for r in roster:
-						name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip() or str(r.get('id'))
+						# Prefer full 'name' field, fall back to first_name + last_name
+						name = r.get('name')
+						if not name:
+							name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip()
+						if not name:
+							name = str(r.get('id'))
 						team = r.get("team_abbr") or None
 						if r.get("id") is not None:
 							players.append((int(r["id"]), name, team))
@@ -369,7 +401,12 @@ async def seed_nfl_api():
 					break
 				players: List[Tuple[int, str, str]] = []
 				for r in rows:
-					name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip() or str(r.get('id'))
+					# Prefer full 'name' field, fall back to first_name + last_name
+					name = r.get('name')
+					if not name:
+						name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip()
+					if not name:
+						name = str(r.get('id'))
 					team = r.get("team_abbr") or None
 					if r.get("id") is not None:
 						players.append((int(r["id"]), name, team))

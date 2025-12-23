@@ -327,10 +327,15 @@ class ApiSportsService:
                         first_stat = statistics[0]
                         team = first_stat.get("team") or {}
                         team_abbr = team.get("name")
+                    # Use full 'name' field if available, otherwise fall back to firstname + lastname
+                    full_name = player.get('name')
+                    first_name = player.get('firstname')
+                    last_name = player.get('lastname')
                     out.append({
                         "id": player.get('id'),
-                        "first_name": player.get('firstname'),
-                        "last_name": player.get('lastname'),
+                        "name": full_name,  # Full official name
+                        "first_name": first_name,
+                        "last_name": last_name,
                         "team_abbr": team_abbr,
                     })
                 return out
@@ -397,13 +402,14 @@ class ApiSportsService:
                 response_list = payload.get('response', [])
                 out = []
                 for p in response_list:
-                    name = (p.get('name') or '')
-                    parts = name.split(' ')
+                    full_name = (p.get('name') or '')
+                    parts = full_name.split(' ')
                     first = parts[0] if parts else None
                     last = ' '.join(parts[1:]) if len(parts) > 1 else None
                     team = p.get('team') or {}
                     out.append({
                         "id": p.get('id'),
+                        "name": full_name,  # Full name
                         "first_name": first,
                         "last_name": last,
                         "team_abbr": team.get('name') or team.get('code'),
@@ -431,13 +437,14 @@ class ApiSportsService:
                 response_list = payload.get('response', [])
                 out: List[Dict[str, Any]] = []
                 for p in response_list:
-                    name = (p.get('name') or '')
-                    parts = name.split(' ')
+                    full_name = (p.get('name') or '')
+                    parts = full_name.split(' ')
                     first = parts[0] if parts else None
                     last = ' '.join(parts[1:]) if len(parts) > 1 else None
                     team = p.get('team') or {}
                     out.append({
                         "id": p.get('id'),
+                        "name": full_name,  # Full name
                         "first_name": first,
                         "last_name": last,
                         "team_abbr": team.get('name') or team.get('code'),
@@ -474,6 +481,7 @@ class ApiSportsService:
                     last = ' '.join(parts[1:]) if len(parts) > 1 else None
                     out.append({
                         "id": player.get('id'),
+                        "name": fullname,  # Full name
                         "first_name": first,
                         "last_name": last,
                         "team_abbr": team.get('code') or team.get('name'),
@@ -511,6 +519,7 @@ class ApiSportsService:
                     last = ' '.join(parts[1:]) if len(parts) > 1 else None
                     out.append({
                         "id": player.get('id'),
+                        "name": fullname,  # Full name
                         "first_name": first,
                         "last_name": last,
                         "team_abbr": team.get('code') or team.get('name'),
@@ -578,10 +587,15 @@ class ApiSportsService:
                     if teams:
                         last_team = teams[-1]
                         team_abbr = (last_team.get('team') or {}).get('code') or (last_team.get('team') or {}).get('name')
+                    first_name = p.get('firstname') or p.get('firstName')
+                    last_name = p.get('lastname') or p.get('lastName')
+                    # Construct full name from first + last since NBA API doesn't have a 'name' field
+                    full_name = f"{first_name or ''} {last_name or ''}".strip() or None
                     out.append({
                         "id": p.get('id'),
-                        "first_name": p.get('firstname') or p.get('firstName'),
-                        "last_name": p.get('lastname') or p.get('lastName'),
+                        "name": full_name,  # Constructed full name
+                        "first_name": first_name,
+                        "last_name": last_name,
                         "team_abbr": team_abbr,
                     })
                 return out
@@ -611,10 +625,15 @@ class ApiSportsService:
                     if teams:
                         last_team = teams[-1]
                         team_abbr = (last_team.get('team') or {}).get('code') or (last_team.get('team') or {}).get('name')
+                    first_name = p.get('firstname') or p.get('firstName')
+                    last_name = p.get('lastname') or p.get('lastName')
+                    # Construct full name from first + last since NBA API doesn't have a 'name' field
+                    full_name = f"{first_name or ''} {last_name or ''}".strip() or None
                     out.append({
                         "id": p.get('id'),
-                        "first_name": p.get('firstname') or p.get('firstName'),
-                        "last_name": p.get('lastname') or p.get('lastName'),
+                        "name": full_name,  # Constructed full name
+                        "first_name": first_name,
+                        "last_name": last_name,
                         "team_abbr": team_abbr,
                     })
                 return out
@@ -642,10 +661,15 @@ class ApiSportsService:
                 for row in response_list:
                     player = row.get('player') or {}
                     team = row.get('team') or {}
+                    first_name = player.get('firstname') or player.get('firstName')
+                    last_name = player.get('lastname') or player.get('lastName')
+                    # Construct full name from first + last
+                    full_name = f"{first_name or ''} {last_name or ''}".strip() or None
                     out.append({
                         "id": player.get('id'),
-                        "first_name": player.get('firstname') or player.get('firstName'),
-                        "last_name": player.get('lastname') or player.get('lastName'),
+                        "name": full_name,  # Constructed full name
+                        "first_name": first_name,
+                        "last_name": last_name,
                         "team_abbr": team.get('code') or team.get('name'),
                     })
                 return out

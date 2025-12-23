@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
 
 from app.config import settings
-from app.routers import widgets, news, twitter, reddit, co_mentions
+from app.routers import widgets, news, twitter, reddit, co_mentions, stats
 from app.utils.middleware import CorrelationIdMiddleware, RateLimitMiddleware
 from app.utils.errors import build_error_payload, map_status_to_code
 
@@ -78,6 +78,7 @@ app.state.rate_limit = (
 
 # Routers - only what we need
 app.include_router(widgets.router, prefix=settings.API_V1_STR)   # /widget/{type}/{id}?sport=X
+app.include_router(stats.router, prefix=settings.API_V1_STR)     # /stats/{type}/{id}?sport=X&category=Y
 app.include_router(news.router, prefix=settings.API_V1_STR)      # /news/{entity_name}
 app.include_router(twitter.router, prefix=settings.API_V1_STR)   # Twitter (future)
 app.include_router(reddit.router, prefix=settings.API_V1_STR)    # Reddit (future)
@@ -96,6 +97,7 @@ async def root_index():
         "version": settings.PROJECT_VERSION,
         "endpoints": {
             "widget": "/api/v1/widget/{type}/{id}?sport=FOOTBALL|NBA|NFL",
+            "stats": "/api/v1/stats/{type}/{id}?sport=FOOTBALL|NBA|NFL&category=offense|defense|...",
             "news": "/api/v1/news/{entity_name}",
             "co_mentions": "/api/v1/co-mentions/{type}/{id}?sport=FOOTBALL|NBA|NFL",
         },

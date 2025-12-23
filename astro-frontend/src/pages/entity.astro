@@ -11,13 +11,8 @@ import StatsCard from '../components/StatsCard.astro';
   <main class="entity-main">
     <EntityWidget page="entity" />
     
-    <!-- Stats Cards Grid (2x2) -->
-    <div class="stats-grid">
-      <StatsCard title="Offense" stat="offense" />
-      <StatsCard title="Defense" stat="defense" />
-      <StatsCard title="Special Teams" stat="special_teams" />
-      <StatsCard title="Discipline" stat="discipline" />
-    </div>
+    <!-- Stats Card -->
+    <StatsCard title="Statistics" />
   </main>
 </Layout>
 
@@ -26,40 +21,13 @@ import StatsCard from '../components/StatsCard.astro';
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 3rem;
-    padding: 2rem 1rem;
+    gap: 1.5rem;
+    padding: 2rem 1rem 3rem;
     min-height: calc(100vh - 3.5rem);
-    background-color: #f8f6f1;
+    background-color: var(--bg);
   }
 
   :global(.dark) .entity-main {
-    background-color: #1a1a1a;
-  }
-
-  .stats-grid {
-    width: 100%;
-    max-width: 900px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 3.5rem;
-    grid-template-rows: auto auto;
-  }
-
-  @media (max-width: 768px) {
-    .stats-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @media (min-width: 768px) and (max-width: 1200px) {
-    .stats-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-
-  @media (min-width: 1200px) {
-    .stats-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
+    background-color: var(--bg-dark);
   }
 </style>

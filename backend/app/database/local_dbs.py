@@ -137,6 +137,7 @@ def _ensure_schema(conn: sqlite3.Connection):
             id INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
             current_league TEXT,
+            league_id INTEGER,
             updated_at INTEGER NOT NULL,
             normalized_name TEXT,
             tokens TEXT
@@ -154,6 +155,10 @@ def _ensure_schema(conn: sqlite3.Connection):
             conn.execute(f"ALTER TABLE {tbl} ADD COLUMN normalized_name TEXT;")
         if not _has_col(tbl, "tokens"):
             conn.execute(f"ALTER TABLE {tbl} ADD COLUMN tokens TEXT;")
+    
+    # Add league_id column if missing (for teams only)
+    if not _has_col("teams", "league_id"):
+        conn.execute("ALTER TABLE teams ADD COLUMN league_id INTEGER;")
 
     # Indexes
     conn.execute("CREATE INDEX IF NOT EXISTS idx_players_name ON players(name);")
@@ -275,10 +280,15 @@ def upsert_players(sport: str, rows: List[Tuple[int, str, Optional[str]]]):
         conn.close()
 
 
-def upsert_teams(sport: str, rows: List[Tuple[int, str, Optional[str]]]):
+def upsert_teams(sport: str, rows: List[Tuple[int, str, Optional[str], Optional[int]]]):
     """
     Upsert teams minimal data.
-    rows: list of (id, name, current_league)
+    rows: list of (id, name, current_league, league_id)
+    
+    league_id is the numeric API-Sports league ID:
+    - Football: 39 (Premier League), 140 (La Liga), 135 (Serie A), 78 (Bundesliga), 61 (Ligue 1), 253 (MLS)
+    - NFL: 1
+    - NBA: None (not required)
     """
     _init_if_needed(sport)
     path = _db_path_for_sport(sport)
@@ -286,14 +296,20 @@ def upsert_teams(sport: str, rows: List[Tuple[int, str, Optional[str]]]):
     try:
         now = int(time.time())
         payload = []
-        for (tid, name, league) in rows:
+        for row in rows:
+            # Support both old 3-tuple and new 4-tuple format
+            if len(row) == 3:
+                tid, name, league = row
+                lid = None
+            else:
+                tid, name, league, lid = row
             display = _strip_specials_preserve_case(name)
             norm = normalize_text(display or name)
             toks = tokenize(norm)
-            payload.append((tid, display or name, league, now, norm, toks))
+            payload.append((tid, display or name, league, lid, now, norm, toks))
         conn.executemany(
-            "INSERT INTO teams(id, name, current_league, updated_at, normalized_name, tokens) VALUES(?, ?, ?, ?, ?, ?)\n"
-            "ON CONFLICT(id) DO UPDATE SET name=excluded.name, current_league=excluded.current_league, updated_at=excluded.updated_at, normalized_name=excluded.normalized_name, tokens=excluded.tokens",
+            "INSERT INTO teams(id, name, current_league, league_id, updated_at, normalized_name, tokens) VALUES(?, ?, ?, ?, ?, ?, ?)\n"
+            "ON CONFLICT(id) DO UPDATE SET name=excluded.name, current_league=excluded.current_league, league_id=excluded.league_id, updated_at=excluded.updated_at, normalized_name=excluded.normalized_name, tokens=excluded.tokens",
             payload,
         )
     finally:
@@ -399,28 +415,28 @@ def search_teams(sport: str, q: str, limit: int) -> List[Dict[str, Optional[str]
             and_clauses = " AND ".join(["tokens LIKE ?" for _ in tokens])
             where = f"({where} OR ({and_clauses}))"
             params.extend([f"%{t}%" for t in tokens])
-        sql = f"SELECT id, name, current_league, normalized_name FROM teams WHERE {where} ORDER BY name LIMIT ?"
+        sql = f"SELECT id, name, current_league, league_id, normalized_name FROM teams WHERE {where} ORDER BY name LIMIT ?"
         params.append(int(limit) * 8)
         cur = conn.execute(sql, params)
         candidates = cur.fetchall()
         try:
             from rapidfuzz import fuzz
             scored = []
-            for tid, name, league, norm in candidates:
+            for tid, name, league, league_id, norm in candidates:
                 score = fuzz.WRatio(nq, norm or normalize_text(name))
-                scored.append((score, tid, name, league))
+                scored.append((score, tid, name, league, league_id))
             if not scored:
-                cur2 = conn.execute("SELECT id, name, current_league, normalized_name FROM teams LIMIT ?", (int(limit) * 30,))
-                for tid, name, league, norm in cur2.fetchall():
+                cur2 = conn.execute("SELECT id, name, current_league, league_id, normalized_name FROM teams LIMIT ?", (int(limit) * 30,))
+                for tid, name, league, league_id, norm in cur2.fetchall():
                     score = fuzz.WRatio(nq, norm or normalize_text(name))
-                    scored.append((score, tid, name, league))
+                    scored.append((score, tid, name, league, league_id))
             scored.sort(reverse=True)
             out = []
-            for score, tid, name, league in scored[:limit]:
-                out.append({"id": tid, "name": name, "current_league": league})
+            for score, tid, name, league, league_id in scored[:limit]:
+                out.append({"id": tid, "name": name, "current_league": league, "league_id": league_id})
             return out
         except Exception:
-            return [{"id": r[0], "name": r[1], "current_league": r[2]} for r in candidates[:limit]]
+            return [{"id": r[0], "name": r[1], "current_league": r[2], "league_id": r[3]} for r in candidates[:limit]]
     finally:
         conn.close()
 
@@ -475,10 +491,10 @@ def get_team_by_id(sport: str, team_id: int) -> Optional[Dict[str, Optional[str]
     path = _db_path_for_sport(sport)
     conn = _connect(path)
     try:
-        cur = conn.execute("SELECT id, name, current_league FROM teams WHERE id = ?", (int(team_id),))
+        cur = conn.execute("SELECT id, name, current_league, league_id FROM teams WHERE id = ?", (int(team_id),))
         row = cur.fetchone()
         if not row:
             return None
-        return {"id": row[0], "name": row[1], "current_league": row[2]}
+        return {"id": row[0], "name": row[1], "current_league": row[2], "league_id": row[3]}
     finally:
         conn.close()
