@@ -29,7 +29,7 @@ scoracle/
 │   │   └── lib/            # API client, types, utilities
 │   └── public/data/        # Bundled JSON for autocomplete
 │
-├── scoracle-svelte/         # SvelteKit frontend
+├── scoracle-svelte/         # SvelteKit frontend (legacy - optional)
 │   ├── src/
 │   │   ├── routes/         # Pages (file-based routing)
 │   │   └── lib/            # Components, stores, utilities
@@ -100,8 +100,10 @@ http://localhost:8000/api/docs
 4. Deploy
 
 The app auto-configures:
-- Frontend: SvelteKit static build
+- Frontend: Astro static build (from `astro-frontend`)
 - Backend: Python serverless function at `/api`
+
+If you encounter Vercel errors referencing `scoracle-svelte` (missing path or build errors), this usually comes from legacy build/install scripts. You can safely remove `scripts/vercel-build.sh` and `scripts/vercel-install.sh`, and verify your Vercel Project Settings' Root Directory is empty or points to the repo root.
 
 ## 📄 License
 

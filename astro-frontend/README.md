@@ -116,7 +116,7 @@ The app supports light, dark, and system themes. Users can toggle between them u
 ## 🔍 Search & Autocomplete
 
 The search functionality uses static JSON files for autocomplete:
-- Copy data files from `/frontend/public/data/` or `/scoracle-svelte/static/data/`
+- Copy data files from `/frontend/public/data/`. (Legacy: `/scoracle-svelte/static/data/` if you have old artifacts.)
 - Place them in `/public/data/`
 - Files needed: `[sport]-players.json` and `[sport]-teams.json`
 
