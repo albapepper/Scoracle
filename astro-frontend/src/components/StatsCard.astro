@@ -182,7 +182,7 @@ const { title, stat } = Astro.props;
   }
 
   // Initialize all stats cards on the page
-  document.querySelectorAll('.stats-card-shell').forEach(shell => {
+  document.querySelectorAll<HTMLElement>('.stats-card-shell').forEach(shell => {
     new StatsCardManager(shell);
   });
 </script>
