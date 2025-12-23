@@ -166,118 +166,130 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 </style>
 
 <script>
-  // Simple IIFE - plain JavaScript, no TypeScript
-  (function initEntityWidget() {
-    var widget = document.getElementById('entity-widget');
-    if (!widget) return;
+  class EntityWidget {
+    private widget: HTMLElement | null = null;
+    private apiUrl = '';
+    private buttonDest = '';
+    private sport: string | null = null;
+    private type: string | null = null;
+    private id: string | null = null;
 
-    var apiUrl = widget.getAttribute('data-api') || 'http://localhost:8000/api/v1';
-    var buttonDest = widget.getAttribute('data-dest') || 'mentions';
+    private loadingEl: HTMLElement | null = null;
+    private contentEl: HTMLElement | null = null;
+    private errorEl: HTMLElement | null = null;
+    private nameEl: HTMLElement | null = null;
+    private badgeEl: HTMLElement | null = null;
+    private subtitleEl: HTMLElement | null = null;
+    private logoEl: HTMLImageElement | null = null;
+    private buttonEl: HTMLAnchorElement | null = null;
 
-    // Parse URL params
-    var params = new URLSearchParams(window.location.search);
-    var sport = params.get('sport');
-    var type = params.get('type');
-    var id = params.get('id');
+    constructor() {
+      const widget = document.getElementById('entity-widget');
+      if (!widget) return;
 
-    // Elements
-    var loadingEl = document.getElementById('ew-loading');
-    var contentEl = document.getElementById('ew-content');
-    var errorEl = document.getElementById('ew-error');
-    var nameEl = document.getElementById('ew-name');
-    var badgeEl = document.getElementById('ew-badge');
-    var subtitleEl = document.getElementById('ew-subtitle');
-    var logoEl = document.getElementById('ew-logo');
-    var buttonEl = document.getElementById('ew-button');
+      this.widget = widget;
+      this.apiUrl = widget.dataset.api || 'http://localhost:8000/api/v1';
+      this.buttonDest = widget.dataset.dest || 'mentions';
 
-    // Set button href immediately
-    if (sport && type && id && buttonEl) {
-      buttonEl.href = '/' + buttonDest + '?sport=' + sport + '&type=' + type + '&id=' + id;
+      const params = new URLSearchParams(window.location.search);
+      this.sport = params.get('sport');
+      this.type = params.get('type');
+      this.id = params.get('id');
+
+      this.loadingEl = document.getElementById('ew-loading');
+      this.contentEl = document.getElementById('ew-content');
+      this.errorEl = document.getElementById('ew-error');
+      this.nameEl = document.getElementById('ew-name');
+      this.badgeEl = document.getElementById('ew-badge');
+      this.subtitleEl = document.getElementById('ew-subtitle');
+      this.logoEl = document.getElementById('ew-logo') as HTMLImageElement;
+      this.buttonEl = document.getElementById('ew-button') as HTMLAnchorElement;
+
+      this.init();
     }
 
-    // Validate params
-    if (!sport || !type || !id) {
-      showError();
-      return;
+    private init() {
+      if (this.sport && this.type && this.id && this.buttonEl) {
+        this.buttonEl.href = `/${this.buttonDest}?sport=${this.sport}&type=${this.type}&id=${this.id}`;
+      }
+
+      if (!this.sport || !this.type || !this.id) {
+        this.showError();
+        return;
+      }
+
+      this.fetchData();
     }
 
-    // Fetch from simple widget endpoint
-    var url = apiUrl + '/widget/' + type + '/' + id + '?sport=' + sport.toUpperCase();
-    console.log('[EntityWidget] Fetching:', url);
+    private async fetchData() {
+      const url = `${this.apiUrl}/widget/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
+      console.log('[EntityWidget] Fetching:', url);
 
-    fetch(url)
-      .then(function(res) {
+      try {
+        const res = await fetch(url);
         console.log('[EntityWidget] Response status:', res.status);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
-      .then(function(data) {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
         console.log('[EntityWidget] Data:', data);
-        
+
         if (data.error) {
-          showError();
+          this.showError();
           return;
         }
-        
-        // API returns EXACTLY what API-Sports returns:
-        // Teams: { team: { id, name, logo, ... }, venue: { name, city, ... } }
-        // Players: { player: { id, name, photo, ... }, statistics: [...] }
-        var name = '';
-        var logo = '';
-        var subtitle = '';
-        
-        if (type === 'team') {
-          // Team response from API-Sports
-          var teamData = data.team || {};
-          var venueData = data.venue || {};
-          
-          name = teamData.name || 'Unknown';
-          logo = teamData.logo || '';
-          subtitle = venueData.name || venueData.city || teamData.country || '';
-        } else {
-          // Player response from API-Sports
-          var playerData = data.player || {};
-          var stats = data.statistics || [];
-          var teamInfo = stats[0] ? stats[0].team : null;
-          
-          name = playerData.name || ((playerData.firstname || '') + ' ' + (playerData.lastname || '')).trim() || 'Unknown';
-          logo = playerData.photo || '';
-          subtitle = teamInfo ? teamInfo.name : '';
-        }
-        
-        // Display name
-        if (nameEl) nameEl.textContent = name;
-        
-        // Badge (type from URL param)
-        if (badgeEl) badgeEl.textContent = type.toUpperCase();
-        
-        // Subtitle
-        if (subtitleEl) subtitleEl.textContent = subtitle;
-        
-        // Logo/photo
-        if (logoEl && logo) {
-          logoEl.src = logo;
-          logoEl.alt = name;
-          logoEl.style.display = 'block';
-        }
-        
-        showContent();
-      })
-      .catch(function(err) {
+
+        this.renderData(data);
+      } catch (err) {
         console.error('[EntityWidget] Error:', err);
-        showError();
-      });
-
-    function showContent() {
-      if (loadingEl) loadingEl.style.display = 'none';
-      if (contentEl) contentEl.style.display = 'flex';
-      if (errorEl) errorEl.style.display = 'none';
+        this.showError();
+      }
     }
 
-    function showError() {
-      if (loadingEl) loadingEl.style.display = 'none';
-      if (contentEl) contentEl.style.display = 'none';
-      if (errorEl) errorEl.style.display = 'flex';
+    private renderData(data: any) {
+      let name = '';
+      let logo = '';
+      let subtitle = '';
+
+      if (this.type === 'team') {
+        const teamData = data.team || {};
+        const venueData = data.venue || {};
+        name = teamData.name || 'Unknown';
+        logo = teamData.logo || '';
+        subtitle = venueData.name || venueData.city || teamData.country || '';
+      } else {
+        const playerData = data.player || {};
+        const stats = data.statistics || [];
+        const teamInfo = stats[0]?.team;
+        name = playerData.name || `${playerData.firstname || ''} ${playerData.lastname || ''}`.trim() || 'Unknown';
+        logo = playerData.photo || '';
+        subtitle = teamInfo?.name || '';
+      }
+
+      if (this.nameEl) this.nameEl.textContent = name;
+      if (this.badgeEl) this.badgeEl.textContent = this.type!.toUpperCase();
+      if (this.subtitleEl) this.subtitleEl.textContent = subtitle;
+
+      if (this.logoEl && logo) {
+        this.logoEl.src = logo;
+        this.logoEl.alt = name;
+        this.logoEl.style.display = 'block';
+      }
+
+      this.showContent();
     }
-  })();
+
+    private showContent() {
+      if (this.loadingEl) this.loadingEl.style.display = 'none';
+      if (this.contentEl) this.contentEl.style.display = 'flex';
+      if (this.errorEl) this.errorEl.style.display = 'none';
+    }
+
+    private showError() {
+      if (this.loadingEl) this.loadingEl.style.display = 'none';
+      if (this.contentEl) this.contentEl.style.display = 'none';
+      if (this.errorEl) this.errorEl.style.display = 'flex';
+    }
+  }
+
+  new EntityWidget();
 </script>
