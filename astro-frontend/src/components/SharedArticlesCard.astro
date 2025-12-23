@@ -188,7 +188,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   class SharedArticlesCard {
     private card: HTMLElement | null = null;
     private apiUrl = '';
-    private params: ReturnType<typeof parseCoMentionsParams>;
+    private params!: ReturnType<typeof parseCoMentionsParams>;
 
     private loadingEl: HTMLElement | null = null;
     private contentEl: HTMLElement | null = null;

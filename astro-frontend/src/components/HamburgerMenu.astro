@@ -297,13 +297,13 @@
   const LANG_STORAGE_KEY = 'preferred-language';
 
   class HamburgerMenuManager {
-    private menuToggle: HTMLButtonElement;
-    private menuDropdown: HTMLElement;
-    private themeToggle: HTMLButtonElement;
-    private menuIcon: HTMLElement;
-    private closeIcon: HTMLElement;
-    private toggleCircle: HTMLElement;
-    private languageSelect: HTMLSelectElement;
+    private menuToggle!: HTMLButtonElement;
+    private menuDropdown!: HTMLElement;
+    private themeToggle!: HTMLButtonElement;
+    private menuIcon!: HTMLElement;
+    private closeIcon!: HTMLElement;
+    private toggleCircle!: HTMLElement;
+    private languageSelect!: HTMLSelectElement;
     private isMenuOpen = false;
 
     constructor() {

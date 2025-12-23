@@ -232,8 +232,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   }
 
   class EntityWidgetPair {
-    private apiUrl: string;
-    private params: EntityParams;
+    private apiUrl!: string;
+    private params!: EntityParams;
 
     constructor() {
       const primaryWidget = document.getElementById('primary-entity-widget');

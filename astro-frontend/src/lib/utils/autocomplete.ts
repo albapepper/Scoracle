@@ -27,13 +27,13 @@ const CACHE_KEY = 'scoracle_autocomplete_cache';
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 
 export class AutocompleteManager {
-  private inputEl: HTMLInputElement;
-  private suggestionsEl: HTMLElement;
-  private onSelect: (entity: AutocompleteEntity) => void;
-  private renderItem: (entity: AutocompleteEntity, index: number) => string;
-  private itemClass: string;
+  private inputEl!: HTMLInputElement;
+  private suggestionsEl!: HTMLElement;
+  private onSelect!: (entity: AutocompleteEntity) => void;
+  private renderItem!: (entity: AutocompleteEntity, index: number) => string;
+  private itemClass!: string;
 
-  private currentSport: string;
+  private currentSport!: string;
   private allData: AutocompleteEntity[] = [];
   private suggestions: AutocompleteEntity[] = [];
   private selectedIndex = -1;

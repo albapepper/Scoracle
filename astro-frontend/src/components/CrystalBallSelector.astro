@@ -208,12 +208,12 @@ const sports = [
   const STORAGE_KEY = 'activeSport';
 
   class CrystalBallSelector {
-    private container: HTMLElement;
-    private sportOptions: NodeListOf<HTMLElement>;
-    private prevBtn: HTMLButtonElement;
-    private nextBtn: HTMLButtonElement;
-    private sports: string[];
-    private currentIndex: number;
+    private container!: HTMLElement;
+    private sportOptions!: NodeListOf<HTMLElement>;
+    private prevBtn!: HTMLButtonElement;
+    private nextBtn!: HTMLButtonElement;
+    private sports!: string[];
+    private currentIndex!: number;
     private isAnimating: boolean = false;
 
     constructor() {
