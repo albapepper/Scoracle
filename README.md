@@ -29,7 +29,7 @@ scoracle/
 │   │   └── lib/            # API client, types, utilities
 │   └── public/data/        # Bundled JSON for autocomplete
 │
-├── scoracle-svelte/         # SvelteKit frontend (legacy - optional)
+<!-- scoracle-svelte removed: previously a legacy SvelteKit frontend -->
 │   ├── src/
 │   │   ├── routes/         # Pages (file-based routing)
 │   │   └── lib/            # Components, stores, utilities
@@ -56,7 +56,8 @@ scoracle/
 # Backend only (FastAPI on :8000)
 ./local.ps1 backend
 
-# Frontend only (Svelte on :5173)
+# Frontend only (Astro on :4321)
+# Frontend only (Astro on :4321)
 ./local.ps1 frontend
 
 # Both
@@ -71,8 +72,7 @@ cd astro-frontend
 npm install
 npm run dev    # Runs on :4321
 
-# Svelte frontend
-cd scoracle-svelte
+<!-- Svelte frontend removed from this repo; use `astro-frontend` instead -->
 bun install    # or: npm install
 bun run dev    # or: npm run dev
 

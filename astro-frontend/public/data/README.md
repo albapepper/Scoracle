@@ -24,4 +24,5 @@ Example:
 
 You can copy these files from the existing frontend directories:
 - `/frontend/public/data/`
-- `/scoracle-svelte/static/data/`
+
+> Note: `/scoracle-svelte/static/data/` is legacy and no longer present in this repository.
