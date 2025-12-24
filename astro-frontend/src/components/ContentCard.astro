@@ -111,7 +111,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
   .tab-btn {
     flex: 1;
-    padding: 0.875rem 1rem;
+    padding: 0.875rem 0.5rem;
+    min-height: 48px;
     background: none;
     border: none;
     color: var(--text-secondary);
@@ -291,23 +292,59 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     color: var(--text-secondary-dark);
     background-color: var(--border-dark);
   }
+
+  /* Responsive - Mobile */
+  @media (max-width: 480px) {
+    .tabs-nav {
+      gap: 0;
+    }
+
+    .tab-btn {
+      padding: 0.75rem 0.25rem;
+      font-size: 0.8rem;
+    }
+
+    .tabs-content {
+      padding: 1rem;
+    }
+
+    .content-title {
+      font-size: 0.9rem;
+    }
+
+    .content-excerpt {
+      font-size: 0.8rem;
+    }
+  }
+
+  /* Extra small screens */
+  @media (max-width: 320px) {
+    .tab-btn {
+      font-size: 0.75rem;
+      padding: 0.75rem 0.125rem;
+    }
+
+    .tabs-content {
+      padding: 0.75rem;
+    }
+  }
 </style>
 
 <script>
   import { escapeHtml, parseEntityParams } from '../lib/utils/dom';
+  import {
+    findCoMentions,
+    loadEntitiesForSport,
+    type Article,
+    type CoMention,
+  } from '../lib/utils/co-mentions';
 
-  interface Article {
+  // Extended article interface for rendering
+  interface ArticleDisplay {
     title?: string;
     link?: string;
     source?: string;
     pub_date?: string;
-  }
-
-  interface CoMention {
-    entity_type: string;
-    entity_id: number;
-    name: string;
-    mention_count: number;
   }
 
   class ContentCard {
@@ -316,6 +353,9 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     private sport: string | null = null;
     private type: string | null = null;
     private id: string | null = null;
+
+    // Store articles for co-mentions
+    private articles: Article[] = [];
 
     // Articles tab elements
     private loadingEl: HTMLElement | null = null;
@@ -408,7 +448,16 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         if (!newsRes.ok) throw new Error(`News HTTP ${newsRes.status}`);
 
         const data = await newsRes.json();
-        const articles: Article[] = data.articles || [];
+        const articles: ArticleDisplay[] = data.articles || [];
+
+        // Store articles for co-mentions (with required Article shape)
+        this.articles = articles.map(a => ({
+          title: a.title || '',
+          link: a.link || '',
+          pub_date: a.pub_date,
+          source: a.source,
+        }));
+
         if (articles.length === 0) {
           this.showEmpty();
           return;
@@ -420,13 +469,13 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       }
     }
 
-    private renderArticles(articles: Article[]) {
+    private renderArticles(articles: ArticleDisplay[]) {
       const html = articles.map(article => this.renderArticle(article)).join('');
       if (this.listEl) this.listEl.innerHTML = html;
       this.showContent();
     }
 
-    private renderArticle(article: Article): string {
+    private renderArticle(article: ArticleDisplay): string {
       const title = escapeHtml(article.title || 'Untitled');
       const link = article.link || '#';
       const source = escapeHtml(article.source || '');
@@ -462,21 +511,31 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.emptyEl?.classList.remove('hidden');
     }
 
-    // Co-mentions methods
+    // Co-mentions methods - now using frontend logic
     private async fetchCoMentions() {
       if (!this.sport || !this.type || !this.id) {
         this.showCoMentionsEmpty();
         return;
       }
 
-      const url = `${this.apiUrl}/co-mentions/${this.type}/${this.id}?sport=${this.sport.toUpperCase()}`;
+      // If we don't have articles yet, we can't find co-mentions
+      if (this.articles.length === 0) {
+        this.showCoMentionsEmpty();
+        return;
+      }
 
       try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`Co-mentions HTTP ${res.status}`);
+        // Load all entities for this sport from static JSON
+        const entities = await loadEntitiesForSport(this.sport);
 
-        const data = await res.json();
-        const coMentions: CoMention[] = data.co_mentions || [];
+        // Find co-mentions using frontend logic (2-part name matching)
+        const coMentions = findCoMentions(
+          this.articles,
+          entities,
+          this.id,
+          this.type as 'player' | 'team'
+        );
+
         this.coMentionsLoaded = true;
 
         if (coMentions.length === 0) {
@@ -485,7 +544,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         }
 
         this.renderCoMentions(coMentions);
-      } catch {
+      } catch (err) {
+        console.error('Co-mentions error:', err);
         this.showCoMentionsEmpty();
       }
     }
@@ -497,13 +557,13 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private renderCoMention(cm: CoMention): string {
-      const name = escapeHtml(cm.name);
-      const type = cm.entity_type === 'player' ? 'Player' : 'Team';
-      const count = cm.mention_count;
+      const name = escapeHtml(cm.entity.name);
+      const type = cm.entity.type === 'player' ? 'Player' : 'Team';
+      const count = cm.mentionCount;
       const countLabel = count === 1 ? 'mention' : 'mentions';
 
       // Build link to the co-mentions comparison page
-      const link = `/co-mentions?sport=${this.sport}&type=${this.type}&id=${this.id}&coType=${cm.entity_type}&coId=${cm.entity_id}`;
+      const link = `/co-mentions?sport=${this.sport}&type=${this.type}&id=${this.id}&coType=${cm.entity.type}&coId=${cm.entity.id}`;
 
       return `<div class="content-item co-mention-item">
         <div class="co-mention-header">

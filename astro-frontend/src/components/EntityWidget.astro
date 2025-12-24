@@ -207,6 +207,61 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     background-color: var(--accent-dark);
     color: var(--bg-dark);
   }
+
+  /* Responsive - Mobile */
+  @media (max-width: 480px) {
+    .ew-body {
+      padding: 1.25rem 1rem;
+    }
+
+    .ew-logo {
+      width: 64px;
+      height: 64px;
+    }
+
+    .ew-name {
+      font-size: 1.25rem;
+    }
+
+    .ew-subtitle {
+      font-size: 0.875rem;
+    }
+
+    .ew-details {
+      gap: 0.5rem 1rem;
+      font-size: 0.8rem;
+    }
+
+    .ew-detail-label {
+      font-size: 0.65rem;
+    }
+
+    .ew-button {
+      padding: 1rem;
+      min-height: 48px;
+    }
+  }
+
+  /* Extra small screens */
+  @media (max-width: 320px) {
+    .ew-body {
+      padding: 1rem 0.75rem;
+    }
+
+    .ew-logo {
+      width: 56px;
+      height: 56px;
+    }
+
+    .ew-name {
+      font-size: 1.1rem;
+    }
+
+    .ew-details {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+  }
 </style>
 
 <script>
