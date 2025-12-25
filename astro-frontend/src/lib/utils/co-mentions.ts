@@ -140,14 +140,68 @@ function escapeRegex(str: string): string {
 }
 
 /**
+ * Build an index of surname tokens to player IDs.
+ * Used to detect when multiple players share the same surname.
+ *
+ * A "surname" is defined as any token with 4+ characters from the player's name.
+ * This helps identify common surnames like "Fernandes", "Silva", "Santos".
+ */
+function buildSurnameIndex(players: Entity[]): Map<string, string[]> {
+  const index = new Map<string, string[]>();
+
+  for (const player of players) {
+    const tokens = tokenizeName(player.name);
+    for (const token of tokens) {
+      // Only index substantial tokens (4+ chars) as potential surnames
+      if (token.length >= 4) {
+        const existing = index.get(token) || [];
+        existing.push(player.id);
+        index.set(token, existing);
+      }
+    }
+  }
+
+  return index;
+}
+
+/**
+ * Get which tokens from a name match in the text.
+ * Returns only tokens with 3+ characters that appear as whole words.
+ */
+function getMatchingTokens(name: string, normalizedText: string): string[] {
+  const tokens = tokenizeName(name);
+  return tokens.filter(token => {
+    if (token.length < 3) return false;
+    const regex = new RegExp(`\\b${escapeRegex(token)}\\b`);
+    return regex.test(normalizedText);
+  });
+}
+
+/**
+ * Check if a player's team is mentioned in the article.
+ * Compares normalized team names for flexible matching.
+ */
+function isPlayerTeamInArticle(
+  player: Entity,
+  teamNamesInArticle: Set<string>
+): boolean {
+  if (!player.team) return false;
+  const normalizedPlayerTeam = normalizeText(player.team);
+  return teamNamesInArticle.has(normalizedPlayerTeam);
+}
+
+/**
  * Find all entities mentioned in a list of articles.
  *
  * Matching rules:
  * - Teams: standard 2-token or single-word matching
- * - Players with 2 name tokens: require 2 tokens to match
- * - Players with 3+ name tokens (long names): if a team is mentioned in the
- *   article, only require 1 token to match (helps with South American/Portuguese
- *   players who have many surnames like "Estêvão Willian Almeida de Oliveira Gonçalves")
+ * - Players with 2+ tokens matching: always valid
+ * - Players with 1 token matching (long names only):
+ *   - If surname is unique: allow the match
+ *   - If surname is shared by multiple players: "Best Match Wins"
+ *     - Player whose team is in the article wins the surname
+ *     - Only 1 player per shared surname per article
+ *     - If no player's team is mentioned, require 2+ tokens
  *
  * @param articles - Articles to scan
  * @param entities - All entities to check for
@@ -165,6 +219,9 @@ export function findCoMentions(
   const teams = entities.filter(e => e.type === 'team');
   const players = entities.filter(e => e.type === 'player');
 
+  // Build surname collision index
+  const surnameIndex = buildSurnameIndex(players);
+
   // Track mention counts per entity
   const mentionCounts = new Map<string, { entity: Entity; count: number }>();
 
@@ -172,11 +229,18 @@ export function findCoMentions(
     const text = article.title || '';
     if (!text) continue;
 
+    const normalizedText = normalizeText(text);
+
     // Track which entities we've already counted for this article
     const countedInArticle = new Set<string>();
 
+    // Track which shared surnames have been claimed by a player in this article
+    const claimedSurnames = new Set<string>();
+
     // First pass: find all teams mentioned in this article
     const teamsInArticle: Entity[] = [];
+    const teamNamesInArticle = new Set<string>();
+
     for (const team of teams) {
       if (excludeEntityId && excludeEntityType) {
         if (team.id === excludeEntityId && team.type === excludeEntityType) {
@@ -186,6 +250,8 @@ export function findCoMentions(
 
       if (entityMatchesText(team.name, text)) {
         teamsInArticle.push(team);
+        teamNamesInArticle.add(normalizeText(team.name));
+
         const teamKey = `team:${team.id}`;
         countedInArticle.add(teamKey);
 
@@ -198,8 +264,19 @@ export function findCoMentions(
       }
     }
 
-    // Determine if we have any team context for relaxed player matching
     const hasTeamContext = teamsInArticle.length > 0;
+
+    // Helper to count a player match
+    const countPlayer = (player: Entity) => {
+      const playerKey = `player:${player.id}`;
+      countedInArticle.add(playerKey);
+      const existing = mentionCounts.get(playerKey);
+      if (existing) {
+        existing.count++;
+      } else {
+        mentionCounts.set(playerKey, { entity: player, count: 1 });
+      }
+    };
 
     // Second pass: find players
     for (const player of players) {
@@ -212,23 +289,50 @@ export function findCoMentions(
       const playerKey = `player:${player.id}`;
       if (countedInArticle.has(playerKey)) continue;
 
-      // For players with long names (3+ tokens), if a team is mentioned,
-      // only require 1 token match. This helps with South American/Portuguese
-      // players who often have multiple surnames.
       const nameTokenCount = getNameTokenCount(player.name);
       const isLongName = nameTokenCount >= 3;
-      const requiredMatches = hasTeamContext && isLongName ? 1 : 2;
+      const matchingTokens = getMatchingTokens(player.name, normalizedText);
 
-      if (entityMatchesText(player.name, text, requiredMatches)) {
-        countedInArticle.add(playerKey);
+      // Case 1: Strong match (2+ tokens) - always valid
+      if (matchingTokens.length >= 2) {
+        countPlayer(player);
+        continue;
+      }
 
-        const existing = mentionCounts.get(playerKey);
-        if (existing) {
-          existing.count++;
+      // Case 2: Weak match (1 token) - only for long names with team context
+      if (matchingTokens.length === 1 && isLongName && hasTeamContext) {
+        const matchedToken = matchingTokens[0];
+
+        // Check if this token is a shared surname
+        const playersWithToken = surnameIndex.get(matchedToken) || [];
+        const isSharedSurname = playersWithToken.length > 1;
+
+        if (isSharedSurname) {
+          // Shared surname: "Best Match Wins" logic
+          // Only allow if this player's team is mentioned AND surname not claimed
+
+          if (claimedSurnames.has(matchedToken)) {
+            // Another player already claimed this surname for this article
+            continue;
+          }
+
+          const playerTeamMentioned = isPlayerTeamInArticle(
+            player,
+            teamNamesInArticle
+          );
+
+          if (playerTeamMentioned) {
+            // This player's team is mentioned - they win the surname
+            claimedSurnames.add(matchedToken);
+            countPlayer(player);
+          }
+          // If player's team not mentioned, skip (no match for shared surnames)
         } else {
-          mentionCounts.set(playerKey, { entity: player, count: 1 });
+          // Unique surname - safe to match with 1 token
+          countPlayer(player);
         }
       }
+      // Case 3: No match or insufficient tokens - skip
     }
   }
 
