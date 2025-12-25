@@ -34,3 +34,24 @@ export function parseEntityParams(): {
     id: params.get('id'),
   };
 }
+
+/**
+ * Parse co-mentions comparison parameters from URL query string.
+ * Used by EntityWidgetPair and SharedArticlesCard.
+ */
+export function parseCoMentionsParams(): {
+  sport: string | null;
+  type: string | null;
+  id: string | null;
+  coType: string | null;
+  coId: string | null;
+} {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    sport: params.get('sport'),
+    type: params.get('type'),
+    id: params.get('id'),
+    coType: params.get('coType'),
+    coId: params.get('coId'),
+  };
+}

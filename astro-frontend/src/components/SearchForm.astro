@@ -1,21 +1,12 @@
 ---
 // Pure Astro search form - zero React
+import { getSportDisplay } from '../lib/types';
+
 interface Props {
   sport?: string;
 }
 
 const { sport = 'nba' } = Astro.props;
-
-// Helper function to get display name for sports
-function getSportDisplay(sportId: string): string {
-  const sportMap: Record<string, string> = {
-    'nba': 'NBA',
-    'nfl': 'NFL',
-    'football': 'Football'
-  };
-  return sportMap[sportId.toLowerCase()] || sportId.toUpperCase();
-}
-
 const sportDisplay = getSportDisplay(sport);
 ---
 

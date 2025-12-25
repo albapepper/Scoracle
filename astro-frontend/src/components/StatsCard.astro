@@ -267,9 +267,11 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 </style>
 
 <script>
+  import { escapeHtml } from '../lib/utils/dom';
+
   /**
    * StatsCard Manager
-   * 
+   *
    * Handles loading statistics from the backend API
    * and populating the table with data.
    */
@@ -298,7 +300,9 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       try {
         await this.loadStats(sport, type, id);
       } catch (error) {
-        console.error('Failed to load stats:', error);
+        if (import.meta.env.DEV) {
+          console.error('Failed to load stats:', error);
+        }
         this.showError();
       }
     }
@@ -342,8 +346,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       tbody.innerHTML = stats
         .map(({ label, value }) => `
           <tr>
-            <td>${this.escapeHtml(label)}</td>
-            <td>${this.escapeHtml(String(value))}</td>
+            <td>${escapeHtml(label)}</td>
+            <td>${escapeHtml(String(value))}</td>
           </tr>
         `)
         .join('');
@@ -370,12 +374,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.card.querySelector('#stats-table')?.classList.add('hidden');
       this.card.querySelector('#stats-empty')?.classList.add('hidden');
       this.card.querySelector('#stats-error')?.classList.remove('hidden');
-    }
-
-    private escapeHtml(text: string): string {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
     }
   }
 

@@ -70,7 +70,6 @@ export interface NewsData {
 export interface AutocompleteEntity {
   id: string;
   name: string;
-  type?: string;
+  type: 'player' | 'team';
   team?: string;
-  [key: string]: string | undefined;
 }

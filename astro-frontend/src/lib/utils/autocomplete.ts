@@ -6,14 +6,9 @@
  */
 
 import { escapeHtml } from './dom';
-import { getSportDisplay, getSportByIdLower } from '../types';
+import { getSportDisplay, getSportByIdLower, type AutocompleteEntity } from '../types';
 
-export interface AutocompleteEntity {
-  id: string;
-  name: string;
-  type: 'player' | 'team';
-  team?: string;
-}
+export type { AutocompleteEntity };
 
 export interface AutocompleteConfig {
   inputEl: HTMLInputElement;

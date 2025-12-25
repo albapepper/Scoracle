@@ -332,6 +332,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 <script>
   import { escapeHtml, parseEntityParams } from '../lib/utils/dom';
+  import { formatDate } from '../lib/utils/date';
   import {
     findCoMentions,
     loadEntitiesForSport,
@@ -479,7 +480,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       const title = escapeHtml(article.title || 'Untitled');
       const link = article.link || '#';
       const source = escapeHtml(article.source || '');
-      const date = this.formatDate(article.pub_date);
+      const date = formatDate(article.pub_date);
 
       return `<div class="content-item">
         <h3 class="content-title">
@@ -487,16 +488,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         </h3>
         <div class="content-meta">${source}${source && date ? ' · ' : ''}${date}</div>
       </div>`;
-    }
-
-    private formatDate(dateStr?: string): string {
-      if (!dateStr) return '';
-      try {
-        const d = new Date(dateStr);
-        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      } catch {
-        return '';
-      }
     }
 
     private showContent() {
@@ -545,7 +536,9 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
         this.renderCoMentions(coMentions);
       } catch (err) {
-        console.error('Co-mentions error:', err);
+        if (import.meta.env.DEV) {
+          console.error('Co-mentions error:', err);
+        }
         this.showCoMentionsEmpty();
       }
     }
