@@ -3,11 +3,12 @@ import re
 import sqlite3
 import threading
 import time
-import unicodedata
 import errno
 import logging
 from typing import List, Dict, Tuple, Optional
 from pathlib import Path
+
+from app.utils.text import normalize_text, strip_specials_preserve_case, first_last_only
 
 # Lightweight per-sport SQLite management for autocomplete data
 
@@ -169,69 +170,9 @@ def _ensure_schema(conn: sqlite3.Connection):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_teams_tokens ON teams(tokens);")
 
 
-_NON_ALNUM = re.compile(r"[^a-z0-9 ]+")
-
-def normalize_text(s: Optional[str]) -> str:
-    if not s:
-        return ""
-    # strip accents, lower, remove non-alphanum, collapse spaces
-    s_norm = unicodedata.normalize("NFKD", s)
-    s_ascii = "".join(ch for ch in s_norm if not unicodedata.combining(ch))
-    s_lower = s_ascii.lower()
-    s_clean = _NON_ALNUM.sub(" ", s_lower)
-    s_sp = " ".join(s_clean.split())
-    return s_sp
-
 def tokenize(s: str) -> str:
-    # Space-separated tokens used for LIKE queries (e.g., "% token %")
+    """Space-separated tokens used for LIKE queries (e.g., "% token %")."""
     return " ".join(s.split())
-
-
-def _strip_specials_preserve_case(s: Optional[str]) -> str:
-    """Remove accents and non-alphanumeric characters while preserving case for display.
-
-    - Strips diacritics
-    - Removes any character not in [A-Za-z0-9 ]
-    - Collapses multiple spaces
-    """
-    if not s:
-        return ""
-    s_norm = unicodedata.normalize("NFKD", s)
-    s_ascii = "".join(ch for ch in s_norm if not unicodedata.combining(ch))
-    # Keep alnum and spaces only
-    out = []
-    for ch in s_ascii:
-        if ch.isalnum() or ch == " ":
-            out.append(ch)
-        else:
-            # drop punctuation and symbols
-            continue
-    s_clean = "".join(out)
-    return " ".join(s_clean.split())
-
-
-def _first_last_only(name: Optional[str]) -> str:
-    """Reduce a display name to only first and last tokens.
-
-    Examples:
-    - "Kevin Wayne Durant Jr." -> "Kevin Durant"
-    - "Kylian Mbappé" -> "Kylian Mbappe" (diacritics stripped upstream by _strip_specials_preserve_case)
-    - "LeBron Raymone James Sr" -> "LeBron James"
-
-    Teams and single-word names are returned as-is.
-    """
-    if not name:
-        return ""
-    parts = str(name).split()
-    if len(parts) <= 1:
-        return parts[0] if parts else ""
-    first = parts[0]
-    last = parts[-1]
-    # Handle suffixes commonly seen; if last is a suffix, take the previous token
-    suffixes = {"jr", "jr.", "sr", "sr.", "ii", "iii", "iv", "v"}
-    if last.lower().strip(". ") in suffixes and len(parts) >= 3:
-        last = parts[-2]
-    return f"{first} {last}".strip()
 
 
 def _init_if_needed(sport: str):
@@ -267,7 +208,7 @@ def upsert_players(sport: str, rows: List[Tuple[int, str, Optional[str]]]):
         payload = []
         for (pid, name, team) in rows:
             # Clean display name - preserve full name, just strip special characters
-            display = _strip_specials_preserve_case(name)
+            display = strip_specials_preserve_case(name)
             norm = normalize_text(display or name)
             toks = tokenize(norm)
             payload.append((pid, display or name, team, now, norm, toks))
@@ -303,7 +244,7 @@ def upsert_teams(sport: str, rows: List[Tuple[int, str, Optional[str], Optional[
                 lid = None
             else:
                 tid, name, league, lid = row
-            display = _strip_specials_preserve_case(name)
+            display = strip_specials_preserve_case(name)
             norm = normalize_text(display or name)
             toks = tokenize(norm)
             payload.append((tid, display or name, league, lid, now, norm, toks))

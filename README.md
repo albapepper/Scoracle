@@ -5,10 +5,11 @@ A modern web app for sports news and statistics across NBA, NFL, and Football (s
 ## ✨ Features
 
 - **Multi-Sport Support** – NBA, NFL, Football with unified API
-- **Fast Search** – In-memory autocomplete with fuzzy matching
+- **Fast Search** – In-memory autocomplete with fuzzy matching and co-mentions detection
 - **News Aggregation** – Google News RSS pipeline
 - **Dark/Light Mode** – System-aware theming
 - **i18n** – English, Spanish, German, Portuguese, Italian
+- **Client-Side Co-Mentions** – Frontend-based entity relationship matching
 
 ## 🗂 Project Structure
 
@@ -22,21 +23,12 @@ scoracle/
 │   │   └── database/       # SQLite helpers
 │   └── instance/localdb/   # SQLite data files
 │
-├── astro-frontend/          # Astro frontend (NEW)
+├── astro-frontend/          # Astro frontend
 │   ├── src/
 │   │   ├── pages/          # File-based routing
-│   │   ├── components/     # React & Astro components
+│   │   ├── components/     # Astro & Island components
 │   │   └── lib/            # API client, types, utilities
 │   └── public/data/        # Bundled JSON for autocomplete
-│
-<!-- scoracle-svelte removed: previously a legacy SvelteKit frontend -->
-│   ├── src/
-│   │   ├── routes/         # Pages (file-based routing)
-│   │   └── lib/            # Components, stores, utilities
-│   └── static/data/        # Bundled JSON for autocomplete
-│
-├── frontend/                # React frontend (Vite)
-│   └── src/                # React components and pages
 │
 ├── api/index.py            # Vercel serverless entry
 ├── local.ps1               # Local dev helper (Windows)
@@ -57,29 +49,18 @@ scoracle/
 ./local.ps1 backend
 
 # Frontend only (Astro on :4321)
-# Frontend only (Astro on :4321)
 ./local.ps1 frontend
 
 # Both
 ./local.ps1 up
 ```
 
-Or run a frontend directly:
+Or run the frontend directly:
 
 ```bash
-# Astro frontend (recommended - new)
 cd astro-frontend
 npm install
 npm run dev    # Runs on :4321
-
-<!-- Svelte frontend removed from this repo; use `astro-frontend` instead -->
-bun install    # or: npm install
-bun run dev    # or: npm run dev
-
-# React frontend
-cd frontend
-npm install
-npm start
 ```
 
 ### API Docs
@@ -102,8 +83,6 @@ http://localhost:8000/api/docs
 The app auto-configures:
 - Frontend: Astro static build (from `astro-frontend`)
 - Backend: Python serverless function at `/api`
-
-If you encounter Vercel errors referencing `scoracle-svelte` (missing path or build errors), this usually comes from legacy build/install scripts. You can safely remove `scripts/vercel-build.sh` and `scripts/vercel-install.sh`, and verify your Vercel Project Settings' Root Directory is empty or points to the repo root.
 
 ## 📄 License
 

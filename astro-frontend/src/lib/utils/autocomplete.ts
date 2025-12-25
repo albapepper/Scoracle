@@ -5,7 +5,8 @@
  * Handles data loading, caching, filtering, and rendering.
  */
 
-import { escapeHtml, getSportDisplay } from './dom';
+import { escapeHtml } from './dom';
+import { getSportDisplay, getSportByIdLower } from '../types';
 
 export interface AutocompleteEntity {
   id: string;
@@ -68,6 +69,12 @@ export class AutocompleteManager {
 
   private async loadData() {
     try {
+      // Get sport config for data file path
+      const sportConfig = getSportByIdLower(this.currentSport);
+      if (!sportConfig) {
+        throw new Error(`Unknown sport: ${this.currentSport}`);
+      }
+
       // Check cache first
       const cache = localStorage.getItem(CACHE_KEY);
       if (cache) {
@@ -81,8 +88,8 @@ export class AutocompleteManager {
         }
       }
 
-      // Fetch fresh data
-      const response = await fetch(`/data/${this.currentSport}.json`);
+      // Fetch fresh data using centralized data file path
+      const response = await fetch(sportConfig.dataFile);
       if (!response.ok) throw new Error('Failed to fetch data');
 
       const json = await response.json();

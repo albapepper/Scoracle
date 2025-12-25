@@ -1,16 +1,15 @@
 ---
 // Crystal Ball Sport Selector - Sports carousel inside the crystal ball
+import { SPORTS } from '../lib/types';
+
 interface Props {
   initialSport?: string;
 }
 
 const { initialSport = 'nba' } = Astro.props;
 
-const sports = [
-  { id: 'nba', display: 'NBA', logo: '/NBA logo.png' },
-  { id: 'nfl', display: 'NFL', logo: '/NFL logo.png' },
-  { id: 'football', display: 'Football', logo: '/fifa logo.png' },
-];
+// Use centralized sport config
+const sports = SPORTS.map(s => ({ id: s.idLower, display: s.display, logo: s.logo }));
 ---
 
 <div class="crystal-ball-container">
@@ -135,8 +134,8 @@ const sports = [
   }
 
   .sport-logo {
-    width: 105px;
-    height: 105px;
+    width: 157.5px;
+    height: 157.5px;
     object-fit: contain;
   }
 
@@ -198,8 +197,8 @@ const sports = [
     }
 
     .sport-logo {
-      width: 75px;
-      height: 75px;
+      width: 112.5px;
+      height: 112.5px;
     }
   }
 </style>

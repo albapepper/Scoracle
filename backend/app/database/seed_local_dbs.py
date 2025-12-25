@@ -1,88 +1,106 @@
 import asyncio
 import os
 import argparse
-from typing import List, Tuple, Sequence
+from typing import Dict, List, Tuple, Sequence
 
 from app.database.local_dbs import upsert_players, upsert_teams, purge_sport
 from app.services.apisports import apisports_service
 from app.config import settings
 
 
-# League ids (API-Sports) for football umbrella (Top 5 + MLS)
-FOOTBALL_LEAGUES = [39, 140, 135, 78, 61, 253]
+# League ids (API-Sports) for football umbrella (Top 5 + MLS + additional leagues)
+FOOTBALL_LEAGUES = [39, 40, 140, 135, 78, 61, 253, 94, 203, 88, 144, 71, 129]
 # League name mapping for football
 LEAGUE_NAMES = {
     39: "Premier League",
+    40: "Championship",       # England 2nd tier
     140: "La Liga",
     135: "Serie A",
     78: "Bundesliga",
     61: "Ligue 1",
-    253: "MLS"
+    253: "MLS",
+    94: "Primeira Liga",      # Portugal
+    203: "Süper Lig",         # Turkey
+    88: "Eredivisie",         # Netherlands
+    144: "Jupiler Pro League", # Belgium
+    71: "Brasileirão",        # Brazil
+    129: "Liga MX",           # Mexico
 }
 ALPHA = list("abcdefghijklmnopqrstuvwxyz")
 
 
 async def seed_football_api():
-	# Teams via listing per league
+	# Teams via listing per league - fetch both seasons to capture all teams
 	print("Seeding FOOTBALL teams via API...")
-	for league_id in FOOTBALL_LEAGUES:
-		try:
-			rows = await apisports_service.list_football_teams(league_id, season="2025")
-			print(f"FOOTBALL teams raw rows league {league_id}: {len(rows)}")
-			league_name = LEAGUE_NAMES.get(league_id, f"League {league_id}")
-			teams: List[Tuple[int, str, str, int]] = []
-			for r in rows:
-				name = r.get("name") or r.get("abbreviation") or str(r.get("id"))
-				if r.get("id") is not None:
-					teams.append((int(r["id"]), name, league_name, league_id))
-			if teams:
-				print(f"FOOTBALL teams upserting {len(teams)} from league {league_id} ({league_name})")
-				upsert_teams("FOOTBALL", teams)
-			else:
-				# Fallback via search if listing returned empty
-				rows2 = await apisports_service.search_teams("a", "FOOTBALL", league_override=league_id, season_override="2025")
-				print(f"FOOTBALL teams fallback rows league {league_id}: {len(rows2)}")
+	all_teams: Dict[int, Tuple[int, str, str, int]] = {}
+	seasons = ["2024", "2025"]
+
+	for season in seasons:
+		for league_id in FOOTBALL_LEAGUES:
+			try:
+				rows = await apisports_service.list_football_teams(league_id, season=season)
 				league_name = LEAGUE_NAMES.get(league_id, f"League {league_id}")
-				teams2 = []
-				for r in rows2:
-					name = r.get("name") or r.get("abbreviation") or str(r.get("id"))
-					if r.get("id") is not None:
-						teams2.append((int(r["id"]), name, league_name, league_id))
-				if teams2:
-					print(f"FOOTBALL teams upserting {len(teams2)} from league {league_id} ({league_name}) (fallback)")
-					upsert_teams("FOOTBALL", teams2)
-		except Exception as e:
-			print(f"football teams seed warn (league {league_id}):", e)
-		await asyncio.sleep(0.1)
+				for r in rows:
+					tid = r.get("id")
+					if tid is not None:
+						name = r.get("name") or r.get("abbreviation") or str(tid)
+						# 2025 data overwrites 2024 data (newer takes precedence)
+						all_teams[int(tid)] = (int(tid), name, league_name, league_id)
+			except Exception as e:
+				print(f"football teams seed warn (league {league_id}, season {season}):", e)
+			await asyncio.sleep(0.05)
+
+	# Upsert all collected teams
+	if all_teams:
+		teams_list = list(all_teams.values())
+		print(f"FOOTBALL teams upserting {len(teams_list)} total (deduplicated from seasons {seasons})")
+		upsert_teams("FOOTBALL", teams_list)
 
 	print("Seeding FOOTBALL players via API...")
-	# For players, loop pages per league
-	for league_id in FOOTBALL_LEAGUES:
-		page = 1
-		while True:
-			try:
-				rows = await apisports_service.list_football_players(league_id, season="2025", page=page)
-				if not rows:
+	# Track all players by ID to avoid duplicates (newer season data takes precedence)
+	all_players: Dict[int, Tuple[int, str, str]] = {}
+	seasons = ["2024", "2025"]  # Fetch both seasons
+
+	# For players, loop pages per league per season
+	for season in seasons:
+		for league_id in FOOTBALL_LEAGUES:
+			page = 1
+			while True:
+				try:
+					rows = await apisports_service.list_football_players(league_id, season=season, page=page)
+					if not rows:
+						break
+					for r in rows:
+						pid = r.get("id")
+						if pid is None:
+							continue
+						# Prefer firstname + lastname (full name) over abbreviated 'name' field
+						# API returns name like "M. Mudryk" but firstname/lastname as "Mykhailo"/"Mudryk"
+						first = (r.get('first_name') or '').strip()
+						last = (r.get('last_name') or '').strip()
+						if first and last:
+							name = f"{first} {last}"
+						elif first:
+							name = first
+						elif last:
+							name = last
+						else:
+							name = r.get('name') or str(pid)
+						team = r.get("team_abbr") or None
+						# 2025 data overwrites 2024 data (newer takes precedence)
+						all_players[int(pid)] = (int(pid), name, team)
+					page += 1
+				except Exception as e:
+					print(f"football players list warn (league {league_id}, season {season}, page {page}):", e)
 					break
-				players: List[Tuple[int, str, str]] = []
-				for r in rows:
-					# Prefer full 'name' field, fall back to first_name + last_name
-					name = r.get('name')
-					if not name:
-						name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip()
-					if not name:
-						name = str(r.get('id'))
-					team = r.get("team_abbr") or None
-					if r.get("id") is not None:
-						players.append((int(r["id"]), name, team))
-				if players:
-					print(f"FOOTBALL players upserting {len(players)} from league {league_id} page {page}")
-					upsert_players("FOOTBALL", players)
-				page += 1
-			except Exception as e:
-				print(f"football players list warn (league {league_id}, page {page}):", e)
-				break
-			await asyncio.sleep(0.1)
+				await asyncio.sleep(0.05)
+			print(f"FOOTBALL players: league {league_id} season {season} complete ({len(all_players)} total so far)")
+
+	# Upsert all collected players
+	if all_players:
+		players_list = list(all_players.values())
+		print(f"FOOTBALL players upserting {len(players_list)} total (deduplicated from seasons {seasons})")
+		upsert_players("FOOTBALL", players_list)
 
 
 async def seed_nba_api():
@@ -137,97 +155,56 @@ async def seed_nba_api():
 		print("nba teams seed warn:", e)
 
 	print("Seeding NBA players via API...")
-	# Paginate NBA players
-	# Try listing; if empty, fallback to alpha search
-	got_any = False
-	for page in range(1, 6):
-		try:
-			rows = await apisports_service.list_nba_players(season="2024", page=page, league='standard')
-			if not rows:
-				break
-			players: List[Tuple[int, str, str]] = []
-			for r in rows:
-				# Prefer full 'name' field, fall back to first_name + last_name
-				name = r.get('name')
-				if not name:
-					name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip()
-				if not name:
-					name = str(r.get('id'))
-				team = r.get("team_abbr") or None
-				if r.get("id") is not None:
-					players.append((int(r["id"]), name, team))
-			if players:
-				got_any = True
-				print(f"NBA players upserting {len(players)} page {page}")
-				upsert_players("NBA", players)
-		except Exception as e:
-			print(f"nba players list warn (page {page}):", e)
-			break
-		await asyncio.sleep(0.1)
-	if not got_any:
-		# Fallback 1: roster by team (iterate NBA teams and fetch roster for the season)
-		try:
-			team_rows = await apisports_service.list_nba_teams(league='standard')
-		except Exception as e:
-			print("nba roster fallback teams warn:", e)
-			team_rows = []
+	# NBA players endpoint requires team parameter - iterate through all teams
+	# Fetch both 2024 and 2025 seasons to include injured/suspended/moved players
+	try:
+		team_rows = await apisports_service.list_nba_teams(league='standard')
+		print(f"NBA players: got {len(team_rows)} teams to iterate")
+	except Exception as e:
+		print("nba players teams fetch warn:", e)
+		team_rows = []
+
+	# Track all players by ID to avoid duplicates (newer season data takes precedence)
+	all_players: Dict[int, Tuple[int, str, str]] = {}
+	seasons = ["2024", "2025"]  # Fetch both seasons
+
+	for season in seasons:
 		for t in team_rows:
 			tid = t.get("id")
 			if not tid:
 				continue
 			try:
-				page = 1
-				while True:
-					roster = await apisports_service.list_nba_team_players(team_id=int(tid), season="2024", league='standard', page=page)
-					if not roster:
-						# Try statistics-based fallback once
-						if page == 1:
-							roster = await apisports_service.list_nba_team_statistics_players(team_id=int(tid), season="2024")
-							if not roster:
-								break
-							# else proceed to upsert this one-shot list
-						else:
-							break
-					players: List[Tuple[int, str, str]] = []
-					for r in roster:
-						# Prefer full 'name' field, fall back to first_name + last_name
-						name = r.get('name')
-						if not name:
-							name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip()
-						if not name:
-							name = str(r.get('id'))
-						team = r.get("team_abbr") or None
-						if r.get("id") is not None:
-							players.append((int(r["id"]), name, team))
-					if players:
-						print(f"NBA players upserting {len(players)} via {'stats' if page==1 and not await apisports_service.list_nba_team_players(team_id=int(tid), season='2024', league='standard', page=1) else 'roster'} team {tid} page {page}")
-						upsert_players("NBA", players)
-					page += 1
+				# Fetch players for this team (season + team, no league/page parameter)
+				roster = await apisports_service.list_nba_team_players(team_id=int(tid), season=season)
+				if not roster:
+					continue
+				for r in roster:
+					pid = r.get("id")
+					if pid is None:
+						continue
+					# Prefer firstname + lastname (full name) over abbreviated 'name' field
+					first = (r.get('first_name') or '').strip()
+					last = (r.get('last_name') or '').strip()
+					if first and last:
+						name = f"{first} {last}"
+					elif first:
+						name = first
+					elif last:
+						name = last
+					else:
+						name = r.get('name') or str(pid)
+					team_abbr = r.get("team_abbr") or None
+					# 2025 data overwrites 2024 data (newer takes precedence)
+					all_players[int(pid)] = (int(pid), name, team_abbr)
 			except Exception as e:
-				print(f"nba roster fallback warn (team {tid}):", e)
-			await asyncio.sleep(0.05)
-	if not got_any:
-		from string import ascii_lowercase
-		for ch in ascii_lowercase:
-			try:
-				rows = await apisports_service.search_players(ch, "NBA", season_override="2024")
-				players: List[Tuple[int, str, str]] = []
-				for r in rows:
-					# Prefer full 'name' field, fall back to first_name + last_name
-					name = r.get('name')
-					if not name:
-						name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip()
-					if not name:
-						name = str(r.get('id'))
-					team = r.get("team_abbr") or None
-					if r.get("id") is not None:
-						players.append((int(r["id"]), name, team))
-				if players:
-					print(f"NBA players upserting {len(players)} via search {ch}")
-					upsert_players("NBA", players)
-			except Exception as e:
-				print(f"nba players search warn ({ch}):", e)
-			await asyncio.sleep(0.1)
+				print(f"nba players warn (team {tid}, season {season}):", e)
+			await asyncio.sleep(0.02)
+
+	# Upsert all collected players
+	if all_players:
+		players_list = list(all_players.values())
+		print(f"NBA players upserting {len(players_list)} total (deduplicated from seasons {seasons})")
+		upsert_players("NBA", players_list)
 	await asyncio.sleep(0.1)
 
 
@@ -239,7 +216,7 @@ async def seed_nfl_api():
 	NFL_LEAGUE_ID = 1
 	# 1) Try listing
 	try:
-		rows = await apisports_service.list_nfl_teams(league=None)
+		rows = await apisports_service.list_nfl_teams(league=NFL_LEAGUE_ID)
 	except Exception as e:
 		print("nfl teams list warn:", e)
 		rows = []
@@ -324,102 +301,60 @@ async def seed_nfl_api():
 			team_rows = found_dicts
 
 	print("Seeding NFL players via API...")
-	page = 1
-	got_any = False
-	while True:
+	# NFL players endpoint requires team parameter - iterate through all teams
+	# Use team_rows from teams seeding if available, otherwise fetch again
+	if not team_rows:
 		try:
-			rows = await apisports_service.list_nfl_players(season="2025", page=page, league=int(os.getenv("API_SPORTS_NFL_LEAGUE", "1")))
-			if not rows:
-				break
-			players: List[Tuple[int, str, str]] = []
-			for r in rows:
-				# Prefer full 'name' field, fall back to first_name + last_name
-				name = r.get('name')
-				if not name:
-					name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip()
-				if not name:
-					name = str(r.get('id'))
-				team = r.get("team_abbr") or None
-				if r.get("id") is not None:
-					players.append((int(r["id"]), name, team))
-			if players:
-				got_any = True
-				print(f"NFL players upserting {len(players)} page {page}")
-				upsert_players("NFL", players)
-			page += 1
+			team_rows = await apisports_service.list_nfl_teams(league=NFL_LEAGUE_ID)
 		except Exception as e:
-			print(f"nfl players list warn (page {page}):", e)
-			break
-		await asyncio.sleep(0.1)
-	if not got_any:
-		# Team-by-team fallback: try roster, then statistics
-		if not team_rows:
-			try:
-				team_rows = await apisports_service.list_nfl_teams(league=None)
-			except Exception as e:
-				print("nfl roster fallback teams warn:", e)
-				team_rows = []
+			print("nfl players teams fetch warn:", e)
+			team_rows = []
+
+	# Track all players by ID to avoid duplicates (newer season data takes precedence)
+	all_players: Dict[int, Tuple[int, str, str]] = {}
+	seasons = ["2024", "2025"]  # Fetch both seasons
+
+	for season in seasons:
 		for t in team_rows:
 			tid = t.get("id")
 			if not tid:
 				continue
 			try:
-				page = 1
-				while True:
-					roster = await apisports_service.list_nfl_team_players(team_id=int(tid), season="2025", page=page)
-					if not roster:
-						if page == 1:
-							roster = await apisports_service.list_nfl_team_statistics_players(team_id=int(tid), season="2025")
-							if not roster:
-								break
-						else:
-							break
-					players: List[Tuple[int, str, str]] = []
-					for r in roster:
-						# Prefer full 'name' field, fall back to first_name + last_name
-						name = r.get('name')
-						if not name:
-							name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip()
-						if not name:
-							name = str(r.get('id'))
-						team = r.get("team_abbr") or None
-						if r.get("id") is not None:
-							players.append((int(r["id"]), name, team))
-					if players:
-						print(f"NFL players upserting {len(players)} via {'stats' if page==1 else 'roster'} team {tid} page {page}")
-						upsert_players("NFL", players)
-					page += 1
+				# Fetch players for this team (season + team, no league/page parameter)
+				roster = await apisports_service.list_nfl_team_players(team_id=int(tid), season=season)
+				if not roster:
+					continue
+				for r in roster:
+					pid = r.get("id")
+					if pid is None:
+						continue
+					# Prefer firstname + lastname (full name) over abbreviated 'name' field
+					first = (r.get('first_name') or '').strip()
+					last = (r.get('last_name') or '').strip()
+					if first and last:
+						name = f"{first} {last}"
+					elif first:
+						name = first
+					elif last:
+						name = last
+					else:
+						name = r.get('name') or str(pid)
+					team_abbr = r.get("team_abbr") or None
+					# 2025 data overwrites 2024 data (newer takes precedence)
+					all_players[int(pid)] = (int(pid), name, team_abbr)
 			except Exception as e:
-				print(f"nfl roster/statistics fallback warn (team {tid}):", e)
-			await asyncio.sleep(0.05)
-	if not got_any:
-		# League-level statistics fallback (paged)
-		for page in range(1, 6):
-			try:
-				rows = await apisports_service.list_nfl_statistics_players(season="2025", league=int(os.getenv("API_SPORTS_NFL_LEAGUE", "1")), page=page)
-				if not rows:
-					break
-				players: List[Tuple[int, str, str]] = []
-				for r in rows:
-					# Prefer full 'name' field, fall back to first_name + last_name
-					name = r.get('name')
-					if not name:
-						name = f"{(r.get('first_name') or '').strip()} {(r.get('last_name') or '').strip()}".strip()
-					if not name:
-						name = str(r.get('id'))
-					team = r.get("team_abbr") or None
-					if r.get("id") is not None:
-						players.append((int(r["id"]), name, team))
-				if players:
-					print(f"NFL players upserting {len(players)} via league stats page {page}")
-					upsert_players("NFL", players)
-			except Exception as e:
-				print(f"nfl league statistics fallback warn (page {page}):", e)
-				break
-			await asyncio.sleep(0.05)
-	# Last-resort: if nothing was upserted for teams and players, seed static NFL subset
-	if not teams_upserted and not got_any:
-		print("NFL API returned no data; seeding static NFL subset as fallback...")
+				print(f"nfl players warn (team {tid}, season {season}):", e)
+			await asyncio.sleep(0.02)
+
+	# Upsert all collected players
+	if all_players:
+		players_list = list(all_players.values())
+		print(f"NFL players upserting {len(players_list)} total (deduplicated from seasons {seasons})")
+		upsert_players("NFL", players_list)
+
+	# Last-resort: if nothing was upserted for teams, seed static NFL subset
+	if not teams_upserted:
+		print("NFL API returned no teams; seeding static NFL subset as fallback...")
 		seed_nfl_static_minimal()
 
 
@@ -595,7 +530,7 @@ async def main():
 		if not os.getenv("RAPIDAPI_KEY"):
 			os.environ["RAPIDAPI_KEY"] = settings.API_SPORTS_KEY
 		# Set default seasons via env for providers that rely on defaults
-		os.environ["API_SPORTS_NBA_SEASON"] = "2024"  # 2024-25
+		os.environ["API_SPORTS_NBA_SEASON"] = "2025"  # 2025-26
 		os.environ["API_SPORTS_FOOTBALL_SEASON"] = "2025"  # 2025-26
 		os.environ["API_SPORTS_NFL_SEASON"] = "2025"  # 2025-26
 		if "FOOTBALL" in selected:

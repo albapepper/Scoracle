@@ -3,7 +3,9 @@
     "allow": [
       "Bash(curl:*)",
       "Bash(python -m json.tool:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(python:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

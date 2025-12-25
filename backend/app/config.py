@@ -73,18 +73,26 @@ class Settings(BaseSettings):
 				"sport": "football",
 				"league": int(self.API_SPORTS_FOOTBALL_LEAGUE),
 				"season": str(self.API_SPORTS_FOOTBALL_SEASON),
+				"base_url": "https://v3.football.api-sports.io",
 			},
 			"NBA": {
 				"sport": "basketball",
 				"league": str(self.API_SPORTS_NBA_LEAGUE),
 				"season": str(self.API_SPORTS_NBA_SEASON),
+				"base_url": "https://v2.nba.api-sports.io",
 			},
 			"NFL": {
 				"sport": "american-football",
 				"league": int(self.API_SPORTS_NFL_LEAGUE),
 				"season": str(self.API_SPORTS_NFL_SEASON),
+				"base_url": "https://v1.american-football.api-sports.io",
 			},
 		}
+
+	@computed_field
+	@property
+	def VALID_SPORTS(self) -> list:
+		return list(self.API_SPORTS_DEFAULTS.keys())
 
 	# Rate limiting (simple in-memory token bucket)
 	RATE_LIMIT_ENABLED: bool = False

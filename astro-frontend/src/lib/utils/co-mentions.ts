@@ -30,11 +30,18 @@ export interface Article {
 }
 
 /**
- * Normalize text for matching:
- * - Remove accents/diacritics (é → e, ñ → n)
- * - Convert to lowercase
- * - Remove non-alphanumeric characters (except spaces)
- * - Collapse multiple spaces
+ * Normalize text for matching.
+ *
+ * IMPORTANT: This function must stay in sync with the backend version
+ * in backend/app/utils/text.py:normalize_text(). Both implementations
+ * should produce identical output for the same input.
+ *
+ * Algorithm:
+ * 1. Strip accents/diacritics using Unicode NFD normalization (é → e, ñ → n)
+ * 2. Convert to lowercase
+ * 3. Remove non-alphanumeric characters (except spaces)
+ * 4. Collapse multiple spaces
+ * 5. Trim leading/trailing whitespace
  */
 export function normalizeText(text: string): string {
   if (!text) return '';
@@ -77,8 +84,16 @@ function tokenizeName(name: string): string[] {
  * - "Patrick Mahomes" does NOT match "Mahomes threw" (only 1 part)
  * - "Cowboys" matches "Cowboys win" (single-word, exact match)
  * - "AJ Brown" matches "AJ Brown caught" (2 parts match)
+ *
+ * @param entityName - Entity name to match
+ * @param text - Text to search in
+ * @param requiredMatches - Minimum tokens required (default: 2 for multi-word)
  */
-export function entityMatchesText(entityName: string, text: string): boolean {
+export function entityMatchesText(
+  entityName: string,
+  text: string,
+  requiredMatches: number = 2
+): boolean {
   const entityTokens = tokenizeName(entityName);
   const normalizedText = normalizeText(text);
 
@@ -105,8 +120,16 @@ export function entityMatchesText(entityName: string, text: string): boolean {
     }
   }
 
-  // Require at least 2 tokens to match
-  return matchCount >= 2;
+  // Require at least requiredMatches tokens to match
+  return matchCount >= requiredMatches;
+}
+
+/**
+ * Count how many meaningful tokens a name has after normalization.
+ * Used to identify "long names" (3+ parts) common in South American/Portuguese names.
+ */
+export function getNameTokenCount(name: string): number {
+  return tokenizeName(name).length;
 }
 
 /**
@@ -118,6 +141,13 @@ function escapeRegex(str: string): string {
 
 /**
  * Find all entities mentioned in a list of articles.
+ *
+ * Matching rules:
+ * - Teams: standard 2-token or single-word matching
+ * - Players with 2 name tokens: require 2 tokens to match
+ * - Players with 3+ name tokens (long names): if a team is mentioned in the
+ *   article, only require 1 token to match (helps with South American/Portuguese
+ *   players who have many surnames like "Estêvão Willian Almeida de Oliveira Gonçalves")
  *
  * @param articles - Articles to scan
  * @param entities - All entities to check for
@@ -131,6 +161,10 @@ export function findCoMentions(
   excludeEntityId?: string,
   excludeEntityType?: string
 ): CoMention[] {
+  // Separate teams and players for efficient lookup
+  const teams = entities.filter(e => e.type === 'team');
+  const players = entities.filter(e => e.type === 'player');
+
   // Track mention counts per entity
   const mentionCounts = new Map<string, { entity: Entity; count: number }>();
 
@@ -139,31 +173,60 @@ export function findCoMentions(
     if (!text) continue;
 
     // Track which entities we've already counted for this article
-    // (avoid counting same entity multiple times per article)
     const countedInArticle = new Set<string>();
 
-    for (const entity of entities) {
-      // Skip the entity being searched for
+    // First pass: find all teams mentioned in this article
+    const teamsInArticle: Entity[] = [];
+    for (const team of teams) {
       if (excludeEntityId && excludeEntityType) {
-        if (entity.id === excludeEntityId && entity.type === excludeEntityType) {
+        if (team.id === excludeEntityId && team.type === excludeEntityType) {
           continue;
         }
       }
 
-      const entityKey = `${entity.type}:${entity.id}`;
+      if (entityMatchesText(team.name, text)) {
+        teamsInArticle.push(team);
+        const teamKey = `team:${team.id}`;
+        countedInArticle.add(teamKey);
 
-      // Skip if already counted in this article
-      if (countedInArticle.has(entityKey)) continue;
-
-      // Check if entity matches
-      if (entityMatchesText(entity.name, text)) {
-        countedInArticle.add(entityKey);
-
-        const existing = mentionCounts.get(entityKey);
+        const existing = mentionCounts.get(teamKey);
         if (existing) {
           existing.count++;
         } else {
-          mentionCounts.set(entityKey, { entity, count: 1 });
+          mentionCounts.set(teamKey, { entity: team, count: 1 });
+        }
+      }
+    }
+
+    // Determine if we have any team context for relaxed player matching
+    const hasTeamContext = teamsInArticle.length > 0;
+
+    // Second pass: find players
+    for (const player of players) {
+      if (excludeEntityId && excludeEntityType) {
+        if (player.id === excludeEntityId && player.type === excludeEntityType) {
+          continue;
+        }
+      }
+
+      const playerKey = `player:${player.id}`;
+      if (countedInArticle.has(playerKey)) continue;
+
+      // For players with long names (3+ tokens), if a team is mentioned,
+      // only require 1 token match. This helps with South American/Portuguese
+      // players who often have multiple surnames.
+      const nameTokenCount = getNameTokenCount(player.name);
+      const isLongName = nameTokenCount >= 3;
+      const requiredMatches = hasTeamContext && isLongName ? 1 : 2;
+
+      if (entityMatchesText(player.name, text, requiredMatches)) {
+        countedInArticle.add(playerKey);
+
+        const existing = mentionCounts.get(playerKey);
+        if (existing) {
+          existing.count++;
+        } else {
+          mentionCounts.set(playerKey, { entity: player, count: 1 });
         }
       }
     }
@@ -182,7 +245,15 @@ export function findCoMentions(
  * Uses localStorage cache if available and fresh.
  */
 export async function loadEntitiesForSport(sport: string): Promise<Entity[]> {
-  const sportLower = sport.toLowerCase();
+  // Import centralized sport config
+  const { getSportById, getSportByIdLower } = await import('../types');
+
+  const sportConfig = getSportById(sport) || getSportByIdLower(sport);
+  if (!sportConfig) {
+    throw new Error(`Unknown sport: ${sport}`);
+  }
+
+  const sportLower = sportConfig.idLower;
   const cacheKey = 'scoracle_autocomplete_cache';
   const cacheExpiry = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -202,8 +273,8 @@ export async function loadEntitiesForSport(sport: string): Promise<Entity[]> {
     // Cache read failed, continue to fetch
   }
 
-  // Fetch from static JSON
-  const response = await fetch(`/data/${sportLower}.json`);
+  // Fetch from static JSON using centralized data file path
+  const response = await fetch(sportConfig.dataFile);
   if (!response.ok) {
     throw new Error(`Failed to load entity data for ${sport}`);
   }

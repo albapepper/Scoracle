@@ -4,6 +4,9 @@
  * Shared helper functions for DOM manipulation.
  */
 
+// Re-export getSportDisplay from centralized config
+export { getSportDisplay } from '../types';
+
 /**
  * Escape HTML to prevent XSS attacks.
  * Used when rendering user-provided or API-provided strings.
@@ -30,16 +33,4 @@ export function parseEntityParams(): {
     type: params.get('type'),
     id: params.get('id'),
   };
-}
-
-/**
- * Get display name for sport ID.
- */
-export function getSportDisplay(sportId: string): string {
-  const sportMap: Record<string, string> = {
-    'nba': 'NBA',
-    'nfl': 'NFL',
-    'football': 'Football',
-  };
-  return sportMap[sportId.toLowerCase()] || sportId.toUpperCase();
 }
