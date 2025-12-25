@@ -23,7 +23,9 @@ export async function getEntityStaticPaths(entityType: 'player' | 'team') {
         }
       }
     } catch (e) {
-      console.error(`Failed to load ${sport.id} data for ${entityType}:`, e);
+      if (import.meta.env.DEV) {
+        console.error(`Failed to load ${sport.id} data for ${entityType}:`, e);
+      }
     }
   }
   

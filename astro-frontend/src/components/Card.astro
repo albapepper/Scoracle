@@ -33,37 +33,37 @@ const { title, class: className = '' } = Astro.props;
 
 <style>
   .card-container {
-    background-color: white;
+    background-color: var(--bg-card);
     border-radius: 0.5rem;
-    border: 1px solid #e8e4db;
+    border: 1px solid var(--border);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     overflow: hidden;
   }
 
   :global(.dark) .card-container {
-    background-color: #2c2c2c;
-    border-color: #3e3e3e;
+    background-color: var(--bg-card-dark);
+    border-color: var(--border-dark);
   }
 
   .card-header {
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid #e8e4db;
-    background-color: #f8f6f1;
+    border-bottom: 1px solid var(--border);
+    background-color: var(--bg);
   }
 
   :global(.dark) .card-header {
-    border-bottom-color: #3e3e3e;
+    border-bottom-color: var(--border-dark);
     background-color: rgba(44, 44, 44, 0.5);
   }
 
   .card-title {
     font-weight: 600;
-    color: #3d3d3d;
+    color: var(--text);
     margin: 0;
   }
 
   :global(.dark) .card-title {
-    color: #e8e8e8;
+    color: var(--text-dark);
   }
 
   .card-body {
