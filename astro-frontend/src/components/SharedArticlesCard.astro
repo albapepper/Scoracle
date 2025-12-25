@@ -302,7 +302,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
           return data.team?.name || null;
         } else {
           const player = data.player || {};
-          return player.name || `${player.firstname || ''} ${player.lastname || ''}`.trim() || null;
+          return `${player.firstname || ''} ${player.lastname || ''}`.trim() || player.name || null;
         }
       } catch {
         return null;
