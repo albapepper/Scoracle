@@ -41,8 +41,9 @@ class TTLCache:
             self._store.pop(k, None)
 
 # Singleton instances for different data classes
-basic_cache = TTLCache(default_ttl=120, max_items=1000)
-stats_cache = TTLCache(default_ttl=300, max_items=500)
+# Increased limits to reduce cache eviction under load
+basic_cache = TTLCache(default_ttl=120, max_items=2000)
+stats_cache = TTLCache(default_ttl=300, max_items=1500)
 # Dedicated cache for widget or profile blobs that can be larger and tolerate longer TTL
-widget_cache = TTLCache(default_ttl=900, max_items=300)
+widget_cache = TTLCache(default_ttl=900, max_items=1000)
 # Removed percentile_cache after deprecating percentile feature

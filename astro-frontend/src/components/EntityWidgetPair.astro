@@ -211,6 +211,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 <script>
   import { escapeHtml, parseCoMentionsParams } from '../lib/utils/dom';
+  import { swrFetch } from '../lib/utils/api-fetcher';
 
   class EntityWidgetPair {
     private apiUrl!: string;
@@ -230,18 +231,23 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       // Set up button links
       this.setupButtonLinks();
 
-      // Fetch both entities
+      // Fetch both entities in parallel for faster loading
+      const fetchPromises: Promise<void>[] = [];
+
       if (this.params.sport && this.params.type && this.params.id) {
-        this.fetchEntity('primary', this.params.type, this.params.id);
+        fetchPromises.push(this.fetchEntity('primary', this.params.type, this.params.id));
       } else {
         this.showError('primary');
       }
 
       if (this.params.sport && this.params.coType && this.params.coId) {
-        this.fetchEntity('secondary', this.params.coType, this.params.coId);
+        fetchPromises.push(this.fetchEntity('secondary', this.params.coType, this.params.coId));
       } else {
         this.showError('secondary');
       }
+
+      // Execute both fetches in parallel
+      Promise.all(fetchPromises);
     }
 
     private setupButtonLinks() {
@@ -257,15 +263,17 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       }
     }
 
-    private async fetchEntity(prefix: string, type: string, id: string) {
+    private async fetchEntity(prefix: string, type: string, id: string): Promise<void> {
       const url = `${this.apiUrl}/widget/${type}/${id}?sport=${this.params.sport!.toUpperCase()}`;
 
       try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        // Use SWR fetch for caching and deduplication
+        const { data } = await swrFetch<Record<string, unknown>>(url, {
+          staleTime: 60 * 1000,      // Consider stale after 1 minute
+          cacheTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+        });
 
-        const data = await res.json();
-        if (data.error) {
+        if ((data as { error?: unknown }).error) {
           this.showError(prefix);
           return;
         }

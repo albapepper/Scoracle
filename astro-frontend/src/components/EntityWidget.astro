@@ -266,6 +266,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 <script>
   import { escapeHtml, parseEntityParams } from '../lib/utils/dom';
+  import { swrFetch, setPageData } from '../lib/utils/api-fetcher';
 
   class EntityWidget {
     private widget: HTMLElement | null = null;
@@ -326,14 +327,19 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       const url = `${this.apiUrl}/widget/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
 
       try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        // Use SWR fetch for caching and deduplication
+        const { data } = await swrFetch<Record<string, unknown>>(url, {
+          staleTime: 60 * 1000,      // Consider stale after 1 minute
+          cacheTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+        });
 
-        const data = await res.json();
-        if (data.error) {
+        if ((data as { error?: unknown }).error) {
           this.showError();
           return;
         }
+
+        // Share widget data with other components (e.g., ContentCard)
+        setPageData('widget', data);
 
         this.renderData(data);
       } catch {
