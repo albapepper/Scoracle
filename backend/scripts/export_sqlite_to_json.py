@@ -19,13 +19,13 @@ backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
 from app.database.local_dbs import (
-    list_all_players, 
-    list_all_teams, 
+    list_all_players,
+    list_all_teams,
     get_player_by_id,
     get_team_by_id,
     _db_path_for_sport,
-    _strip_specials_preserve_case,
 )
+from app.utils.text import strip_specials_preserve_case
 
 SPORTS = {
     "football": "FOOTBALL",
@@ -36,8 +36,12 @@ SPORTS = {
 def export_sport(sport_key: str, sport_code: str, output_dir: Path):
     """Export a single sport's data to JSON."""
     print(f"Exporting {sport_key} ({sport_code})...")
-    
+
     try:
+        # Debug: print which database we're using
+        db_path = _db_path_for_sport(sport_code)
+        print(f"  Using database: {db_path}")
+
         players = list_all_players(sport_code)
         teams = list_all_teams(sport_code)
         
@@ -45,7 +49,7 @@ def export_sport(sport_key: str, sport_code: str, output_dir: Path):
         players_items = []
         for pid, name in players:
             # Clean name - preserve the full name (remove special chars but keep all name parts)
-            cleaned_name = _strip_specials_preserve_case(name or "")
+            cleaned_name = strip_specials_preserve_case(name or "")
             
             # Get current team from database
             current_team = None
@@ -53,7 +57,7 @@ def export_sport(sport_key: str, sport_code: str, output_dir: Path):
                 row = get_player_by_id(sport_code, int(pid))
                 current_team = row.get("current_team") if row else None
                 if current_team:
-                    current_team = _strip_specials_preserve_case(current_team)
+                    current_team = strip_specials_preserve_case(current_team)
             except Exception:
                 current_team = None
             
@@ -66,7 +70,7 @@ def export_sport(sport_key: str, sport_code: str, output_dir: Path):
         # Get team details including league/division
         teams_items = []
         for tid, name in teams:
-            cleaned_name = _strip_specials_preserve_case(name or "")
+            cleaned_name = strip_specials_preserve_case(name or "")
             team_data = {"id": int(tid), "name": cleaned_name}
             # Get league/division from database
             try:
@@ -110,9 +114,9 @@ def export_sport(sport_key: str, sport_code: str, output_dir: Path):
 
 def main():
     """Main export function."""
-    # Output to frontend/public/data (will be bundled with build)
+    # Output to astro-frontend/public/data (will be bundled with build)
     repo_root = Path(__file__).parent.parent.parent
-    output_dir = repo_root / "frontend" / "public" / "data"
+    output_dir = repo_root / "astro-frontend" / "public" / "data"
     output_dir.mkdir(parents=True, exist_ok=True)
     
     print(f"Exporting SQLite data to JSON files in {output_dir}")
