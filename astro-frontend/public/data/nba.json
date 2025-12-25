@@ -1,3304 +1,3904 @@
 {
   "sport": "NBA",
-  "datasetVersion": "nba-626p-32t-2025-12-09",
-  "generatedAt": "2025-12-09T23:42:10.095977+00:00",
+  "datasetVersion": "nba-747p-31t-2025-12-25",
+  "generatedAt": "2025-12-25T02:41:19.704812+00:00",
   "players": {
-    "count": 626,
+    "count": 747,
     "items": [
+      {
+        "id": 4291,
+        "name": "A Bailey",
+        "currentTeam": null
+      },
       {
         "id": 4210,
         "name": "A Estrada",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 4084,
         "name": "A Flagler",
-        "currentTeam": "OKC"
+        "currentTeam": null
+      },
+      {
+        "id": 4299,
+        "name": "A Martin",
+        "currentTeam": null
+      },
+      {
+        "id": 4317,
+        "name": "A Newell",
+        "currentTeam": null
+      },
+      {
+        "id": 4242,
+        "name": "A OConnell",
+        "currentTeam": null
       },
       {
         "id": 4206,
         "name": "A Reese",
-        "currentTeam": "PHI"
+        "currentTeam": null
+      },
+      {
+        "id": 4287,
+        "name": "A Williams",
+        "currentTeam": null
       },
       {
         "id": 3443,
         "name": "AJ Green",
-        "currentTeam": "MIL"
+        "currentTeam": null
       },
       {
         "id": 4140,
         "name": "AJ Johnson",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 2890,
         "name": "AJ Lawson",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 195,
         "name": "Aaron Gordon",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 979,
         "name": "Aaron Holiday",
-        "currentTeam": "HOU"
+        "currentTeam": null
       },
       {
         "id": 2626,
         "name": "Aaron Nesmith",
-        "currentTeam": "IND"
+        "currentTeam": null
       },
       {
         "id": 2863,
         "name": "Aaron Wiggins",
-        "currentTeam": "OKC"
+        "currentTeam": null
       },
       {
         "id": 3955,
         "name": "Adama Sanogo",
-        "currentTeam": "CHI"
+        "currentTeam": null
       },
       {
         "id": 4156,
         "name": "Adem Bona",
-        "currentTeam": "PHI"
+        "currentTeam": null
+      },
+      {
+        "id": 4339,
+        "name": "Adou Thiero",
+        "currentTeam": null
       },
       {
         "id": 4153,
         "name": "Ajay Mitchell",
-        "currentTeam": "OKC"
+        "currentTeam": null
       },
       {
         "id": 248,
         "name": "Al Horford",
-        "currentTeam": "BOS"
+        "currentTeam": null
       },
       {
         "id": 84,
         "name": "Alec Burks",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 631,
         "name": "Alex Caruso",
-        "currentTeam": "OKC"
+        "currentTeam": null
       },
       {
         "id": 4151,
         "name": "Alex Ducas",
-        "currentTeam": "OKC"
+        "currentTeam": null
       },
       {
         "id": 313,
         "name": "Alex Len",
-        "currentTeam": "SAC"
+        "currentTeam": null
+      },
+      {
+        "id": 3924,
+        "name": "Alex Morales",
+        "currentTeam": null
       },
       {
         "id": 4184,
         "name": "Alex Sarr",
-        "currentTeam": "WAS"
+        "currentTeam": null
+      },
+      {
+        "id": 983,
+        "name": "Alize Johnson",
+        "currentTeam": null
       },
       {
         "id": 3503,
         "name": "Alondes Williams",
-        "currentTeam": "LAC"
+        "currentTeam": null
       },
       {
         "id": 2847,
         "name": "Alperen Sengun",
-        "currentTeam": "HOU"
+        "currentTeam": null
       },
       {
         "id": 3947,
         "name": "Amari Bailey",
-        "currentTeam": "BKN"
+        "currentTeam": null
       },
       {
         "id": 3977,
         "name": "Amen Thompson",
-        "currentTeam": "HOU"
+        "currentTeam": null
       },
       {
         "id": 2115,
         "name": "Amir Coffey",
-        "currentTeam": "LAC"
+        "currentTeam": null
       },
       {
         "id": 147,
         "name": "Andre Drummond",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 4047,
         "name": "Andre Jr Jackson",
-        "currentTeam": "MIL"
+        "currentTeam": null
       },
       {
         "id": 3964,
         "name": "Andrew Funk",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 3476,
         "name": "Andrew Nembhard",
-        "currentTeam": "IND"
+        "currentTeam": null
       },
       {
         "id": 548,
         "name": "Andrew Wiggins",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 1023,
         "name": "Anfernee Simons",
-        "currentTeam": "POR"
+        "currentTeam": null
       },
       {
         "id": 4010,
         "name": "Anthony Black",
-        "currentTeam": "ORL"
+        "currentTeam": null
       },
       {
         "id": 126,
         "name": "Anthony Davis",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 2584,
         "name": "Anthony Edwards",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 2590,
         "name": "Anthony Gill",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 4093,
         "name": "Anton Watson",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 4146,
         "name": "Antonio Reeves",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 2204,
         "name": "Anzejs Pasecniks",
-        "currentTeam": "MIL"
+        "currentTeam": null
       },
       {
         "id": 4148,
         "name": "Ariel Hukporti",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 4129,
         "name": "Armando Bacot",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
         "id": 4128,
         "name": "Armel Traore",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 3971,
         "name": "Ausar Thompson",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 2845,
         "name": "Austin Reaves",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 2802,
         "name": "Ayo Dosunmu",
-        "currentTeam": "CHI"
+        "currentTeam": null
+      },
+      {
+        "id": 4332,
+        "name": "B Barnhizer",
+        "currentTeam": null
+      },
+      {
+        "id": 4241,
+        "name": "B Buie",
+        "currentTeam": null
       },
       {
         "id": 4209,
         "name": "B Hinson",
-        "currentTeam": "GSW"
+        "currentTeam": null
+      },
+      {
+        "id": 4240,
+        "name": "B Saraf",
+        "currentTeam": null
+      },
+      {
+        "id": 4316,
+        "name": "B Williams",
+        "currentTeam": null
       },
       {
         "id": 724,
         "name": "Bam Adebayo",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 4092,
         "name": "Baylor Scheierman",
-        "currentTeam": "BOS"
+        "currentTeam": null
       },
       {
         "id": 3979,
         "name": "Ben Sheppard",
-        "currentTeam": "IND"
+        "currentTeam": null
       },
       {
         "id": 481,
         "name": "Ben Simmons",
-        "currentTeam": "LAC"
+        "currentTeam": null
       },
       {
         "id": 3466,
         "name": "Bennedict Mathurin",
-        "currentTeam": "IND"
+        "currentTeam": null
       },
       {
         "id": 4036,
         "name": "Bilal Coulibaly",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 54,
         "name": "Bismack Biyombo",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 3499,
         "name": "Blake Wesley",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 431,
         "name": "Bobby Portis",
-        "currentTeam": "MIL"
+        "currentTeam": null
       },
       {
         "id": 4113,
         "name": "Bobi Klintman",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 743,
         "name": "Bogdan Bogdanovic",
-        "currentTeam": "LAC"
+        "currentTeam": null
       },
       {
         "id": 1849,
         "name": "Bol Bol",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 2816,
         "name": "Bones Hyland",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 4167,
         "name": "Boogie Ellis",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 45,
         "name": "Bradley Beal",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 4173,
         "name": "Branden Carlson",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 3975,
         "name": "Brandin Podziemski",
-        "currentTeam": "GSW"
+        "currentTeam": null
       },
       {
         "id": 2792,
         "name": "Brandon Boston Jr",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 1853,
         "name": "Brandon Clarke",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
-        "id": 63,
+        "id": 260,
         "name": "Brandon Ingram",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 3950,
         "name": "Brandon Miller",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 3398,
         "name": "Brandon Williams",
-        "currentTeam": "DAL"
+        "currentTeam": null
       },
       {
         "id": 3091,
         "name": "Braxton Key",
-        "currentTeam": "LAC"
+        "currentTeam": null
       },
       {
         "id": 4034,
         "name": "Brice Sensabaugh",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 2654,
         "name": "Brodric Thomas",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 4125,
         "name": "Bronny James",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 323,
         "name": "Brook Lopez",
-        "currentTeam": "MIL"
+        "currentTeam": null
       },
       {
         "id": 944,
         "name": "Bruce Brown",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 1858,
         "name": "Bruno Fernando",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 3469,
         "name": "Bryce McGowens",
-        "currentTeam": "POR"
+        "currentTeam": null
       },
       {
         "id": 4182,
         "name": "Bub Carrington",
-        "currentTeam": "WAS"
+        "currentTeam": null
+      },
+      {
+        "id": 3417,
+        "name": "Buddy Boeheim",
+        "currentTeam": null
       },
       {
         "id": 236,
         "name": "Buddy Hield",
-        "currentTeam": "GSW"
+        "currentTeam": null
+      },
+      {
+        "id": 4295,
+        "name": "C Bryant",
+        "currentTeam": null
+      },
+      {
+        "id": 4323,
+        "name": "C Coward",
+        "currentTeam": null
+      },
+      {
+        "id": 4320,
+        "name": "C Flagg",
+        "currentTeam": null
+      },
+      {
+        "id": 4300,
+        "name": "C Hepburn",
+        "currentTeam": null
+      },
+      {
+        "id": 4250,
+        "name": "C Huntley",
+        "currentTeam": null
+      },
+      {
+        "id": 4259,
+        "name": "C Johnson",
+        "currentTeam": null
+      },
+      {
+        "id": 4322,
+        "name": "C Lanier",
+        "currentTeam": null
+      },
+      {
+        "id": 4280,
+        "name": "C Love",
+        "currentTeam": null
+      },
+      {
+        "id": 4314,
+        "name": "C Matthews",
+        "currentTeam": null
+      },
+      {
+        "id": 4301,
+        "name": "C MurrayBoyles",
+        "currentTeam": null
+      },
+      {
+        "id": 4244,
+        "name": "C Shumate",
+        "currentTeam": null
+      },
+      {
+        "id": 4331,
+        "name": "C Youngblood",
+        "currentTeam": null
       },
       {
         "id": 347,
         "name": "CJ McCollum",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 2801,
         "name": "Cade Cunningham",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 4213,
         "name": "Caleb Daniels",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 3449,
         "name": "Caleb Houstan",
-        "currentTeam": "ORL"
+        "currentTeam": null
       },
       {
         "id": 2242,
         "name": "Caleb Martin",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 4121,
         "name": "Cam Christie",
-        "currentTeam": "LAC"
+        "currentTeam": null
       },
       {
         "id": 1889,
         "name": "Cam Reddish",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 4132,
         "name": "Cam Spencer",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
         "id": 2855,
         "name": "Cam Thomas",
-        "currentTeam": "BKN"
+        "currentTeam": null
       },
       {
         "id": 3978,
         "name": "Cam Whitmore",
-        "currentTeam": "HOU"
+        "currentTeam": null
       },
       {
         "id": 1871,
         "name": "Cameron Johnson",
-        "currentTeam": "BKN"
+        "currentTeam": null
       },
       {
         "id": 417,
         "name": "Cameron Payne",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 317,
         "name": "Caris LeVert",
-        "currentTeam": "CLE"
+        "currentTeam": null
       },
       {
         "id": 4009,
         "name": "Cason Wallace",
-        "currentTeam": "OKC"
+        "currentTeam": null
       },
       {
         "id": 2790,
         "name": "Charles Bassey",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 4023,
         "name": "Charles Bediako",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 2111,
         "name": "Charlie Brown Jr",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 3448,
         "name": "Chet Holmgren",
-        "currentTeam": "OKC"
+        "currentTeam": null
       },
       {
         "id": 745,
         "name": "Chris Boucher",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 2803,
         "name": "Chris Duarte",
-        "currentTeam": "CHI"
+        "currentTeam": null
       },
       {
         "id": 3997,
         "name": "Chris Livingston",
-        "currentTeam": "MIL"
+        "currentTeam": null
+      },
+      {
+        "id": 4340,
+        "name": "Chris Manon",
+        "currentTeam": null
       },
       {
         "id": 415,
         "name": "Chris Paul",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 3420,
         "name": "Christian Braun",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 3458,
         "name": "Christian Koloko",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 1883,
         "name": "Chuma Okeke",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 92,
         "name": "Clint Capela",
-        "currentTeam": "ATL"
+        "currentTeam": null
       },
       {
         "id": 1900,
         "name": "Coby White",
-        "currentTeam": "CHI"
+        "currentTeam": null
       },
       {
         "id": 1879,
         "name": "Cody Martin",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 4181,
         "name": "Cody Williams",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 4020,
         "name": "Colby Jones",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 2563,
         "name": "Cole Anthony",
-        "currentTeam": "ORL"
+        "currentTeam": null
       },
       {
         "id": 3493,
         "name": "Cole Swider",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 3987,
         "name": "Colin Castleton",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 3441,
         "name": "Collin Gillespie",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 1021,
         "name": "Collin Sexton",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 2825,
         "name": "Corey Kispert",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 4216,
         "name": "Cormac Ryan",
-        "currentTeam": "OKC"
+        "currentTeam": null
       },
       {
         "id": 287,
         "name": "Cory Joseph",
-        "currentTeam": "ORL"
+        "currentTeam": null
       },
       {
         "id": 4043,
         "name": "Craig Jr Porter",
-        "currentTeam": "CLE"
+        "currentTeam": null
+      },
+      {
+        "id": 4330,
+        "name": "Curtis Jones",
+        "currentTeam": null
+      },
+      {
+        "id": 4246,
+        "name": "D Batcho",
+        "currentTeam": null
+      },
+      {
+        "id": 4279,
+        "name": "D Cardwell",
+        "currentTeam": null
+      },
+      {
+        "id": 4310,
+        "name": "D Dainja",
+        "currentTeam": null
+      },
+      {
+        "id": 4266,
+        "name": "D Harper",
+        "currentTeam": null
+      },
+      {
+        "id": 4271,
+        "name": "D Powell",
+        "currentTeam": null
+      },
+      {
+        "id": 4249,
+        "name": "D Rodman",
+        "currentTeam": null
       },
       {
         "id": 4083,
         "name": "D Skapintsev",
-        "currentTeam": "BOS"
+        "currentTeam": null
+      },
+      {
+        "id": 4269,
+        "name": "D Wolf",
+        "currentTeam": null
       },
       {
         "id": 462,
         "name": "DAngelo Russell",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 2797,
         "name": "DJ Carton",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 2921,
         "name": "DJ Steward",
-        "currentTeam": "CHI"
+        "currentTeam": null
       },
       {
         "id": 1948,
         "name": "DaQuan Jeffries",
-        "currentTeam": "CHA"
+        "currentTeam": null
+      },
+      {
+        "id": 4107,
+        "name": "DaRon II Holmes",
+        "currentTeam": null
       },
       {
         "id": 3478,
         "name": "Daeqwon Plowden",
-        "currentTeam": "ATL"
+        "currentTeam": null
       },
       {
         "id": 3154,
         "name": "Daishen Nix",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 2788,
         "name": "Dalano Banton",
-        "currentTeam": "POR"
+        "currentTeam": null
       },
       {
         "id": 3494,
         "name": "Dalen Terry",
-        "currentTeam": "CHI"
+        "currentTeam": null
       },
       {
         "id": 4126,
         "name": "Dalton Knecht",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
-        "id": 79,
+        "id": 319,
         "name": "Damian Lillard",
-        "currentTeam": "MIL"
+        "currentTeam": null
       },
       {
         "id": 3986,
         "name": "Damion Baugh",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 599,
         "name": "Damion Lee",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 1859,
         "name": "Daniel Gafford",
-        "currentTeam": "DAL"
+        "currentTeam": null
       },
       {
         "id": 886,
         "name": "Daniel Theis",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 4112,
         "name": "Daniss Jenkins",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 164,
         "name": "Dante Exum",
-        "currentTeam": "DAL"
+        "currentTeam": null
       },
       {
         "id": 468,
         "name": "Dario Saric",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 3945,
         "name": "Dariq Whitehead",
-        "currentTeam": "BKN"
+        "currentTeam": null
       },
       {
         "id": 1860,
         "name": "Darius Garland",
-        "currentTeam": "CLE"
+        "currentTeam": null
       },
       {
         "id": 2804,
         "name": "David Duke Jr",
-        "currentTeam": "SAS"
+        "currentTeam": null
+      },
+      {
+        "id": 4158,
+        "name": "David Jones",
+        "currentTeam": null
       },
       {
         "id": 3483,
         "name": "David Roddy",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 2834,
         "name": "Davion Mitchell",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 2848,
         "name": "DayRon Sharpe",
-        "currentTeam": "BKN"
+        "currentTeam": null
       },
       {
         "id": 776,
         "name": "DeAaron Fox",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 1868,
         "name": "DeAndre Hunter",
-        "currentTeam": "CLE"
+        "currentTeam": null
       },
       {
         "id": 286,
         "name": "DeAndre Jordan",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 998,
         "name": "DeAnthony Melton",
-        "currentTeam": "GSW"
+        "currentTeam": null
       },
       {
         "id": 136,
         "name": "DeMar DeRozan",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 2392,
         "name": "Dean Wade",
-        "currentTeam": "CLE"
+        "currentTeam": null
       },
       {
         "id": 930,
         "name": "Deandre Ayton",
-        "currentTeam": "POR"
+        "currentTeam": null
       },
       {
         "id": 382,
         "name": "Dejounte Murray",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 564,
         "name": "Delon Wright",
-        "currentTeam": "NYK"
+        "currentTeam": null
+      },
+      {
+        "id": 4185,
+        "name": "Demin Egor",
+        "currentTeam": null
       },
       {
         "id": 2564,
         "name": "Deni Avdija",
-        "currentTeam": "POR"
+        "currentTeam": null
       },
       {
         "id": 472,
         "name": "Dennis Schroder",
-        "currentTeam": "GSW"
+        "currentTeam": null
       },
       {
         "id": 876,
         "name": "Dennis Smith Jr",
-        "currentTeam": "BKN"
+        "currentTeam": null
       },
       {
         "id": 4044,
         "name": "Dereck II Lively",
-        "currentTeam": "DAL"
+        "currentTeam": null
       },
       {
         "id": 3486,
         "name": "Dereon Seabron",
-        "currentTeam": "DET"
+        "currentTeam": null
+      },
+      {
+        "id": 4338,
+        "name": "Derik Queen",
+        "currentTeam": null
       },
       {
         "id": 283,
         "name": "Derrick Jones Jr",
-        "currentTeam": "LAC"
+        "currentTeam": null
       },
       {
         "id": 897,
         "name": "Derrick White",
-        "currentTeam": "BOS"
+        "currentTeam": null
       },
       {
         "id": 2568,
         "name": "Desmond Bane",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
         "id": 64,
         "name": "Devin Booker",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 4165,
         "name": "Devin Carter",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 2661,
         "name": "Devin Vassell",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 973,
         "name": "Devonte Graham",
-        "currentTeam": "POR"
+        "currentTeam": null
       },
       {
         "id": 749,
         "name": "Dillon Brooks",
-        "currentTeam": "HOU"
+        "currentTeam": null
       },
       {
         "id": 4152,
         "name": "Dillon Jones",
-        "currentTeam": "OKC"
+        "currentTeam": null
       },
       {
         "id": 463,
         "name": "Domantas Sabonis",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 3415,
         "name": "Dominick Barlow",
-        "currentTeam": "ATL"
+        "currentTeam": null
       },
       {
         "id": 4164,
         "name": "Donovan Clingan",
-        "currentTeam": "POR"
+        "currentTeam": null
       },
       {
-        "id": 333,
+        "id": 840,
         "name": "Donovan Mitchell",
-        "currentTeam": "CLE"
+        "currentTeam": null
       },
       {
         "id": 962,
         "name": "Donte DiVincenzo",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 175,
         "name": "Dorian FinneySmith",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 351,
         "name": "Doug McDermott",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 204,
         "name": "Draymond Green",
-        "currentTeam": "GSW"
+        "currentTeam": null
       },
       {
         "id": 966,
         "name": "Drew Eubanks",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 3995,
         "name": "Drew Peterson",
-        "currentTeam": "BOS"
+        "currentTeam": null
       },
       {
         "id": 3999,
         "name": "Drew Timme",
-        "currentTeam": "BKN"
+        "currentTeam": null
       },
       {
         "id": 3360,
         "name": "Dru Smith",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 2860,
         "name": "Duane Washington Jr",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 1018,
         "name": "Duncan Robinson",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 4018,
         "name": "Duop Reath",
-        "currentTeam": "POR"
+        "currentTeam": null
       },
       {
         "id": 433,
         "name": "Dwight Powell",
-        "currentTeam": "DAL"
+        "currentTeam": null
       },
       {
         "id": 3406,
         "name": "Dyson Daniels",
-        "currentTeam": "ATL"
+        "currentTeam": null
       },
       {
         "id": 4238,
         "name": "E Harkless",
-        "currentTeam": "LAC"
+        "currentTeam": null
+      },
+      {
+        "id": 4302,
+        "name": "E NDiaye",
+        "currentTeam": null
       },
       {
         "id": 4124,
         "name": "EJ Harkless",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 3462,
         "name": "EJ Liddell",
-        "currentTeam": "CHI"
+        "currentTeam": null
       },
       {
         "id": 418,
         "name": "Elfrid Payton",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 4103,
         "name": "Emanuel Miller",
-        "currentTeam": "DAL"
+        "currentTeam": null
       },
       {
         "id": 3956,
         "name": "Emoni Bates",
-        "currentTeam": "CLE"
+        "currentTeam": null
       },
       {
         "id": 4118,
         "name": "Enrique Freeman",
-        "currentTeam": "IND"
+        "currentTeam": null
       },
       {
         "id": 196,
         "name": "Eric Gordon",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 3237,
         "name": "Ethan Thompson",
-        "currentTeam": "ORL"
+        "currentTeam": null
       },
       {
         "id": 2838,
         "name": "Eugene Omoruyi",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 2835,
         "name": "Evan Mobley",
-        "currentTeam": "CLE"
+        "currentTeam": null
+      },
+      {
+        "id": 4272,
+        "name": "F Zeng",
+        "currentTeam": null
       },
       {
         "id": 290,
         "name": "Frank Kaminsky",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 2858,
         "name": "Franz Wagner",
-        "currentTeam": "ORL"
+        "currentTeam": null
       },
       {
         "id": 527,
         "name": "Fred VanVleet",
-        "currentTeam": "HOU"
+        "currentTeam": null
+      },
+      {
+        "id": 4260,
+        "name": "G Madsen",
+        "currentTeam": null
       },
       {
         "id": 3994,
         "name": "GG Jackson",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
         "id": 4109,
         "name": "Gabe McGlothan",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 1775,
         "name": "Gabe Vincent",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 507,
         "name": "Garrett Temple",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 2327,
         "name": "Garrison Mathews",
-        "currentTeam": "ATL"
+        "currentTeam": null
       },
       {
         "id": 220,
         "name": "Gary Harris",
-        "currentTeam": "ORL"
+        "currentTeam": null
       },
       {
         "id": 593,
         "name": "Gary Payton II",
-        "currentTeam": "GSW"
+        "currentTeam": null
       },
       {
         "id": 1058,
         "name": "Gary Trent Jr",
-        "currentTeam": "MIL"
+        "currentTeam": null
       },
       {
         "id": 391,
         "name": "Georges Niang",
-        "currentTeam": "CLE"
+        "currentTeam": null
       },
       {
         "id": 20,
         "name": "Giannis Antetokounmpo",
-        "currentTeam": "MIL"
+        "currentTeam": null
       },
       {
         "id": 1848,
         "name": "Goga Bitadze",
-        "currentTeam": "ORL"
+        "currentTeam": null
+      },
+      {
+        "id": 4194,
+        "name": "Gonzalez Hugo",
+        "currentTeam": null
       },
       {
         "id": 4027,
         "name": "Gradey Dick",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 1901,
         "name": "Grant Williams",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 926,
         "name": "Grayson Allen",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 904,
         "name": "Guerschon Yabusele",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 3485,
         "name": "Gui Santos",
-        "currentTeam": "GSW"
+        "currentTeam": null
+      },
+      {
+        "id": 4252,
+        "name": "H Dickinson",
+        "currentTeam": null
+      },
+      {
+        "id": 4267,
+        "name": "H Sallis",
+        "currentTeam": null
       },
       {
         "id": 36,
         "name": "Harrison Barnes",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 4170,
         "name": "Harrison Ingram",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 4041,
         "name": "Harry III Giles",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 1815,
         "name": "Haywood Highsmith",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 2822,
         "name": "Herbert Jones",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 3967,
         "name": "Hunter Tyson",
-        "currentTeam": "DEN"
+        "currentTeam": null
+      },
+      {
+        "id": 4014,
+        "name": "Ibou Badji",
+        "currentTeam": null
       },
       {
         "id": 2636,
         "name": "Immanuel Quickley",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 4168,
         "name": "Isaac Jones",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 2630,
         "name": "Isaac Okoro",
-        "currentTeam": "CLE"
+        "currentTeam": null
       },
       {
         "id": 4178,
         "name": "Isaiah Collier",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 4166,
         "name": "Isaiah Crawford",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 978,
         "name": "Isaiah Hartenstein",
-        "currentTeam": "OKC"
+        "currentTeam": null
       },
       {
         "id": 2817,
         "name": "Isaiah Jackson",
-        "currentTeam": "IND"
+        "currentTeam": null
       },
       {
         "id": 2604,
         "name": "Isaiah Joe",
-        "currentTeam": "OKC"
+        "currentTeam": null
+      },
+      {
+        "id": 2829,
+        "name": "Isaiah Livers",
+        "currentTeam": null
       },
       {
         "id": 3472,
         "name": "Isaiah Mobley",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 4137,
         "name": "Isaiah Stevens",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 2648,
         "name": "Isaiah Stewart",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 3982,
         "name": "Isaiah Wong",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 575,
         "name": "Ivica Zubac",
-        "currentTeam": "LAC"
+        "currentTeam": null
+      },
+      {
+        "id": 4337,
+        "name": "J Beringer",
+        "currentTeam": null
+      },
+      {
+        "id": 4304,
+        "name": "J Broome",
+        "currentTeam": null
+      },
+      {
+        "id": 4277,
+        "name": "J Cooke",
+        "currentTeam": null
+      },
+      {
+        "id": 4253,
+        "name": "J Fears",
+        "currentTeam": null
       },
       {
         "id": 4203,
         "name": "J Oduro",
-        "currentTeam": "NOP"
+        "currentTeam": null
+      },
+      {
+        "id": 4321,
+        "name": "J Richardson",
+        "currentTeam": null
+      },
+      {
+        "id": 4292,
+        "name": "J Small",
+        "currentTeam": null
+      },
+      {
+        "id": 4248,
+        "name": "J Telfort",
+        "currentTeam": null
+      },
+      {
+        "id": 4265,
+        "name": "J Tonje",
+        "currentTeam": null
+      },
+      {
+        "id": 4261,
+        "name": "J Watkins",
+        "currentTeam": null
       },
       {
         "id": 3429,
         "name": "JD Davison",
-        "currentTeam": "BOS"
+        "currentTeam": null
       },
       {
         "id": 2856,
         "name": "JT Thor",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 1881,
         "name": "Ja Morant",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
         "id": 4177,
         "name": "JaKobe Walter",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 3489,
         "name": "Jabari Smith Jr",
-        "currentTeam": "HOU"
+        "currentTeam": null
       },
       {
         "id": 3496,
         "name": "Jabari Walker",
-        "currentTeam": "POR"
+        "currentTeam": null
       },
       {
         "id": 1060,
         "name": "Jack McVeigh",
-        "currentTeam": "HOU"
+        "currentTeam": null
       },
       {
         "id": 4115,
         "name": "Jackson Rowe",
-        "currentTeam": "GSW"
+        "currentTeam": null
       },
       {
         "id": 3892,
         "name": "Jacob Gilyard",
-        "currentTeam": "CLE"
+        "currentTeam": null
       },
       {
         "id": 4007,
         "name": "Jacob Toppin",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 3407,
         "name": "Jaden Hardy",
-        "currentTeam": "DAL"
+        "currentTeam": null
       },
       {
         "id": 3451,
         "name": "Jaden Ivey",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 2621,
         "name": "Jaden McDaniels",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 2851,
         "name": "Jaden Springer",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 121,
         "name": "Jae Crowder",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 2650,
         "name": "JaeSean Tate",
-        "currentTeam": "HOU"
+        "currentTeam": null
       },
       {
         "id": 4110,
         "name": "Jahmir Young",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 2637,
         "name": "Jahmius Ramsey",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 3460,
         "name": "Jake LaRavia",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 428,
         "name": "Jakob Poeltl",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 4161,
         "name": "Jalen Bridges",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 946,
         "name": "Jalen Brunson",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 2990,
         "name": "Jalen Crutcher",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 3433,
         "name": "Jalen Duren",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 2810,
         "name": "Jalen Green",
-        "currentTeam": "HOU"
+        "currentTeam": null
       },
       {
         "id": 3990,
         "name": "Jalen HoodSchifino",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 2819,
         "name": "Jalen Johnson",
-        "currentTeam": "ATL"
+        "currentTeam": null
       },
       {
         "id": 1880,
         "name": "Jalen McDaniels",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 3965,
         "name": "Jalen Pickett",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 4021,
         "name": "Jalen Slawson",
-        "currentTeam": "ORL"
+        "currentTeam": null
       },
       {
         "id": 2644,
         "name": "Jalen Smith",
-        "currentTeam": "CHI"
+        "currentTeam": null
       },
       {
         "id": 2852,
         "name": "Jalen Suggs",
-        "currentTeam": "ORL"
+        "currentTeam": null
       },
       {
         "id": 3504,
         "name": "Jalen Williams",
-        "currentTeam": "OKC"
+        "currentTeam": null
       },
       {
         "id": 3946,
         "name": "Jalen Wilson",
-        "currentTeam": "BKN"
+        "currentTeam": null
       },
       {
         "id": 3424,
         "name": "Jamal Cain",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 383,
         "name": "Jamal Murray",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 4176,
         "name": "Jamal Shead",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 3418,
         "name": "Jamaree Bouyea",
-        "currentTeam": "MIL"
+        "currentTeam": null
       },
       {
         "id": 4104,
         "name": "Jamarion Sharp",
-        "currentTeam": "DAL"
+        "currentTeam": null
       },
       {
         "id": 4139,
         "name": "James Akinjo",
-        "currentTeam": "MIL"
+        "currentTeam": null
       },
       {
         "id": 216,
         "name": "James Harden",
-        "currentTeam": "LAC"
+        "currentTeam": null
       },
       {
         "id": 274,
         "name": "James Johnson",
-        "currentTeam": "IND"
+        "currentTeam": null
       },
       {
         "id": 2666,
         "name": "James Wiseman",
-        "currentTeam": "IND"
+        "currentTeam": null
       },
       {
         "id": 4085,
         "name": "Jamie Jr Jaquez",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 4172,
         "name": "Jamison Battle",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 3981,
         "name": "Jarace Walker",
-        "currentTeam": "IND"
+        "currentTeam": null
       },
       {
         "id": 2796,
         "name": "Jared Butler",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 4159,
         "name": "Jared McCain",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 3481,
         "name": "Jared Rhoden",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 982,
         "name": "Jaren Jackson Jr",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
         "id": 1036,
         "name": "Jarred Vanderbilt",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 727,
         "name": "Jarrett Allen",
-        "currentTeam": "CLE"
+        "currentTeam": null
       },
       {
         "id": 1855,
         "name": "Jarrett Culver",
-        "currentTeam": "ORL"
+        "currentTeam": null
+      },
+      {
+        "id": 3397,
+        "name": "Jarron Cumberland",
+        "currentTeam": null
       },
       {
         "id": 2842,
         "name": "Jason Preston",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 3468,
         "name": "Javante McCoy",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 2404,
         "name": "Javonte Green",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 2917,
         "name": "Javonte Smart",
-        "currentTeam": "ORL"
+        "currentTeam": null
       },
       {
         "id": 1864,
         "name": "Jaxson Hayes",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 2814,
         "name": "Jay Huff",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
         "id": 75,
         "name": "Jaylen Brown",
-        "currentTeam": "BOS"
+        "currentTeam": null
       },
       {
         "id": 4000,
         "name": "Jaylen Clark",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 4006,
         "name": "Jaylen Martin",
-        "currentTeam": "BKN"
+        "currentTeam": null
       },
       {
         "id": 1882,
         "name": "Jaylen Nowell",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 4133,
         "name": "Jaylen Wells",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
         "id": 3505,
         "name": "Jaylin Williams",
-        "currentTeam": "OKC"
+        "currentTeam": null
       },
       {
         "id": 4102,
         "name": "Jaylon Tyson",
-        "currentTeam": "CLE"
+        "currentTeam": null
       },
       {
-        "id": 666,
+        "id": 882,
         "name": "Jayson Tatum",
-        "currentTeam": "BOS"
+        "currentTeam": null
       },
       {
         "id": 3996,
         "name": "Jazian Gortman",
-        "currentTeam": "DAL"
+        "currentTeam": null
       },
       {
         "id": 3931,
         "name": "Jeenathan Williams",
-        "currentTeam": "HOU"
+        "currentTeam": null
       },
       {
         "id": 2878,
         "name": "Jeff Dowtin",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 207,
         "name": "Jeff Green",
-        "currentTeam": "HOU"
+        "currentTeam": null
       },
       {
         "id": 200,
         "name": "Jerami Grant",
-        "currentTeam": "POR"
+        "currentTeam": null
       },
       {
         "id": 2846,
         "name": "Jeremiah RobinsonEarl",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 3490,
         "name": "Jeremy Sochan",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 2849,
         "name": "Jericho Sims",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 4143,
         "name": "Jesse Edwards",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 4011,
         "name": "Jett Howard",
-        "currentTeam": "ORL"
+        "currentTeam": null
       },
       {
         "id": 949,
         "name": "Jevon Carter",
-        "currentTeam": "CHI"
+        "currentTeam": null
       },
       {
         "id": 86,
         "name": "Jimmy Butler",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 1485,
         "name": "Jock Landale",
-        "currentTeam": "HOU"
+        "currentTeam": null
       },
       {
         "id": 258,
         "name": "Joe Ingles",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
-        "id": 60,
+        "id": 159,
         "name": "Joel Embiid",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 761,
         "name": "John Collins",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 2177,
         "name": "John Konchar",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
         "id": 3428,
         "name": "Johnny Davis",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 4119,
         "name": "Johnny Furphy",
-        "currentTeam": "IND"
+        "currentTeam": null
       },
       {
         "id": 3454,
         "name": "Johnny Juzang",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 525,
         "name": "Jonas Valanciunas",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 801,
         "name": "Jonathan Isaac",
-        "currentTeam": "ORL"
+        "currentTeam": null
       },
       {
         "id": 2827,
         "name": "Jonathan Kuminga",
-        "currentTeam": "GSW"
+        "currentTeam": null
       },
       {
         "id": 4175,
         "name": "Jonathan Mogbo",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 109,
         "name": "Jordan Clarkson",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 3341,
         "name": "Jordan Goodwin",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 4002,
         "name": "Jordan Hawkins",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 997,
         "name": "Jordan McLaughlin",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 3984,
         "name": "Jordan Miller",
-        "currentTeam": "LAC"
+        "currentTeam": null
       },
       {
         "id": 1887,
         "name": "Jordan Poole",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 4219,
         "name": "Jordan Tucker",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 3943,
         "name": "Jordan Walsh",
-        "currentTeam": "BOS"
+        "currentTeam": null
       },
       {
         "id": 2941,
         "name": "Jose Alvarado",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 2799,
         "name": "Josh Christopher",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 2808,
         "name": "Josh Giddey",
-        "currentTeam": "CHI"
+        "currentTeam": null
       },
       {
         "id": 2593,
         "name": "Josh Green",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 791,
         "name": "Josh Hart",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 3470,
         "name": "Josh Minott",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 1010,
         "name": "Josh Okogie",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 446,
         "name": "Josh Richardson",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 242,
         "name": "Jrue Holiday",
-        "currentTeam": "BOS"
+        "currentTeam": null
       },
       {
         "id": 4160,
         "name": "Judah Mintz",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 3576,
         "name": "Jules Bernard",
-        "currentTeam": "CLE"
+        "currentTeam": null
       },
       {
         "id": 3425,
         "name": "Julian Champagnie",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 3954,
         "name": "Julian Phillips",
-        "currentTeam": "CHI"
+        "currentTeam": null
       },
       {
         "id": 3966,
         "name": "Julian Strawther",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 441,
         "name": "Julius Randle",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 2798,
         "name": "Justin Champagnie",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 4217,
         "name": "Justin Edwards",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 3714,
         "name": "Justin Minaya",
-        "currentTeam": "POR"
+        "currentTeam": null
       },
       {
         "id": 398,
         "name": "Jusuf Nurkic",
-        "currentTeam": "PHX"
+        "currentTeam": null
+      },
+      {
+        "id": 4264,
+        "name": "K Brea",
+        "currentTeam": null
       },
       {
         "id": 4204,
         "name": "K Brooks",
-        "currentTeam": "NOP"
+        "currentTeam": null
+      },
+      {
+        "id": 4294,
+        "name": "K Jakucionis",
+        "currentTeam": null
+      },
+      {
+        "id": 4336,
+        "name": "K Knueppel",
+        "currentTeam": null
+      },
+      {
+        "id": 4273,
+        "name": "K Maluach",
+        "currentTeam": null
+      },
+      {
+        "id": 4255,
+        "name": "K Richmond",
+        "currentTeam": null
+      },
+      {
+        "id": 4247,
+        "name": "K Sanders",
+        "currentTeam": null
       },
       {
         "id": 4096,
         "name": "KJ Simpson",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 2823,
         "name": "Kai Jones",
-        "currentTeam": "LAC"
+        "currentTeam": null
       },
       {
         "id": 519,
         "name": "KarlAnthony Towns",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 3467,
         "name": "Karlo Matkovic",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 314,
         "name": "Kawhi Leonard",
-        "currentTeam": "LAC"
+        "currentTeam": null
       },
       {
         "id": 3259,
         "name": "Keaton Wallace",
-        "currentTeam": "ATL"
+        "currentTeam": null
       },
       {
         "id": 3475,
         "name": "Keegan Murray",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 934,
         "name": "Keita BatesDiop",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 1872,
         "name": "Keldon Johnson",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 4138,
         "name": "Kelel Ware",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 404,
         "name": "Kelly Olynyk",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 407,
         "name": "Kelly Oubre Jr",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 3423,
         "name": "Kendall Brown",
-        "currentTeam": "IND"
+        "currentTeam": null
+      },
+      {
+        "id": 3426,
+        "name": "Kennedy Chandler",
+        "currentTeam": null
       },
       {
         "id": 3463,
         "name": "Kenneth Lofton Jr",
-        "currentTeam": "CHI"
+        "currentTeam": null
       },
       {
         "id": 1044,
         "name": "Kenrich Williams",
-        "currentTeam": "OKC"
+        "currentTeam": null
       },
       {
         "id": 89,
         "name": "Kentavious CaldwellPope",
-        "currentTeam": "ORL"
+        "currentTeam": null
       },
       {
         "id": 2617,
         "name": "Kenyon Martin Jr",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 3436,
         "name": "Keon Ellis",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 2820,
         "name": "Keon Johnson",
-        "currentTeam": "BKN"
+        "currentTeam": null
       },
       {
         "id": 4134,
         "name": "Keshad Johnson",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 2805,
         "name": "Kessler Edwards",
-        "currentTeam": "DAL"
+        "currentTeam": null
       },
       {
-        "id": 140,
+        "id": 153,
         "name": "Kevin Durant",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 980,
         "name": "Kevin Huerter",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 4150,
         "name": "Kevin Jr McCullar",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 987,
         "name": "Kevin Knox II",
-        "currentTeam": "GSW"
+        "currentTeam": null
       },
       {
         "id": 326,
         "name": "Kevin Love",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 1888,
         "name": "Kevin Porter Jr",
-        "currentTeam": "MIL"
+        "currentTeam": null
       },
       {
         "id": 2677,
         "name": "Kevon Harris",
-        "currentTeam": "ATL"
+        "currentTeam": null
       },
       {
         "id": 322,
         "name": "Kevon Looney",
-        "currentTeam": "GSW"
+        "currentTeam": null
       },
       {
         "id": 4008,
         "name": "Keyontae Johnson",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 4029,
         "name": "Keyonte George",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 361,
         "name": "Khris Middleton",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 2599,
         "name": "Killian Hayes",
-        "currentTeam": "BKN"
+        "currentTeam": null
       },
       {
         "id": 2611,
         "name": "Kira Lewis Jr",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 514,
         "name": "Klay Thompson",
-        "currentTeam": "DAL"
+        "currentTeam": null
       },
       {
         "id": 3983,
         "name": "Kobe Brown",
-        "currentTeam": "LAC"
+        "currentTeam": null
       },
       {
         "id": 3938,
         "name": "Kobe Bufkin",
-        "currentTeam": "ATL"
+        "currentTeam": null
       },
       {
         "id": 152,
         "name": "Kris Dunn",
-        "currentTeam": "LAC"
+        "currentTeam": null
       },
       {
         "id": 4017,
         "name": "Kris Murray",
-        "currentTeam": "POR"
+        "currentTeam": null
       },
       {
         "id": 432,
         "name": "Kristaps Porzingis",
-        "currentTeam": "BOS"
+        "currentTeam": null
       },
       {
         "id": 18,
         "name": "Kyle Anderson",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 4179,
         "name": "Kyle Filipowski",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 820,
         "name": "Kyle Kuzma",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 327,
         "name": "Kyle Lowry",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 2670,
         "name": "Kylor Kelley",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
-        "id": 172,
+        "id": 261,
         "name": "Kyrie Irving",
-        "currentTeam": "DAL"
+        "currentTeam": null
       },
       {
         "id": 4183,
         "name": "Kyshawn George",
-        "currentTeam": "WAS"
+        "currentTeam": null
+      },
+      {
+        "id": 4256,
+        "name": "L Butler",
+        "currentTeam": null
+      },
+      {
+        "id": 4293,
+        "name": "L Lovering",
+        "currentTeam": null
+      },
+      {
+        "id": 4335,
+        "name": "L McNeeley",
+        "currentTeam": null
+      },
+      {
+        "id": 4275,
+        "name": "L Olbrich",
+        "currentTeam": null
+      },
+      {
+        "id": 4324,
+        "name": "LJ Cryer",
+        "currentTeam": null
       },
       {
         "id": 2566,
         "name": "LaMelo Ball",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 2647,
         "name": "Lamar Stevens",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
         "id": 1022,
         "name": "Landry Shamet",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 385,
         "name": "Larry Nance Jr",
-        "currentTeam": "ATL"
+        "currentTeam": null
       },
       {
         "id": 830,
         "name": "Lauri Markkanen",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
-        "id": 237,
+        "id": 265,
         "name": "LeBron James",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 4001,
         "name": "Leonard Miller",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 3480,
         "name": "Lester Quinones",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 4005,
         "name": "Liam Robbins",
-        "currentTeam": "MIL"
+        "currentTeam": null
       },
       {
         "id": 3404,
         "name": "Lindy Waters III",
-        "currentTeam": "GSW"
+        "currentTeam": null
       },
       {
         "id": 1038,
         "name": "Lonnie Walker IV",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 735,
         "name": "Lonzo Ball",
-        "currentTeam": "CHI"
+        "currentTeam": null
       },
       {
         "id": 2040,
         "name": "Luguentz Dort",
-        "currentTeam": "OKC"
+        "currentTeam": null
       },
       {
         "id": 963,
         "name": "Luka Doncic",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 2807,
         "name": "Luka Garza",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 814,
         "name": "Luke Kennard",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
         "id": 819,
         "name": "Luke Kornet",
-        "currentTeam": "BOS"
+        "currentTeam": null
       },
       {
         "id": 4101,
         "name": "Luke Travers",
-        "currentTeam": "CLE"
+        "currentTeam": null
+      },
+      {
+        "id": 4312,
+        "name": "M Cisse",
+        "currentTeam": null
+      },
+      {
+        "id": 4305,
+        "name": "M Cleveland",
+        "currentTeam": null
+      },
+      {
+        "id": 4307,
+        "name": "M Diawara",
+        "currentTeam": null
+      },
+      {
+        "id": 4309,
+        "name": "M Gardner",
+        "currentTeam": null
+      },
+      {
+        "id": 4308,
+        "name": "M Kelly",
+        "currentTeam": null
+      },
+      {
+        "id": 4245,
+        "name": "M Mascari",
+        "currentTeam": null
+      },
+      {
+        "id": 4290,
+        "name": "M Murrell",
+        "currentTeam": null
+      },
+      {
+        "id": 4251,
+        "name": "M Peavy",
+        "currentTeam": null
       },
       {
         "id": 4086,
         "name": "M Pereira",
-        "currentTeam": "MEM"
+        "currentTeam": null
+      },
+      {
+        "id": 4276,
+        "name": "M Raynaud",
+        "currentTeam": null
+      },
+      {
+        "id": 4318,
+        "name": "M Sears",
+        "currentTeam": null
+      },
+      {
+        "id": 4285,
+        "name": "M Shulga",
+        "currentTeam": null
       },
       {
         "id": 4208,
         "name": "M Wood",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 2833,
         "name": "Mac McClung",
-        "currentTeam": "ORL"
+        "currentTeam": null
       },
       {
         "id": 2587,
         "name": "Malachi Flynn",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 3419,
         "name": "Malaki Branham",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 71,
         "name": "Malcolm Brogdon",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 3380,
         "name": "Malcolm Hill",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 4215,
         "name": "Malevy Leons",
-        "currentTeam": "OKC"
+        "currentTeam": null
       },
       {
         "id": 46,
         "name": "Malik Beasley",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 842,
         "name": "Malik Monk",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 2580,
         "name": "Mamadi Diakite",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 3405,
         "name": "MarJon Beauchamp",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 2880,
         "name": "Marcus Garrett",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 3970,
         "name": "Marcus Sasser",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 486,
         "name": "Marcus Smart",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 3506,
         "name": "Mark Williams",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 779,
         "name": "Markelle Fultz",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 374,
         "name": "Markieff Morris",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 4028,
         "name": "Markquis Nowell",
-        "currentTeam": "HOU"
+        "currentTeam": null
+      },
+      {
+        "id": 2482,
+        "name": "Marques Bolden",
+        "currentTeam": null
       },
       {
         "id": 931,
         "name": "Marvin Bagley III",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 2605,
         "name": "Mason Jones",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 426,
         "name": "Mason Plumlee",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 4098,
         "name": "Matas Buzelis",
-        "currentTeam": "CHI"
+        "currentTeam": null
       },
       {
         "id": 1896,
         "name": "Matisse Thybulle",
-        "currentTeam": "POR"
+        "currentTeam": null
       },
       {
         "id": 3195,
         "name": "Matt Ryan",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 3427,
         "name": "Max Christie",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 4218,
         "name": "Max Fiedler",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 2051,
         "name": "Max Strus",
-        "currentTeam": "CLE"
+        "currentTeam": null
       },
       {
         "id": 817,
         "name": "Maxi Kleber",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 3991,
         "name": "Maxwell Lewis",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 3358,
         "name": "Micah Potter",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 1014,
         "name": "Michael Porter Jr",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 940,
         "name": "Mikal Bridges",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 114,
         "name": "Mike Conley",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 941,
         "name": "Miles Bridges",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 2832,
         "name": "Miles McBride",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 3942,
         "name": "Miles Norris",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
         "id": 4214,
         "name": "Miller Kopp",
-        "currentTeam": "OKC"
+        "currentTeam": null
       },
       {
         "id": 1020,
         "name": "Mitchell Robinson",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 1885,
         "name": "Miye Oni",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
         "id": 932,
         "name": "Mo Bamba",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 845,
         "name": "Monte Morris",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 1037,
         "name": "Moritz Wagner",
-        "currentTeam": "ORL"
+        "currentTeam": null
       },
       {
         "id": 2160,
         "name": "Moses Brown",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 2836,
         "name": "Moses Moody",
-        "currentTeam": "GSW"
+        "currentTeam": null
+      },
+      {
+        "id": 3445,
+        "name": "Mouhamadou Gueye",
+        "currentTeam": null
       },
       {
         "id": 3939,
         "name": "Mouhamed Gueye",
-        "currentTeam": "ATL"
+        "currentTeam": null
       },
       {
         "id": 3431,
         "name": "Moussa Diabate",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 522,
         "name": "Myles Turner",
-        "currentTeam": "IND"
+        "currentTeam": null
+      },
+      {
+        "id": 4282,
+        "name": "N Clifford",
+        "currentTeam": null
+      },
+      {
+        "id": 4319,
+        "name": "N Djurisic",
+        "currentTeam": null
+      },
+      {
+        "id": 4297,
+        "name": "N Essengue",
+        "currentTeam": null
+      },
+      {
+        "id": 4258,
+        "name": "N Omier",
+        "currentTeam": null
+      },
+      {
+        "id": 4315,
+        "name": "N Penda",
+        "currentTeam": null
+      },
+      {
+        "id": 4278,
+        "name": "N Tomlin",
+        "currentTeam": null
+      },
+      {
+        "id": 4274,
+        "name": "N Traore",
+        "currentTeam": null
       },
       {
         "id": 4116,
         "name": "NFaly Dante",
-        "currentTeam": "HOU"
+        "currentTeam": null
       },
       {
         "id": 2668,
         "name": "Naji Marshall",
-        "currentTeam": "DAL"
+        "currentTeam": null
       },
       {
         "id": 1875,
         "name": "Nassir Little",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 2578,
         "name": "Nate Darling",
-        "currentTeam": "LAC"
+        "currentTeam": null
       },
       {
         "id": 2672,
         "name": "Nate Hinton",
-        "currentTeam": "HOU"
+        "currentTeam": null
       },
       {
         "id": 3949,
         "name": "Nathan Mensah",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 2146,
         "name": "Naz Reid",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 2844,
         "name": "Neemias Queta",
-        "currentTeam": "BOS"
+        "currentTeam": null
       },
       {
         "id": 1854,
         "name": "Nic Claxton",
-        "currentTeam": "BKN"
+        "currentTeam": null
       },
       {
         "id": 4042,
         "name": "Nick Jr Smith",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 2639,
         "name": "Nick Richards",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 1845,
         "name": "Nickeil AlexanderWalker",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 40,
         "name": "Nicolas Batum",
-        "currentTeam": "LAC"
+        "currentTeam": null
+      },
+      {
+        "id": 792,
+        "name": "Nigel Hayes",
+        "currentTeam": null
       },
       {
         "id": 279,
         "name": "Nikola Jokic",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 3453,
         "name": "Nikola Jovic",
-        "currentTeam": "MIA"
+        "currentTeam": null
+      },
+      {
+        "id": 4154,
+        "name": "Nikola Topic",
+        "currentTeam": null
       },
       {
         "id": 534,
         "name": "Nikola Vucevic",
-        "currentTeam": "CHI"
+        "currentTeam": null
       },
       {
         "id": 3944,
         "name": "Noah Clowney",
-        "currentTeam": "BKN"
+        "currentTeam": null
       },
       {
         "id": 434,
         "name": "Norman Powell",
-        "currentTeam": "LAC"
+        "currentTeam": null
       },
       {
         "id": 732,
         "name": "OG Anunoby",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 2658,
         "name": "Obi Toppin",
-        "currentTeam": "IND"
+        "currentTeam": null
       },
       {
         "id": 3411,
         "name": "Ochai Agbaji",
-        "currentTeam": "TOR"
+        "currentTeam": null
+      },
+      {
+        "id": 3399,
+        "name": "Olivier Sarr",
+        "currentTeam": null
       },
       {
         "id": 3960,
         "name": "OlivierMaxence Prosper",
-        "currentTeam": "DAL"
+        "currentTeam": null
       },
       {
         "id": 3951,
         "name": "Onuralp Bitim",
-        "currentTeam": "CHI"
+        "currentTeam": null
       },
       {
         "id": 2629,
         "name": "Onyeka Okongwu",
-        "currentTeam": "ATL"
+        "currentTeam": null
       },
       {
         "id": 3482,
         "name": "Orlando Robinson",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 3980,
         "name": "Oscar Tshiebwe",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 2110,
         "name": "Oshae Brissett",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 4163,
         "name": "Oso Ighodaro",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 3432,
         "name": "Ousmane Dieng",
-        "currentTeam": "OKC"
+        "currentTeam": null
       },
       {
         "id": 770,
         "name": "PJ Dozier",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 4106,
         "name": "PJ Hall",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 520,
         "name": "PJ Tucker",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 1897,
         "name": "PJ Washington",
-        "currentTeam": "DAL"
+        "currentTeam": null
       },
       {
         "id": 4147,
         "name": "Pacome Dadiet",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 3414,
         "name": "Paolo Banchero",
-        "currentTeam": "ORL"
+        "currentTeam": null
       },
       {
         "id": 479,
         "name": "Pascal Siakam",
-        "currentTeam": "IND"
+        "currentTeam": null
       },
       {
         "id": 115,
         "name": "Pat Connaughton",
-        "currentTeam": "MIL"
+        "currentTeam": null
       },
       {
         "id": 3492,
         "name": "Pat Spencer",
-        "currentTeam": "GSW"
+        "currentTeam": null
       },
       {
         "id": 3413,
         "name": "Patrick Baldwin Jr",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 2664,
         "name": "Patrick Williams",
-        "currentTeam": "CHI"
+        "currentTeam": null
       },
       {
         "id": 365,
         "name": "Patty Mills",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 189,
         "name": "Paul George",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 2638,
         "name": "Paul Reed",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 2635,
         "name": "Payton Pritchard",
-        "currentTeam": "BOS"
+        "currentTeam": null
       },
       {
         "id": 4135,
         "name": "Pelle Larsson",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 3957,
         "name": "Pete Nance",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 3498,
         "name": "Peyton Watson",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 2561,
         "name": "Precious Achiuwa",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 4207,
         "name": "Q Post",
-        "currentTeam": "GSW"
+        "currentTeam": null
       },
       {
         "id": 2811,
         "name": "Quentin Grimes",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 3452,
         "name": "Quenton Jackson",
-        "currentTeam": "IND"
+        "currentTeam": null
       },
       {
         "id": 4127,
         "name": "Quincy Olivari",
-        "currentTeam": "LAL"
+        "currentTeam": null
+      },
+      {
+        "id": 4326,
+        "name": "R Davis",
+        "currentTeam": null
+      },
+      {
+        "id": 4270,
+        "name": "R Fleming",
+        "currentTeam": null
+      },
+      {
+        "id": 4333,
+        "name": "R Kalkbrenner",
+        "currentTeam": null
+      },
+      {
+        "id": 4284,
+        "name": "R Luis Jr",
+        "currentTeam": null
+      },
+      {
+        "id": 4311,
+        "name": "R Nembhard",
+        "currentTeam": null
       },
       {
         "id": 4069,
         "name": "R Rupert",
-        "currentTeam": "POR"
+        "currentTeam": null
+      },
+      {
+        "id": 4334,
+        "name": "R Zikarsky",
+        "currentTeam": null
       },
       {
         "id": 1846,
         "name": "RJ Barrett",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 4122,
         "name": "RayJ Dennis",
-        "currentTeam": "LAC"
+        "currentTeam": null
       },
       {
         "id": 4114,
         "name": "Reece Beekman",
-        "currentTeam": "GSW"
+        "currentTeam": null
       },
       {
         "id": 4117,
         "name": "Reed Sheppard",
-        "currentTeam": "HOU"
+        "currentTeam": null
       },
       {
         "id": 264,
         "name": "Reggie Jackson",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 246,
         "name": "Richaun Holmes",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 4049,
         "name": "Ricky IV Council",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 4171,
         "name": "Riley Minix",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 4142,
         "name": "Rob Dillingham",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 1045,
         "name": "Robert Williams III",
-        "currentTeam": "POR"
+        "currentTeam": null
       },
       {
         "id": 3447,
         "name": "Ron Harper Jr",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 4111,
         "name": "Ron II Holland",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 851,
         "name": "Royce ONeale",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 192,
         "name": "Rudy Gobert",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 1862,
         "name": "Rui Hachimura",
-        "currentTeam": "LAL"
+        "currentTeam": null
       },
       {
         "id": 544,
         "name": "Russell Westbrook",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 4162,
         "name": "Ryan Dunn",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 3484,
         "name": "Ryan Rollins",
-        "currentTeam": "MIL"
+        "currentTeam": null
+      },
+      {
+        "id": 4254,
+        "name": "S Crowl",
+        "currentTeam": null
+      },
+      {
+        "id": 4329,
+        "name": "S James",
+        "currentTeam": null
+      },
+      {
+        "id": 4306,
+        "name": "S Thomas",
+        "currentTeam": null
+      },
+      {
+        "id": 2569,
+        "name": "Saddiq Bey",
+        "currentTeam": null
       },
       {
         "id": 2812,
         "name": "Sam Hauser",
-        "currentTeam": "BOS"
+        "currentTeam": null
       },
       {
         "id": 2623,
         "name": "Sam Merrill",
-        "currentTeam": "CLE"
+        "currentTeam": null
       },
       {
         "id": 869,
         "name": "Samardo Samuels",
-        "currentTeam": "HOU"
+        "currentTeam": null
       },
       {
         "id": 2830,
         "name": "Sandro Mamukelashvili",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 2786,
         "name": "Santi Aldama",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
         "id": 3408,
         "name": "Scoot Henderson",
-        "currentTeam": "POR"
+        "currentTeam": null
       },
       {
         "id": 2789,
         "name": "Scottie Barnes",
-        "currentTeam": "TOR"
+        "currentTeam": null
       },
       {
         "id": 3477,
         "name": "Scotty Pippen Jr",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
         "id": 123,
         "name": "Seth Curry",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 3941,
         "name": "Seth Lundy",
-        "currentTeam": "ATL"
+        "currentTeam": null
       },
       {
         "id": 3487,
         "name": "Shaedon Sharpe",
-        "currentTeam": "POR"
+        "currentTeam": null
       },
       {
         "id": 972,
         "name": "Shai GilgeousAlexander",
-        "currentTeam": "OKC"
+        "currentTeam": null
       },
       {
         "id": 1001,
         "name": "Shake Milton",
-        "currentTeam": "LAL"
+        "currentTeam": null
+      },
+      {
+        "id": 2800,
+        "name": "Sharife Cooper",
+        "currentTeam": null
       },
       {
         "id": 4024,
         "name": "Sidy Cissoko",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 3438,
         "name": "Simone Fontecchio",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 302,
         "name": "Skal Labissiere",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 142,
         "name": "Spencer Dinwiddie",
-        "currentTeam": "DAL"
+        "currentTeam": null
       },
       {
         "id": 4108,
         "name": "Spencer Jones",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 3790,
         "name": "Stanley Umude",
-        "currentTeam": "MIL"
+        "currentTeam": null
       },
       {
         "id": 124,
         "name": "Stephen Curry",
-        "currentTeam": "GSW"
+        "currentTeam": null
       },
       {
         "id": 4169,
         "name": "Stephon Castle",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 4,
         "name": "Steven Adams",
-        "currentTeam": "HOU"
+        "currentTeam": null
       },
       {
         "id": 1006,
         "name": "Svi Mykhailiuk",
-        "currentTeam": "UTA"
+        "currentTeam": null
+      },
+      {
+        "id": 4288,
+        "name": "T Burton",
+        "currentTeam": null
       },
       {
         "id": 4235,
         "name": "T Funk",
-        "currentTeam": "WAS"
+        "currentTeam": null
+      },
+      {
+        "id": 4263,
+        "name": "T Johnson",
+        "currentTeam": null
+      },
+      {
+        "id": 4296,
+        "name": "T Peter",
+        "currentTeam": null
+      },
+      {
+        "id": 4298,
+        "name": "T Proctor",
+        "currentTeam": null
       },
       {
         "id": 4088,
         "name": "T Vukcevic",
-        "currentTeam": "WAS"
+        "currentTeam": null
       },
       {
         "id": 348,
         "name": "TJ McConnell",
-        "currentTeam": "IND"
+        "currentTeam": null
       },
       {
         "id": 540,
         "name": "TJ Warren",
-        "currentTeam": "NYK"
+        "currentTeam": null
+      },
+      {
+        "id": 4032,
+        "name": "Taevion Kinsey",
+        "currentTeam": null
+      },
+      {
+        "id": 190,
+        "name": "Taj Gibson",
+        "currentTeam": null
       },
       {
         "id": 1867,
         "name": "Talen HortonTucker",
-        "currentTeam": "CHI"
+        "currentTeam": null
+      },
+      {
+        "id": 4328,
+        "name": "Tamar Bates",
+        "currentTeam": null
       },
       {
         "id": 3435,
         "name": "Tari Eason",
-        "currentTeam": "HOU"
+        "currentTeam": null
       },
       {
         "id": 437,
         "name": "Taurean Prince",
-        "currentTeam": "MIL"
+        "currentTeam": null
       },
       {
         "id": 4031,
         "name": "Taylor Hendricks",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 3724,
         "name": "Taze Moore",
-        "currentTeam": "POR"
+        "currentTeam": null
       },
       {
         "id": 1877,
         "name": "Terance Mann",
-        "currentTeam": "LAC"
+        "currentTeam": null
       },
       {
         "id": 2168,
         "name": "Terence Davis",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 4144,
         "name": "Terrence Jr Shannon",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 458,
         "name": "Terry Rozier",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 2853,
         "name": "Terry Taylor",
-        "currentTeam": "SAC"
+        "currentTeam": null
+      },
+      {
+        "id": 4004,
+        "name": "Tevian Jones",
+        "currentTeam": null
+      },
+      {
+        "id": 2408,
+        "name": "Thanasis Antetokounmpo",
+        "currentTeam": null
       },
       {
         "id": 753,
         "name": "Thomas Bryant",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 4095,
         "name": "Tidjane Salaun",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 215,
         "name": "Tim Hardaway Jr",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 222,
         "name": "Tobias Harris",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 4211,
         "name": "Tolu Smith",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 748,
         "name": "Tony Bradley",
-        "currentTeam": "IND"
+        "currentTeam": null
       },
       {
         "id": 765,
         "name": "Torrey Craig",
-        "currentTeam": "CHI"
+        "currentTeam": null
       },
       {
         "id": 3969,
         "name": "Tosan Evbuomwan",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 4015,
         "name": "Toumani Camara",
-        "currentTeam": "POR"
+        "currentTeam": null
       },
       {
         "id": 1046,
         "name": "Trae Young",
-        "currentTeam": "ATL"
+        "currentTeam": null
       },
       {
         "id": 3973,
         "name": "Trayce JacksonDavis",
-        "currentTeam": "GSW"
+        "currentTeam": null
       },
       {
         "id": 2606,
         "name": "Tre Jones",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 2831,
         "name": "Tre Mann",
-        "currentTeam": "CHA"
+        "currentTeam": null
       },
       {
         "id": 2861,
         "name": "Trendon Watford",
-        "currentTeam": "BKN"
+        "currentTeam": null
       },
       {
         "id": 4123,
         "name": "Trentyn Flowers",
-        "currentTeam": "LAC"
+        "currentTeam": null
       },
       {
         "id": 2671,
         "name": "Trevelin Queen",
-        "currentTeam": "ORL"
+        "currentTeam": null
+      },
+      {
+        "id": 3456,
+        "name": "Trevor Keels",
+        "currentTeam": null
       },
       {
         "id": 4105,
         "name": "Trey Alexander",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 4003,
         "name": "Trey Jemison",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 331,
         "name": "Trey Lyles",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 2837,
         "name": "Trey Murphy III",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 3717,
         "name": "Trhae Mitchell",
-        "currentTeam": "NOP"
+        "currentTeam": null
+      },
+      {
+        "id": 4091,
+        "name": "Tristan Enaruna",
+        "currentTeam": null
       },
       {
         "id": 4155,
         "name": "Tristan Silva da",
-        "currentTeam": "ORL"
+        "currentTeam": null
       },
       {
         "id": 515,
         "name": "Tristan Thompson",
-        "currentTeam": "CLE"
+        "currentTeam": null
       },
       {
         "id": 4120,
         "name": "Tristen Newton",
-        "currentTeam": "MIN"
+        "currentTeam": null
       },
       {
         "id": 1870,
         "name": "Ty Jerome",
-        "currentTeam": "CLE"
+        "currentTeam": null
       },
       {
         "id": 3497,
         "name": "TyTy Washington Jr",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 1866,
         "name": "Tyler Herro",
-        "currentTeam": "MIA"
+        "currentTeam": null
       },
       {
         "id": 4149,
         "name": "Tyler Kolek",
-        "currentTeam": "NYK"
+        "currentTeam": null
       },
       {
         "id": 4141,
         "name": "Tyler Smith",
-        "currentTeam": "MIL"
+        "currentTeam": null
       },
       {
         "id": 2595,
         "name": "Tyrese Haliburton",
-        "currentTeam": "IND"
+        "currentTeam": null
       },
       {
         "id": 3465,
         "name": "Tyrese Martin",
-        "currentTeam": "BKN"
+        "currentTeam": null
       },
       {
         "id": 2619,
         "name": "Tyrese Maxey",
-        "currentTeam": "PHI"
+        "currentTeam": null
       },
       {
         "id": 3437,
         "name": "Tyson Etienne",
-        "currentTeam": "BKN"
+        "currentTeam": null
       },
       {
         "id": 285,
         "name": "Tyus Jones",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 4174,
         "name": "Ulrich Chomche",
-        "currentTeam": "TOR"
+        "currentTeam": null
+      },
+      {
+        "id": 4303,
+        "name": "V Edgecombe",
+        "currentTeam": null
+      },
+      {
+        "id": 4313,
+        "name": "V Goldin",
+        "currentTeam": null
       },
       {
         "id": 2739,
         "name": "Vasilije Micic",
-        "currentTeam": "PHX"
+        "currentTeam": null
       },
       {
         "id": 4026,
         "name": "Victor Wembanyama",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 3508,
         "name": "Vince Williams Jr",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
         "id": 2608,
         "name": "Vit Krejci",
-        "currentTeam": "ATL"
+        "currentTeam": null
       },
       {
         "id": 1312,
         "name": "Vlatko Cancar",
-        "currentTeam": "DEN"
+        "currentTeam": null
+      },
+      {
+        "id": 4289,
+        "name": "W Clayton Jr",
+        "currentTeam": null
+      },
+      {
+        "id": 4325,
+        "name": "W Richard",
+        "currentTeam": null
       },
       {
         "id": 4205,
         "name": "W Richardson",
-        "currentTeam": "DEN"
+        "currentTeam": null
+      },
+      {
+        "id": 4262,
+        "name": "W Riley",
+        "currentTeam": null
       },
       {
         "id": 3457,
         "name": "Walker Kessler",
-        "currentTeam": "UTA"
+        "currentTeam": null
       },
       {
         "id": 950,
         "name": "Wendell Carter Jr",
-        "currentTeam": "ORL"
+        "currentTeam": null
       },
       {
         "id": 3474,
         "name": "Wendell Moore Jr",
-        "currentTeam": "DET"
+        "currentTeam": null
       },
       {
         "id": 2656,
         "name": "Xavier Tillman",
-        "currentTeam": "BOS"
+        "currentTeam": null
+      },
+      {
+        "id": 4286,
+        "name": "Y Hansen",
+        "currentTeam": null
+      },
+      {
+        "id": 4257,
+        "name": "Y Konan Niederhauser",
+        "currentTeam": null
       },
       {
         "id": 4212,
         "name": "Yongxi Cui",
-        "currentTeam": "BKN"
+        "currentTeam": null
       },
       {
         "id": 4131,
         "name": "Yuki Kawamura",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
         "id": 4145,
         "name": "Yves Missi",
-        "currentTeam": "NOP"
+        "currentTeam": null
+      },
+      {
+        "id": 4327,
+        "name": "Z Austin",
+        "currentTeam": null
       },
       {
         "id": 4090,
         "name": "Zaccharie Risacher",
-        "currentTeam": "ATL"
+        "currentTeam": null
       },
       {
         "id": 762,
         "name": "Zach Collins",
-        "currentTeam": "SAS"
+        "currentTeam": null
       },
       {
         "id": 4130,
         "name": "Zach Edey",
-        "currentTeam": "MEM"
+        "currentTeam": null
       },
       {
         "id": 308,
         "name": "Zach LaVine",
-        "currentTeam": "SAC"
+        "currentTeam": null
       },
       {
         "id": 2627,
         "name": "Zeke Nnaji",
-        "currentTeam": "DEN"
+        "currentTeam": null
       },
       {
         "id": 1025,
         "name": "Zhaire Smith",
-        "currentTeam": "CLE"
+        "currentTeam": null
       },
       {
         "id": 2864,
         "name": "Ziaire Williams",
-        "currentTeam": "BKN"
+        "currentTeam": null
       },
       {
         "id": 1902,
         "name": "Zion Williamson",
-        "currentTeam": "NOP"
+        "currentTeam": null
       },
       {
         "id": 4136,
         "name": "Zyon Pullin",
-        "currentTeam": "MIA"
+        "currentTeam": null
       }
     ]
   },
   "teams": {
-    "count": 32,
+    "count": 31,
     "items": [
       {
         "id": 1,
         "name": "Atlanta Hawks",
-        "league": "NBA"
+        "league": "Southeast Division"
       },
       {
         "id": 2,
         "name": "Boston Celtics",
-        "league": "NBA"
-      },
-      {
-        "id": 3,
-        "name": "Brooklyn Nets",
-        "league": "NBA"
+        "league": "Atlantic Division"
       },
       {
         "id": 4,
         "name": "Brooklyn Nets",
-        "league": "NBA"
+        "league": "Atlantic Division"
       },
       {
         "id": 5,
         "name": "Charlotte Hornets",
-        "league": "NBA"
+        "league": "Southeast Division"
       },
       {
         "id": 6,
         "name": "Chicago Bulls",
-        "league": "NBA"
+        "league": "Central Division"
       },
       {
         "id": 7,
         "name": "Cleveland Cavaliers",
-        "league": "NBA"
+        "league": "Central Division"
       },
       {
         "id": 8,
         "name": "Dallas Mavericks",
-        "league": "NBA"
+        "league": "Southwest Division"
       },
       {
         "id": 9,
         "name": "Denver Nuggets",
-        "league": "NBA"
+        "league": "Northwest Division"
       },
       {
         "id": 10,
         "name": "Detroit Pistons",
-        "league": "NBA"
+        "league": "Central Division"
       },
       {
         "id": 11,
         "name": "Golden State Warriors",
-        "league": "NBA"
+        "league": "Pacific Division"
       },
       {
         "id": 37,
         "name": "Home Team Stephen A",
-        "league": "NBA"
+        "league": "East Division"
       },
       {
         "id": 14,
         "name": "Houston Rockets",
-        "league": "NBA"
+        "league": "Southwest Division"
       },
       {
         "id": 15,
         "name": "Indiana Pacers",
-        "league": "NBA"
+        "league": "Central Division"
       },
       {
         "id": 16,
         "name": "LA Clippers",
-        "league": "NBA"
+        "league": "Pacific Division"
       },
       {
         "id": 17,
         "name": "Los Angeles Lakers",
-        "league": "NBA"
+        "league": "Pacific Division"
       },
       {
         "id": 19,
         "name": "Memphis Grizzlies",
-        "league": "NBA"
+        "league": "Southwest Division"
       },
       {
         "id": 20,
         "name": "Miami Heat",
-        "league": "NBA"
+        "league": "Southeast Division"
       },
       {
         "id": 21,
         "name": "Milwaukee Bucks",
-        "league": "NBA"
+        "league": "Central Division"
       },
       {
         "id": 22,
         "name": "Minnesota Timberwolves",
-        "league": "NBA"
+        "league": "Northwest Division"
       },
       {
         "id": 23,
         "name": "New Orleans Pelicans",
-        "league": "NBA"
+        "league": "Southwest Division"
       },
       {
         "id": 24,
         "name": "New York Knicks",
-        "league": "NBA"
+        "league": "Atlantic Division"
       },
       {
         "id": 25,
         "name": "Oklahoma City Thunder",
-        "league": "NBA"
+        "league": "Northwest Division"
       },
       {
         "id": 26,
         "name": "Orlando Magic",
-        "league": "NBA"
+        "league": "Southeast Division"
       },
       {
         "id": 27,
         "name": "Philadelphia 76ers",
-        "league": "NBA"
+        "league": "Atlantic Division"
       },
       {
         "id": 28,
         "name": "Phoenix Suns",
-        "league": "NBA"
+        "league": "Pacific Division"
       },
       {
         "id": 29,
         "name": "Portland Trail Blazers",
-        "league": "NBA"
+        "league": "Northwest Division"
       },
       {
         "id": 30,
         "name": "Sacramento Kings",
-        "league": "NBA"
+        "league": "Pacific Division"
       },
       {
         "id": 31,
         "name": "San Antonio Spurs",
-        "league": "NBA"
+        "league": "Southwest Division"
       },
       {
         "id": 38,
         "name": "Toronto Raptors",
-        "league": "NBA"
+        "league": "Atlantic Division"
       },
       {
         "id": 40,
         "name": "Utah Jazz",
-        "league": "NBA"
+        "league": "Northwest Division"
       },
       {
         "id": 41,
         "name": "Washington Wizards",
-        "league": "NBA"
+        "league": "Southeast Division"
       }
     ]
   }
