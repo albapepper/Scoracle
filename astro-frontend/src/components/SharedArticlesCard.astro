@@ -168,6 +168,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   import { escapeHtml, parseCoMentionsParams } from '../lib/utils/dom';
   import { formatDate } from '../lib/utils/date';
   import type { Article } from '../lib/utils/co-mentions';
+  import { swrFetch } from '../lib/utils/api-fetcher';
 
   class SharedArticlesCard {
     private card: HTMLElement | null = null;
@@ -205,7 +206,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private async fetchSharedArticles() {
-      // First get both entity names
+      // First get both entity names in parallel using SWR
       const [primaryName, secondaryName] = await Promise.all([
         this.getEntityName(this.params.type!, this.params.id!),
         this.params.coType && this.params.coId
@@ -224,10 +225,13 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         if (this.params.sport) newsParams.set('sport', this.params.sport.toUpperCase());
 
         const newsUrl = `${this.apiUrl}/news/${encodeURIComponent(primaryName)}?${newsParams.toString()}`;
-        const res = await fetch(newsUrl);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-        const data = await res.json();
+        // Use SWR fetch for news
+        const { data } = await swrFetch<{ articles?: Article[] }>(newsUrl, {
+          staleTime: 30 * 1000,      // Consider stale after 30 seconds
+          cacheTime: 5 * 60 * 1000,  // Keep in cache for 5 minutes
+        });
+
         const articles: Article[] = data.articles || [];
 
         // Build search terms for the secondary entity
@@ -281,15 +285,18 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     private async getEntityName(type: string, id: string): Promise<string | null> {
       try {
         const url = `${this.apiUrl}/widget/${type}/${id}?sport=${this.params.sport!.toUpperCase()}`;
-        const res = await fetch(url);
-        if (!res.ok) return null;
 
-        const data = await res.json();
+        // Use SWR fetch for widget data
+        const { data } = await swrFetch<Record<string, unknown>>(url, {
+          staleTime: 60 * 1000,
+          cacheTime: 30 * 60 * 1000,
+        });
+
         if (type === 'team') {
-          return data.team?.name || null;
+          return (data.team as Record<string, unknown>)?.name as string || null;
         } else {
-          const player = data.player || {};
-          return `${player.firstname || ''} ${player.lastname || ''}`.trim() || player.name || null;
+          const player = (data.player || {}) as Record<string, unknown>;
+          return `${player.firstname || ''} ${player.lastname || ''}`.trim() || (player.name as string) || null;
         }
       } catch {
         return null;

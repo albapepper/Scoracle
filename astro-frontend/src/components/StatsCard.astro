@@ -268,12 +268,14 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 <script>
   import { escapeHtml } from '../lib/utils/dom';
+  import { swrFetch, setPageData } from '../lib/utils/api-fetcher';
 
   /**
    * StatsCard Manager
    *
    * Handles loading statistics from the backend API
    * and populating the table with data.
+   * Uses SWR pattern for faster repeat loads.
    */
   class StatsCardManager {
     private card!: HTMLElement;
@@ -310,23 +312,23 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     private async loadStats(sport: string, type: string, id: string) {
       // No category parameter - API returns all stats for the entity
       const url = `${this.apiUrl}/stats/${type}/${id}?sport=${sport}`;
-      
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        if (response.status === 404) {
-          this.showEmpty();
-          return;
-        }
-        throw new Error(`HTTP ${response.status}`);
-      }
 
-      const data = await response.json();
-      
+      // Use SWR fetch for caching (stats update less frequently)
+      const { data } = await swrFetch<{
+        stats?: Array<{ label: string; value: string | number }>;
+        season?: string;
+      }>(url, {
+        staleTime: 5 * 60 * 1000,   // Consider stale after 5 minutes
+        cacheTime: 30 * 60 * 1000,  // Keep in cache for 30 minutes
+      });
+
       if (!data || !data.stats || data.stats.length === 0) {
         this.showEmpty();
         return;
       }
+
+      // Share stats data with other components
+      setPageData('stats', data);
 
       // Display season if available
       if (data.season) {

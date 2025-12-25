@@ -339,6 +339,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     type Article,
     type CoMention,
   } from '../lib/utils/co-mentions';
+  import { swrFetch, waitForPageData, getPageData, setPageData } from '../lib/utils/api-fetcher';
 
   // Extended article interface for rendering
   interface ArticleDisplay {
@@ -435,25 +436,55 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private async fetchData() {
-      const widgetUrl = `${this.apiUrl}/widget/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
-
       try {
-        const widgetRes = await fetch(widgetUrl);
-        if (!widgetRes.ok) throw new Error(`Widget HTTP ${widgetRes.status}`);
-        const widgetData = await widgetRes.json();
+        // Try to get widget data from shared store first (EntityWidget may have fetched it)
+        // This avoids duplicate fetch when both components are on the same page
+        let widgetData = getPageData('widget') as Record<string, unknown> | undefined;
 
-        const entityName = widgetData.team?.name || widgetData.player?.name || widgetData.name;
+        if (!widgetData) {
+          // Wait for EntityWidget to fetch it (with timeout), or fetch ourselves
+          try {
+            widgetData = await Promise.race([
+              waitForPageData('widget', 2000),
+              // Fallback: fetch ourselves after short delay if EntityWidget hasn't started
+              new Promise<Record<string, unknown>>((resolve) => {
+                setTimeout(async () => {
+                  const url = `${this.apiUrl}/widget/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
+                  const { data } = await swrFetch<Record<string, unknown>>(url, {
+                    staleTime: 60 * 1000,
+                    cacheTime: 30 * 60 * 1000,
+                  });
+                  setPageData('widget', data);
+                  resolve(data);
+                }, 100);
+              }),
+            ]) as Record<string, unknown>;
+          } catch {
+            // Timeout or error - fetch ourselves
+            const url = `${this.apiUrl}/widget/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
+            const { data } = await swrFetch<Record<string, unknown>>(url, {
+              staleTime: 60 * 1000,
+              cacheTime: 30 * 60 * 1000,
+            });
+            widgetData = data;
+            setPageData('widget', data);
+          }
+        }
+
+        const team = widgetData.team as Record<string, unknown> | undefined;
+        const player = widgetData.player as Record<string, unknown> | undefined;
+        const entityName = team?.name || player?.name || widgetData.name;
         if (!entityName) {
           this.showEmpty();
           return;
         }
 
         // Store entity info for later use
-        this.entityName = entityName;
+        this.entityName = entityName as string;
 
         // Extract team name for players (improves news search relevance)
         if (this.type === 'player') {
-          this.entityTeam = widgetData.player?.currentTeam || widgetData.currentTeam || null;
+          this.entityTeam = (player?.currentTeam || widgetData.currentTeam || null) as string | null;
         }
 
         // Build news URL with sport and team context for better search results
@@ -461,12 +492,15 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         if (this.sport) newsParams.set('sport', this.sport.toUpperCase());
         if (this.entityTeam) newsParams.set('team', this.entityTeam);
 
-        const newsUrl = `${this.apiUrl}/news/${encodeURIComponent(entityName)}?${newsParams.toString()}`;
-        const newsRes = await fetch(newsUrl);
-        if (!newsRes.ok) throw new Error(`News HTTP ${newsRes.status}`);
+        const newsUrl = `${this.apiUrl}/news/${encodeURIComponent(entityName as string)}?${newsParams.toString()}`;
 
-        const data = await newsRes.json();
-        const articles: ArticleDisplay[] = data.articles || [];
+        // Use SWR fetch for news (with shorter stale time since news updates frequently)
+        const { data: newsData } = await swrFetch<{ articles?: ArticleDisplay[] }>(newsUrl, {
+          staleTime: 30 * 1000,      // Consider stale after 30 seconds
+          cacheTime: 5 * 60 * 1000,  // Keep in cache for 5 minutes
+        });
+
+        const articles: ArticleDisplay[] = newsData.articles || [];
 
         // Store articles for co-mentions (with required Article shape)
         this.articles = articles.map(a => ({
@@ -475,6 +509,9 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
           pub_date: a.pub_date,
           source: a.source,
         }));
+
+        // Share news data with other components
+        setPageData('news', { articles: this.articles });
 
         if (articles.length === 0) {
           this.showEmpty();
