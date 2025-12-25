@@ -354,6 +354,10 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     private type: string | null = null;
     private id: string | null = null;
 
+    // Store entity info for news fetching
+    private entityName: string | null = null;
+    private entityTeam: string | null = null;
+
     // Store articles for co-mentions
     private articles: Article[] = [];
 
@@ -443,7 +447,20 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
           return;
         }
 
-        const newsUrl = `${this.apiUrl}/news/${encodeURIComponent(entityName)}`;
+        // Store entity info for later use
+        this.entityName = entityName;
+
+        // Extract team name for players (improves news search relevance)
+        if (this.type === 'player') {
+          this.entityTeam = widgetData.player?.currentTeam || widgetData.currentTeam || null;
+        }
+
+        // Build news URL with sport and team context for better search results
+        const newsParams = new URLSearchParams();
+        if (this.sport) newsParams.set('sport', this.sport.toUpperCase());
+        if (this.entityTeam) newsParams.set('team', this.entityTeam);
+
+        const newsUrl = `${this.apiUrl}/news/${encodeURIComponent(entityName)}?${newsParams.toString()}`;
         const newsRes = await fetch(newsUrl);
         if (!newsRes.ok) throw new Error(`News HTTP ${newsRes.status}`);
 

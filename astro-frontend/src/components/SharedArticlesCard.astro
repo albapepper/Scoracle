@@ -234,9 +234,12 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         return;
       }
 
-      // Fetch news for primary entity
+      // Fetch news for primary entity with sport context
       try {
-        const newsUrl = `${this.apiUrl}/news/${encodeURIComponent(primaryName)}`;
+        const newsParams = new URLSearchParams();
+        if (this.params.sport) newsParams.set('sport', this.params.sport.toUpperCase());
+
+        const newsUrl = `${this.apiUrl}/news/${encodeURIComponent(primaryName)}?${newsParams.toString()}`;
         const res = await fetch(newsUrl);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 

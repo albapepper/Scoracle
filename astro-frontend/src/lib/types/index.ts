@@ -61,7 +61,11 @@ export interface NewsArticle {
 // News response from GET /api/v1/news/{entity_name}
 export interface NewsData {
   query: string;
+  sport?: string | null;
+  team?: string | null;
   hours: number;
+  hours_requested?: number;
+  extended?: boolean;
   count: number;
   articles: NewsArticle[];
 }

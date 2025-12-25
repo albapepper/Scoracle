@@ -337,14 +337,24 @@ export async function loadEntitiesForSport(sport: string): Promise<Entity[]> {
 
 /**
  * Fetch news articles for an entity.
+ *
+ * Enhanced with sport/team context for better search relevance.
+ * The backend will use these to build smarter queries and may
+ * auto-extend the time range if few results are found.
  */
 export async function fetchArticles(
   entityName: string,
   apiUrl: string,
-  hours: number = 48
+  hours: number = 48,
+  sport?: string,
+  team?: string
 ): Promise<Article[]> {
+  const params = new URLSearchParams({ hours: hours.toString() });
+  if (sport) params.set('sport', sport);
+  if (team) params.set('team', team);
+
   const response = await fetch(
-    `${apiUrl}/news/${encodeURIComponent(entityName)}?hours=${hours}`
+    `${apiUrl}/news/${encodeURIComponent(entityName)}?${params.toString()}`
   );
 
   if (!response.ok) {
@@ -364,6 +374,7 @@ export async function fetchArticles(
  * @param sport - Sport code (FOOTBALL, NBA, NFL)
  * @param apiUrl - Base API URL
  * @param hours - Hours to look back for news
+ * @param team - Team name for player context (improves search relevance)
  * @returns List of co-mentioned entities with counts
  */
 export async function getCoMentions(
@@ -372,11 +383,12 @@ export async function getCoMentions(
   entityType: 'player' | 'team',
   sport: string,
   apiUrl: string,
-  hours: number = 48
+  hours: number = 48,
+  team?: string
 ): Promise<CoMention[]> {
   // Fetch articles and entities in parallel
   const [articles, entities] = await Promise.all([
-    fetchArticles(entityName, apiUrl, hours),
+    fetchArticles(entityName, apiUrl, hours, sport, team),
     loadEntitiesForSport(sport),
   ]);
 
