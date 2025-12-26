@@ -17,6 +17,8 @@ export interface AutocompleteConfig {
   initialSport?: string;
   renderItem?: (entity: AutocompleteEntity, index: number) => string;
   itemClass?: string;
+  /** Filter to only show entities of this type ('player' or 'team') */
+  typeFilter?: 'player' | 'team';
 }
 
 const CACHE_KEY = 'scoracle_autocomplete_cache';
@@ -28,6 +30,7 @@ export class AutocompleteManager {
   private onSelect!: (entity: AutocompleteEntity) => void;
   private renderItem!: (entity: AutocompleteEntity, index: number) => string;
   private itemClass!: string;
+  private typeFilter?: 'player' | 'team';
 
   private currentSport!: string;
   private allData: AutocompleteEntity[] = [];
@@ -40,6 +43,7 @@ export class AutocompleteManager {
     this.onSelect = config.onSelect;
     this.currentSport = config.initialSport || 'nba';
     this.itemClass = config.itemClass || 'suggestion-item';
+    this.typeFilter = config.typeFilter;
 
     // Default render function
     this.renderItem = config.renderItem || ((entity, index) => `
@@ -153,7 +157,13 @@ export class AutocompleteManager {
     }
 
     this.suggestions = this.allData
-      .filter(item => item.name.toLowerCase().includes(query))
+      .filter(item => {
+        // Filter by name
+        if (!item.name.toLowerCase().includes(query)) return false;
+        // Filter by type if typeFilter is set
+        if (this.typeFilter && item.type !== this.typeFilter) return false;
+        return true;
+      })
       .slice(0, 10);
 
     this.selectedIndex = -1;
@@ -265,5 +275,23 @@ export class AutocompleteManager {
    */
   public getSport(): string {
     return this.currentSport;
+  }
+
+  /**
+   * Set type filter to only show entities of a specific type.
+   */
+  public setTypeFilter(type: 'player' | 'team' | undefined) {
+    this.typeFilter = type;
+    // Clear current suggestions to apply new filter
+    this.suggestions = [];
+    this.selectedIndex = -1;
+    this.hideSuggestions();
+  }
+
+  /**
+   * Get current type filter.
+   */
+  public getTypeFilter(): 'player' | 'team' | undefined {
+    return this.typeFilter;
   }
 }

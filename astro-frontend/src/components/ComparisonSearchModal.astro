@@ -339,6 +339,7 @@
           suggestionsEl: this.suggestionsEl,
           initialSport: this.currentSport,
           itemClass: 'comparison-suggestion-item',
+          typeFilter: this.currentType as 'player' | 'team',
           renderItem: (entity, index) => `
             <button
               type="button"
@@ -351,12 +352,8 @@
             </button>
           `,
           onSelect: (entity) => {
-            // Filter: must be same type and not the same entity
-            if (entity.type !== this.currentType) {
-              return; // Should not happen due to filtering, but safety check
-            }
+            // Don't allow comparing with self
             if (entity.id === this.currentId) {
-              // Can't compare with self
               return;
             }
             this.close();
@@ -366,8 +363,9 @@
           },
         });
       } else {
-        // Update sport if changed
+        // Update sport and type filter if changed
         this.autocomplete.setSport(this.currentSport);
+        this.autocomplete.setTypeFilter(this.currentType as 'player' | 'team');
       }
 
       // Clear input
