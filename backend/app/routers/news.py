@@ -2,17 +2,21 @@
 News Router - Entity-validated news service using Aho-Corasick matching.
 
 This redesigned news service:
-1. Fetches news broadly by sport/league
+1. Fetches news using entity-specific queries (like before)
 2. Validates each article against known entities using Aho-Corasick
 3. Returns only articles that match verified entities with confidence scores
+
+The key improvement over the old approach is that we validate matches against
+our database of known entities, eliminating false positives from substring
+matches or common names.
 
 Endpoints:
 - GET /api/v1/news?sport=NFL&hours=48 - Get validated news for a sport
 - GET /api/v1/news?sport=NFL&entity_id=123&entity_type=player - Filter by entity
+- GET /api/v1/news/{entity_name}?sport=NFL - Legacy endpoint (validated)
 """
 import asyncio
 import logging
-from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 from urllib.parse import quote_plus
@@ -53,20 +57,30 @@ MIN_ARTICLES_THRESHOLD = 3
 # Time range escalation (in hours)
 TIME_RANGE_ESCALATION = [48, 96, 168]
 
-# Sport-specific search queries for broad news fetching
-SPORT_QUERIES = {
+# Sport keywords for query enhancement
+SPORT_KEYWORDS = {
+    Sport.NFL: "NFL",
+    Sport.NBA: "NBA",
+    Sport.FOOTBALL: "football soccer",
+}
+
+# Top entities to query for sport-wide news (populated from DB)
+# These are fetched dynamically but we have fallbacks
+SPORT_QUERIES_FALLBACK = {
     Sport.NFL: [
-        "NFL football news",
-        "NFL players news",
+        "Patrick Mahomes", "Josh Allen", "Lamar Jackson", "Travis Kelce",
+        "Jalen Hurts", "Tyreek Hill", "Justin Jefferson", "Micah Parsons",
+        "Chiefs", "Eagles", "49ers", "Cowboys", "Bills", "Ravens",
     ],
     Sport.NBA: [
-        "NBA basketball news",
-        "NBA players news",
+        "LeBron James", "Stephen Curry", "Kevin Durant", "Giannis Antetokounmpo",
+        "Luka Doncic", "Jayson Tatum", "Joel Embiid", "Nikola Jokic",
+        "Lakers", "Celtics", "Warriors", "Nuggets", "Bucks", "76ers",
     ],
     Sport.FOOTBALL: [
-        "Premier League football news",
-        "La Liga soccer news",
-        "Champions League football",
+        "Erling Haaland", "Kylian Mbappe", "Jude Bellingham", "Vinicius Junior",
+        "Bukayo Saka", "Mohamed Salah", "Cole Palmer", "Rodri",
+        "Manchester City", "Arsenal", "Liverpool", "Real Madrid", "Barcelona",
     ],
 }
 
@@ -79,7 +93,7 @@ async def _fetch_rss_feed(
     """
     Fetch news articles from Google News RSS for a query.
 
-    Returns raw articles with title, link, pub_date, source.
+    Returns raw articles with title, link, pub_date, source, description.
     """
     import feedparser
     import time
@@ -158,7 +172,67 @@ def _matched_entity_to_dict(entity: MatchedEntity) -> dict[str, Any]:
     }
 
 
-async def _fetch_and_validate_news(
+def _build_query(entity_name: str, sport: Optional[Sport] = None) -> str:
+    """Build a search query for an entity with optional sport context."""
+    if sport and sport in SPORT_KEYWORDS:
+        return f'"{entity_name}" {SPORT_KEYWORDS[sport]}'
+    return f'"{entity_name}"'
+
+
+async def _fetch_entity_news(
+    client: httpx.AsyncClient,
+    entity_name: str,
+    hours: int,
+    sport: Optional[Sport] = None,
+) -> list[dict[str, Any]]:
+    """
+    Fetch news for a specific entity and validate against known entities.
+
+    Returns validated articles with matched_entities.
+    """
+    entity_index = get_entity_index()
+
+    # Build query and fetch
+    query = _build_query(entity_name, sport)
+    articles = await _fetch_rss_feed(client, query, hours)
+
+    if not entity_index.is_loaded:
+        # Fallback: return unvalidated articles if index not loaded
+        logger.warning("Entity index not loaded, returning unvalidated articles")
+        return [
+            {
+                "title": a.get("title", ""),
+                "link": a.get("link", ""),
+                "pub_date": a.get("pub_date"),
+                "source": a.get("source", ""),
+                "matched_entities": [],
+            }
+            for a in articles
+        ]
+
+    # Validate each article
+    validated = []
+    for article in articles:
+        text = f"{article.get('title', '')} {article.get('description', '')}"
+
+        # Find matching entities
+        matches = entity_index.find_entities(text, sport=sport)
+
+        if not matches:
+            continue
+
+        validated.append({
+            "title": article.get("title", ""),
+            "link": article.get("link", ""),
+            "pub_date": article.get("pub_date"),
+            "source": article.get("source", ""),
+            "matched_entities": [_matched_entity_to_dict(m) for m in matches],
+        })
+
+    return validated
+
+
+async def _fetch_sport_news(
     client: httpx.AsyncClient,
     sport: Sport,
     hours: int,
@@ -166,19 +240,24 @@ async def _fetch_and_validate_news(
     entity_type: Optional[EntityType] = None,
 ) -> dict[str, Any]:
     """
-    Fetch news for a sport and validate against known entities.
+    Fetch news for a sport by querying multiple popular entities.
 
-    Returns articles enriched with matched entity information.
+    This queries news for top players/teams and validates all results,
+    giving a broad view of sport news with entity tagging.
     """
     entity_index = get_entity_index()
-    if not entity_index.is_loaded:
-        logger.warning("Entity index not loaded, returning empty results")
+
+    # Get query entities - use top entities for the sport
+    query_entities = SPORT_QUERIES_FALLBACK.get(sport, [])
+
+    if not query_entities:
         return {"articles": [], "hours_used": hours, "entities_matched": 0}
 
-    # Fetch from multiple queries for the sport
-    queries = SPORT_QUERIES.get(sport, [f"{sport.value} sports news"])
-
-    tasks = [_fetch_rss_feed(client, q, hours) for q in queries]
+    # Fetch news for multiple entities in parallel
+    tasks = [
+        _fetch_entity_news(client, entity, hours, sport)
+        for entity in query_entities[:10]  # Limit to top 10 to avoid rate limiting
+    ]
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     # Merge all results
@@ -189,54 +268,28 @@ async def _fetch_and_validate_news(
             continue
         all_articles.extend(result)
 
-    # Deduplicate
-    unique_articles = _deduplicate_articles(all_articles)
-    logger.debug(f"Fetched {len(unique_articles)} unique articles for {sport.value}")
+    # Deduplicate and sort
+    unique = _deduplicate_articles(all_articles)
+    sorted_articles = _sort_by_date(unique)
 
-    # Validate each article against entity index
-    validated_articles = []
+    # Filter by specific entity if requested
+    if entity_id is not None and entity_type is not None:
+        sorted_articles = [
+            a for a in sorted_articles
+            if any(
+                me.get("id") == entity_id and me.get("type") == entity_type.value
+                for me in a.get("matched_entities", [])
+            )
+        ]
+
+    # Count unique entities
     entities_seen: set[tuple[str, int]] = set()
-
-    for article in unique_articles:
-        # Combine title and description for matching
-        text_to_match = f"{article.get('title', '')} {article.get('description', '')}"
-
-        # Find matching entities
-        matches = entity_index.find_entities(
-            text=text_to_match,
-            sport=sport,
-            entity_id=entity_id,
-            entity_type=entity_type,
-        )
-
-        if not matches:
-            continue
-
-        # Filter by entity if specified
-        if entity_id is not None and entity_type is not None:
-            matches = [m for m in matches if m.entity_id == entity_id and m.entity_type == entity_type]
-            if not matches:
-                continue
-
-        # Track unique entities
-        for m in matches:
-            entities_seen.add((m.entity_type.value, m.entity_id))
-
-        # Remove description from output (we only needed it for matching)
-        output_article = {
-            "title": article.get("title", ""),
-            "link": article.get("link", ""),
-            "pub_date": article.get("pub_date"),
-            "source": article.get("source", ""),
-            "matched_entities": [_matched_entity_to_dict(m) for m in matches],
-        }
-        validated_articles.append(output_article)
-
-    # Sort by date
-    validated_articles = _sort_by_date(validated_articles)
+    for article in sorted_articles:
+        for me in article.get("matched_entities", []):
+            entities_seen.add((me.get("type", ""), me.get("id", 0)))
 
     return {
-        "articles": validated_articles[:MAX_ARTICLES],
+        "articles": sorted_articles[:MAX_ARTICLES],
         "hours_used": hours,
         "entities_matched": len(entities_seen),
     }
@@ -251,19 +304,14 @@ async def _fetch_news_with_escalation(
 ) -> dict[str, Any]:
     """
     Fetch news with adaptive time range escalation.
-
-    If fewer than MIN_ARTICLES_THRESHOLD articles are found,
-    automatically extends the time range.
     """
-    # Build cache key
-    cache_key = f"news:v3:{sport.value}:{hours}:{entity_type.value if entity_type else ''}:{entity_id or ''}"
+    cache_key = f"news:v4:{sport.value}:{hours}:{entity_type.value if entity_type else ''}:{entity_id or ''}"
     cached = widget_cache.get(cache_key)
     if cached is not None:
         logger.debug(f"News cache HIT: {cache_key}")
         return cached
 
     async def _work() -> dict[str, Any]:
-        # Re-check cache
         cached2 = widget_cache.get(cache_key)
         if cached2 is not None:
             return cached2
@@ -275,7 +323,7 @@ async def _fetch_news_with_escalation(
             if try_hours < hours:
                 continue
 
-            result = await _fetch_and_validate_news(
+            result = await _fetch_sport_news(
                 client, sport, try_hours, entity_id, entity_type
             )
             final_hours = try_hours
@@ -293,9 +341,7 @@ async def _fetch_news_with_escalation(
         result["extended"] = final_hours > hours
 
         widget_cache.set(cache_key, result, ttl=NEWS_CACHE_TTL)
-        logger.info(
-            f"News cache SET: {cache_key} ({len(result['articles'])} articles)"
-        )
+        logger.info(f"News cache SET: {cache_key} ({len(result['articles'])} articles)")
         return result
 
     try:
@@ -308,7 +354,6 @@ async def _fetch_news_with_escalation(
         return {"articles": [], "hours_used": hours, "entities_matched": 0}
 
 
-# Legacy endpoint for backwards compatibility
 @router.get("/{entity_name}")
 async def get_news_by_name(
     request: Request,
@@ -316,19 +361,23 @@ async def get_news_by_name(
     entity_name: str,
     hours: int = Query(48, description="Hours to look back"),
     sport: Optional[str] = Query(None, description="Sport (NFL, NBA, FOOTBALL)"),
-    team: Optional[str] = Query(None, description="Team context (deprecated)"),
+    team: Optional[str] = Query(None, description="Team context (unused, for compatibility)"),
 ) -> dict[str, Any]:
     """
-    Legacy endpoint: Get news for an entity by name.
+    Get validated news for an entity by name.
 
-    This endpoint is maintained for backwards compatibility.
-    For better results, use the new sport-based endpoint with entity_id.
+    This endpoint queries Google News for the entity name and validates
+    all results against our database of known entities using Aho-Corasick
+    matching. This eliminates false positives from substring matches.
+
+    The response includes matched_entities for each article showing which
+    database entities were found with confidence scores.
     """
     client = getattr(request.app.state, "http_client", None)
     if client is None:
         raise HTTPException(status_code=500, detail="HTTP client not initialized")
 
-    # Try to determine sport
+    # Parse sport
     sport_enum: Optional[Sport] = None
     if sport:
         try:
@@ -336,37 +385,11 @@ async def get_news_by_name(
         except ValueError:
             pass
 
-    # If no sport, try all sports and merge
-    if sport_enum is None:
-        all_results: list[dict] = []
-        for s in Sport:
-            try:
-                result = await _fetch_and_validate_news(client, s, hours)
-                all_results.extend(result.get("articles", []))
-            except Exception:
-                continue
+    # Fetch and validate news
+    articles = await _fetch_entity_news(client, entity_name, hours, sport_enum)
 
-        # Filter by entity name in matched entities
-        entity_name_lower = entity_name.lower()
-        filtered = [
-            a for a in all_results
-            if any(
-                entity_name_lower in me.get("name", "").lower()
-                for me in a.get("matched_entities", [])
-            )
-        ]
-        articles = _sort_by_date(_deduplicate_articles(filtered))[:MAX_ARTICLES]
-    else:
-        result = await _fetch_and_validate_news(client, sport_enum, hours)
-        # Filter by entity name
-        entity_name_lower = entity_name.lower()
-        articles = [
-            a for a in result.get("articles", [])
-            if any(
-                entity_name_lower in me.get("name", "").lower()
-                for me in a.get("matched_entities", [])
-            )
-        ]
+    # Deduplicate and sort
+    articles = _sort_by_date(_deduplicate_articles(articles))[:MAX_ARTICLES]
 
     payload = {
         "query": entity_name,
@@ -397,38 +420,16 @@ async def get_news(
     """
     Get validated news articles for a sport.
 
-    Features:
-    - Fetches broad sport news and validates against known entities
-    - Each article includes matched_entities with confidence scores
-    - Optionally filter by specific entity_id + entity_type
-    - Adaptive time range: auto-extends if < 3 results
-    - Cached for 10 minutes
+    This endpoint fetches news for popular entities in the sport and
+    validates all results against our entity database. Each article
+    includes matched_entities with confidence scores.
 
-    Response:
-    {
-        "sport": "NFL",
-        "hours": 48,
-        "count": 25,
-        "entities_matched": 15,
-        "articles": [
-            {
-                "title": "Mahomes leads Chiefs to victory",
-                "link": "...",
-                "pub_date": "2024-01-15T10:00:00Z",
-                "source": "ESPN",
-                "matched_entities": [
-                    {"type": "player", "id": 123, "name": "Patrick Mahomes", "sport": "NFL", "confidence": "high"},
-                    {"type": "team", "id": 456, "name": "Kansas City Chiefs", "sport": "NFL", "confidence": "high"}
-                ]
-            }
-        ]
-    }
+    Optionally filter to a specific entity_id + entity_type.
     """
     client = getattr(request.app.state, "http_client", None)
     if client is None:
         raise HTTPException(status_code=500, detail="HTTP client not initialized")
 
-    # Validate sport
     try:
         sport_enum = Sport(sport.upper())
     except ValueError:
@@ -437,7 +438,6 @@ async def get_news(
             detail=f"Invalid sport. Must be one of: {', '.join(s.value for s in Sport)}"
         )
 
-    # Validate entity_type if provided
     entity_type_enum: Optional[EntityType] = None
     if entity_type:
         try:
@@ -448,7 +448,6 @@ async def get_news(
                 detail=f"Invalid entity_type. Must be one of: {', '.join(e.value for e in EntityType)}"
             )
 
-    # Require both entity_id and entity_type together
     if (entity_id is not None) != (entity_type_enum is not None):
         raise HTTPException(
             status_code=400,
@@ -456,9 +455,7 @@ async def get_news(
         )
 
     result = await _fetch_news_with_escalation(
-        client,
-        sport_enum,
-        hours,
+        client, sport_enum, hours,
         entity_id=entity_id,
         entity_type=entity_type_enum,
     )

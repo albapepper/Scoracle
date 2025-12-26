@@ -38,23 +38,28 @@ async def lifespan(app: FastAPI):
     app.state.http_client = httpx.AsyncClient(timeout=timeout, limits=limits, follow_redirects=True)
 
     # Initialize entity index for news validation
-    # Database path: try instance/localdb relative to project root, fallback for Vercel
+    # Try multiple paths to find the database (local dev vs Vercel)
     db_paths = [
-        Path(__file__).parent.parent.parent / "instance" / "localdb",  # Local dev
-        Path("/var/task/instance/localdb"),  # Vercel serverless
-        Path(__file__).parent.parent.parent.parent / "instance" / "localdb",  # Alternative
+        Path(__file__).parent.parent.parent / "instance" / "localdb",  # Local: backend/../instance
+        Path("/var/task/instance/localdb"),  # Vercel absolute path
+        Path("instance/localdb"),  # Relative to cwd
+        Path(__file__).parent.parent / "instance" / "localdb",  # Alternative
     ]
+
+    logger.info(f"Looking for entity database. CWD: {os.getcwd()}, __file__: {__file__}")
+
     for db_path in db_paths:
+        logger.info(f"Checking path: {db_path} (exists: {db_path.exists()})")
         if db_path.exists():
-            logger.info(f"Initializing entity index from {db_path}")
+            logger.info(f"Found entity database at {db_path}")
             try:
                 initialize_entity_index(db_path)
                 logger.info("Entity index initialized successfully")
             except Exception as e:
-                logger.error(f"Failed to initialize entity index: {e}")
+                logger.error(f"Failed to initialize entity index: {e}", exc_info=True)
             break
     else:
-        logger.warning("Entity database not found, news validation will be disabled")
+        logger.warning("Entity database not found in any expected location")
 
     yield
     client = getattr(app.state, "http_client", None)
@@ -108,7 +113,16 @@ app.include_router(reddit.router, prefix=settings.API_V1_STR)    # Reddit (futur
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "version": settings.PROJECT_VERSION}
+    from app.services.entity_index import get_entity_index
+    entity_index = get_entity_index()
+    return {
+        "status": "ok",
+        "version": settings.PROJECT_VERSION,
+        "entity_index": {
+            "loaded": entity_index.is_loaded,
+            "patterns": len(entity_index._patterns) if entity_index.is_loaded else 0,
+        },
+    }
 
 
 @app.get("/")
