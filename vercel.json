@@ -11,7 +11,7 @@
   ],
   "functions": {
     "api/index.py": {
-      "includeFiles": "backend/**"
+      "includeFiles": "backend/**,instance/localdb/*.sqlite"
     }
   },
   "env": {
