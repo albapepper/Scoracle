@@ -194,6 +194,7 @@ interface PageData {
   widget?: unknown;
   news?: unknown;
   stats?: unknown;
+  comparisonWidget?: unknown;
 }
 
 const pageDataStore: PageData = {};

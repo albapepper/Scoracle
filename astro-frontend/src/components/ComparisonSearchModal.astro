@@ -1,0 +1,401 @@
+---
+/**
+ * Comparison Search Modal
+ *
+ * A modal overlay with a search box for selecting an entity to compare.
+ * Uses the AutocompleteManager for entity search functionality.
+ * Filters results to match the current entity type (team/player) and sport.
+ */
+---
+
+<div id="comparison-modal" class="comparison-modal hidden">
+  <div class="modal-backdrop"></div>
+  <div class="modal-content card">
+    <div class="modal-header">
+      <h3 class="modal-title">Add Comparison</h3>
+      <button type="button" class="modal-close" aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="search-container">
+        <input
+          type="text"
+          id="comparison-search-input"
+          class="search-input input"
+          placeholder="Search..."
+          autocomplete="off"
+        />
+        <div id="comparison-suggestions" class="suggestions-dropdown hidden"></div>
+      </div>
+      <p class="search-hint">
+        <span id="comparison-hint-text">Search for a similar entity to compare</span>
+      </p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .comparison-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 10vh;
+  }
+
+  .comparison-modal.hidden {
+    display: none;
+  }
+
+  .modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+  }
+
+  :global(.dark) .modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.6);
+  }
+
+  .modal-content {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 1rem;
+    animation: modalSlideIn 0.2s ease-out;
+  }
+
+  @keyframes modalSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  :global(.dark) .modal-header {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .modal-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  :global(.dark) .modal-title {
+    color: var(--text-dark);
+  }
+
+  .modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    border-radius: 4px;
+  }
+
+  .modal-close:hover {
+    background-color: var(--border);
+  }
+
+  :global(.dark) .modal-close {
+    color: var(--text-secondary-dark);
+  }
+
+  :global(.dark) .modal-close:hover {
+    background-color: var(--border-dark);
+  }
+
+  .modal-body {
+    padding: 1.25rem;
+  }
+
+  .search-container {
+    position: relative;
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+  }
+
+  .suggestions-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 250px;
+    overflow-y: auto;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 0.25rem 0.25rem;
+    z-index: 10;
+  }
+
+  :global(.dark) .suggestions-dropdown {
+    background-color: var(--bg-card-dark);
+    border-color: var(--border-dark);
+  }
+
+  .suggestions-dropdown.hidden {
+    display: none;
+  }
+
+  .search-hint {
+    margin: 0.75rem 0 0;
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+  }
+
+  :global(.dark) .search-hint {
+    color: var(--text-tertiary-dark);
+  }
+
+  /* Suggestion item styles */
+  :global(.comparison-suggestion-item) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+
+  :global(.comparison-suggestion-item:last-child) {
+    border-bottom: none;
+  }
+
+  :global(.comparison-suggestion-item:hover),
+  :global(.comparison-suggestion-item.selected) {
+    background-color: var(--border);
+  }
+
+  :global(.dark .comparison-suggestion-item) {
+    border-bottom-color: var(--border-dark);
+  }
+
+  :global(.dark .comparison-suggestion-item:hover),
+  :global(.dark .comparison-suggestion-item.selected) {
+    background-color: var(--border-dark);
+  }
+
+  :global(.comparison-suggestion-name) {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  :global(.dark .comparison-suggestion-name) {
+    color: var(--text-dark);
+  }
+
+  :global(.comparison-suggestion-meta) {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  :global(.dark .comparison-suggestion-meta) {
+    color: var(--text-secondary-dark);
+  }
+
+  :global(.no-results) {
+    padding: 1rem;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+  }
+
+  :global(.dark .no-results) {
+    color: var(--text-tertiary-dark);
+  }
+
+  @media (max-width: 480px) {
+    .comparison-modal {
+      padding-top: 5vh;
+    }
+
+    .modal-content {
+      margin: 0 0.5rem;
+    }
+  }
+</style>
+
+<script>
+  import { AutocompleteManager, type AutocompleteEntity } from '../lib/utils/autocomplete';
+  import { escapeHtml } from '../lib/utils/dom';
+
+  /**
+   * ComparisonModalManager
+   *
+   * Manages the comparison search modal, including opening/closing,
+   * entity search, and selection.
+   */
+  class ComparisonModalManager {
+    private modal: HTMLElement | null = null;
+    private backdrop: HTMLElement | null = null;
+    private closeBtn: HTMLElement | null = null;
+    private inputEl: HTMLInputElement | null = null;
+    private suggestionsEl: HTMLElement | null = null;
+    private hintEl: HTMLElement | null = null;
+
+    private autocomplete: AutocompleteManager | null = null;
+    private currentSport: string = '';
+    private currentType: string = '';
+    private currentId: string = '';
+    private onSelectCallback: ((entity: AutocompleteEntity) => void) | null = null;
+
+    constructor() {
+      this.modal = document.getElementById('comparison-modal');
+      this.backdrop = this.modal?.querySelector('.modal-backdrop') || null;
+      this.closeBtn = this.modal?.querySelector('.modal-close') || null;
+      this.inputEl = document.getElementById('comparison-search-input') as HTMLInputElement;
+      this.suggestionsEl = document.getElementById('comparison-suggestions');
+      this.hintEl = document.getElementById('comparison-hint-text');
+
+      this.bindEvents();
+      this.exposeAPI();
+    }
+
+    private bindEvents() {
+      // Close on backdrop click
+      this.backdrop?.addEventListener('click', () => this.close());
+
+      // Close on close button click
+      this.closeBtn?.addEventListener('click', () => this.close());
+
+      // Close on Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && this.isOpen()) {
+          this.close();
+        }
+      });
+    }
+
+    private exposeAPI() {
+      // Expose open/close methods globally for other components
+      (window as any).comparisonModal = {
+        open: (sport: string, type: string, id: string, onSelect: (entity: AutocompleteEntity) => void) => {
+          this.open(sport, type, id, onSelect);
+        },
+        close: () => this.close(),
+        isOpen: () => this.isOpen(),
+      };
+    }
+
+    public open(sport: string, type: string, id: string, onSelect: (entity: AutocompleteEntity) => void) {
+      if (!this.modal || !this.inputEl || !this.suggestionsEl) return;
+
+      this.currentSport = sport.toLowerCase();
+      this.currentType = type;
+      this.currentId = id;
+      this.onSelectCallback = onSelect;
+
+      // Update hint text
+      const typeDisplay = type === 'team' ? 'team' : 'player';
+      if (this.hintEl) {
+        this.hintEl.textContent = `Search for another ${typeDisplay} to compare`;
+      }
+
+      // Initialize autocomplete if needed
+      if (!this.autocomplete) {
+        this.autocomplete = new AutocompleteManager({
+          inputEl: this.inputEl,
+          suggestionsEl: this.suggestionsEl,
+          initialSport: this.currentSport,
+          itemClass: 'comparison-suggestion-item',
+          renderItem: (entity, index) => `
+            <button
+              type="button"
+              data-index="${index}"
+              class="comparison-suggestion-item"
+              tabindex="-1"
+            >
+              <div class="comparison-suggestion-name">${escapeHtml(entity.name)}</div>
+              <div class="comparison-suggestion-meta">${entity.type === 'player' ? (entity.team || 'Player') : 'Team'}</div>
+            </button>
+          `,
+          onSelect: (entity) => {
+            // Filter: must be same type and not the same entity
+            if (entity.type !== this.currentType) {
+              return; // Should not happen due to filtering, but safety check
+            }
+            if (entity.id === this.currentId) {
+              // Can't compare with self
+              return;
+            }
+            this.close();
+            if (this.onSelectCallback) {
+              this.onSelectCallback(entity);
+            }
+          },
+        });
+      } else {
+        // Update sport if changed
+        this.autocomplete.setSport(this.currentSport);
+      }
+
+      // Clear input
+      this.inputEl.value = '';
+
+      // Show modal
+      this.modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+
+      // Focus input
+      setTimeout(() => {
+        this.inputEl?.focus();
+      }, 100);
+    }
+
+    public close() {
+      if (!this.modal) return;
+
+      this.modal.classList.add('hidden');
+      document.body.style.overflow = '';
+      this.onSelectCallback = null;
+    }
+
+    public isOpen(): boolean {
+      return this.modal ? !this.modal.classList.contains('hidden') : false;
+    }
+  }
+
+  // Initialize on page load
+  new ComparisonModalManager();
+</script>

@@ -2,17 +2,30 @@
 import Layout from '../layouts/Layout.astro';
 import EntityWidget from '../components/EntityWidget.astro';
 import StatsCard from '../components/StatsCard.astro';
+import ComparisonSearchModal from '../components/ComparisonSearchModal.astro';
+import EntityWidgetComparison from '../components/EntityWidgetComparison.astro';
+import StatsCardComparison from '../components/StatsCardComparison.astro';
 ---
 
-<Layout 
+<Layout
   title="Entity Profile - Scoracle"
   description="View detailed statistics, news, and information about sports players and teams"
 >
   <main class="entity-main">
-    <EntityWidget page="entity" />
-    
-    <!-- Stats Card -->
-    <StatsCard title="Statistics" />
+    <!-- Single Entity View (default) -->
+    <div id="single-entity-view">
+      <EntityWidget page="entity" showCompareButton={true} />
+      <StatsCard title="Statistics" />
+    </div>
+
+    <!-- Comparison View (hidden by default) -->
+    <div id="comparison-view" class="comparison-view hidden">
+      <EntityWidgetComparison />
+      <StatsCardComparison title="Statistics Comparison" />
+    </div>
+
+    <!-- Comparison Search Modal -->
+    <ComparisonSearchModal />
   </main>
 </Layout>
 
@@ -30,4 +43,215 @@ import StatsCard from '../components/StatsCard.astro';
   :global(.dark) .entity-main {
     background-color: var(--bg-dark);
   }
+
+  #single-entity-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    width: 100%;
+  }
+
+  #single-entity-view.hidden {
+    display: none;
+  }
+
+  .comparison-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    width: 100%;
+  }
+
+  .comparison-view.hidden {
+    display: none;
+  }
 </style>
+
+<script>
+  import type { AutocompleteEntity } from '../lib/utils/autocomplete';
+
+  /**
+   * Entity Page Comparison Manager
+   *
+   * Orchestrates the comparison feature on the entity page.
+   * Handles switching between single and comparison views.
+   */
+  class EntityPageManager {
+    private singleView: HTMLElement | null = null;
+    private comparisonView: HTMLElement | null = null;
+
+    private primarySport: string = '';
+    private primaryType: string = '';
+    private primaryId: string = '';
+    private primaryName: string = '';
+
+    private secondaryType: string = '';
+    private secondaryId: string = '';
+    private secondaryName: string = '';
+
+    constructor() {
+      this.singleView = document.getElementById('single-entity-view');
+      this.comparisonView = document.getElementById('comparison-view');
+
+      this.bindEvents();
+    }
+
+    private bindEvents() {
+      // Listen for comparison add request (from EntityWidget + button)
+      window.addEventListener('comparison:add', ((event: CustomEvent) => {
+        const { sport, type, id, name } = event.detail;
+        this.primarySport = sport;
+        this.primaryType = type;
+        this.primaryId = id;
+        this.primaryName = name;
+
+        this.openComparisonModal();
+      }) as EventListener);
+
+      // Listen for comparison removal
+      window.addEventListener('comparison:removed', () => {
+        this.exitComparisonMode();
+      });
+    }
+
+    private openComparisonModal() {
+      // Use the global comparison modal API
+      const modal = (window as any).comparisonModal;
+      if (modal) {
+        modal.open(
+          this.primarySport,
+          this.primaryType,
+          this.primaryId,
+          (entity: AutocompleteEntity) => {
+            this.onComparisonSelected(entity);
+          }
+        );
+      }
+    }
+
+    private onComparisonSelected(entity: AutocompleteEntity) {
+      this.secondaryType = entity.type;
+      this.secondaryId = entity.id;
+      this.secondaryName = entity.name;
+
+      this.enterComparisonMode();
+    }
+
+    private enterComparisonMode() {
+      // Hide single view
+      this.singleView?.classList.add('hidden');
+
+      // Show comparison view
+      this.comparisonView?.classList.remove('hidden');
+
+      // Initialize comparison widgets
+      const widgetComparison = (window as any).entityWidgetComparison;
+      if (widgetComparison) {
+        widgetComparison.show(
+          this.primarySport,
+          this.primaryType,
+          this.primaryId,
+          this.secondaryType,
+          this.secondaryId
+        );
+      }
+
+      // Initialize comparison stats card
+      const statsComparison = (window as any).statsCardComparison;
+      if (statsComparison) {
+        statsComparison.show(
+          this.primarySport,
+          this.primaryType,
+          this.primaryId,
+          this.secondaryType,
+          this.secondaryId,
+          this.primaryName,
+          this.secondaryName
+        );
+      }
+
+      // Update URL with comparison params (for sharing/bookmarking)
+      this.updateURL();
+    }
+
+    private exitComparisonMode() {
+      // Show single view
+      this.singleView?.classList.remove('hidden');
+
+      // Hide comparison view
+      this.comparisonView?.classList.add('hidden');
+
+      // Hide comparison components
+      const widgetComparison = (window as any).entityWidgetComparison;
+      if (widgetComparison) widgetComparison.hide();
+
+      const statsComparison = (window as any).statsCardComparison;
+      if (statsComparison) statsComparison.hide();
+
+      // Reset secondary entity
+      this.secondaryType = '';
+      this.secondaryId = '';
+      this.secondaryName = '';
+
+      // Remove comparison params from URL
+      this.removeComparisonFromURL();
+    }
+
+    private updateURL() {
+      const url = new URL(window.location.href);
+      url.searchParams.set('compareType', this.secondaryType);
+      url.searchParams.set('compareId', this.secondaryId);
+      window.history.replaceState({}, '', url.toString());
+    }
+
+    private removeComparisonFromURL() {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('compareType');
+      url.searchParams.delete('compareId');
+      window.history.replaceState({}, '', url.toString());
+    }
+
+    /**
+     * Check if comparison params exist in URL and restore comparison mode
+     */
+    private checkURLForComparison() {
+      const params = new URLSearchParams(window.location.search);
+      const compareType = params.get('compareType');
+      const compareId = params.get('compareId');
+
+      if (compareType && compareId) {
+        // Wait for entity widget to load and provide primary entity info
+        const checkWidget = () => {
+          const widget = (window as any).entityWidget;
+          if (widget && widget.getSport()) {
+            this.primarySport = widget.getSport();
+            this.primaryType = widget.getType();
+            this.primaryId = widget.getId();
+            this.primaryName = widget.getName() || 'Primary';
+
+            this.secondaryType = compareType;
+            this.secondaryId = compareId;
+            this.secondaryName = 'Comparison';
+
+            this.enterComparisonMode();
+          } else {
+            // Retry after a short delay
+            setTimeout(checkWidget, 100);
+          }
+        };
+
+        setTimeout(checkWidget, 200);
+      }
+    }
+  }
+
+  // Initialize
+  const manager = new EntityPageManager();
+
+  // Check for comparison in URL after page load
+  document.addEventListener('DOMContentLoaded', () => {
+    (manager as any).checkURLForComparison();
+  });
+</script>
