@@ -2,7 +2,17 @@
 
 ## Executive Summary
 
-This document outlines the comprehensive plan for building a local SQLite database system to store current and historical season statistics from API-Sports. The system will enable interactive graphs, tables, and percentile-based comparisons while dramatically reducing API calls to the third-party service.
+This document outlines the comprehensive plan for building a **unified local database** that serves as the single source of truth for all entity profiles and statistics. The system eliminates live API calls for user requests, enabling sub-10ms response times while reducing API-Sports usage to ~100 calls/week (batch updates only).
+
+### Key Design Decisions
+
+- **Local-first architecture**: All user requests served from SQLite, never live API
+- **Tiered football coverage**: Full data for Top 5 European leagues + MLS; minimal data for others
+- **NBA/NFL always full coverage**: Single league per sport, always complete data
+- **Two-phase seeding**: Discovery (roster changes) → Profile fetch (new entities only)
+- **Daily roster diffs**: Catch trades/transfers during season
+- **Yearly profile refresh**: Photos only change annually
+- **Percentiles from priority leagues only**: Meaningful comparisons against quality competition
 
 ---
 
@@ -10,14 +20,15 @@ This document outlines the comprehensive plan for building a local SQLite databa
 
 1. [Goals & Objectives](#1-goals--objectives)
 2. [Architecture Overview](#2-architecture-overview)
-3. [Database Schema Design](#3-database-schema-design)
-4. [Sport-Specific Data Models](#4-sport-specific-data-models)
-5. [Percentile Calculation System](#5-percentile-calculation-system)
-6. [Data Seeding & Automation](#6-data-seeding--automation)
-7. [API Integration](#7-api-integration)
-8. [Extensibility Framework](#8-extensibility-framework)
-9. [Implementation Phases](#9-implementation-phases)
-10. [File Structure](#10-file-structure)
+3. [Tiered Data Coverage](#3-tiered-data-coverage)
+4. [Database Schema Design](#4-database-schema-design)
+5. [Sport-Specific Data Models](#5-sport-specific-data-models)
+6. [Two-Phase Seeding System](#6-two-phase-seeding-system)
+7. [Percentile Calculation System](#7-percentile-calculation-system)
+8. [Service Layer Architecture](#8-service-layer-architecture)
+9. [API Integration](#9-api-integration)
+10. [Implementation Phases](#10-implementation-phases)
+11. [File Structure](#11-file-structure)
 
 ---
 
@@ -25,19 +36,20 @@ This document outlines the comprehensive plan for building a local SQLite databa
 
 ### Primary Goals
 
-1. **Local Data Storage**: Store comprehensive player and team statistics locally to minimize third-party API calls
-2. **Percentile Analytics**: Enable percentile-based comparisons for visual statistical profiling
-3. **Interactive Visualizations**: Support data for graphs, charts, and comparative tables
-4. **Minimal API Usage**: Reduce API calls to a handful per week (batch updates only)
-5. **Historical Data**: Maintain current season + previous season(s) for trend analysis
+1. **Unified Local Database**: Single SQLite database for ALL entity profiles AND statistics
+2. **Zero Live API Calls**: User requests never trigger API-Sports calls; all data served locally
+3. **Sub-10ms Response Times**: SQLite reads replace 300-500ms API calls
+4. **~100 API Calls/Week**: Predictable, budgeted API usage via batch seeding only
+5. **Real-Time News**: Eliminate news caching for always-fresh content
+6. **Tiered Coverage**: Full data for priority leagues; minimal + fallback for others
 
 ### Design Principles
 
-- **Sport-Agnostic Core**: Central schema that works across all sports
-- **Sport-Specific Extensions**: Dedicated tables for sport-unique statistics
-- **Automation-First**: Built for automated updates via cron/scheduler
-- **Extensibility**: Easy to add new sports without schema refactoring
-- **Performance**: Optimized for read-heavy percentile calculations
+- **Local-First**: Database is the source of truth, not a cache
+- **Two-Phase Seeding**: Discovery phase detects changes; Profile phase fetches only what's new
+- **Smart Diffing**: Daily roster diffs catch trades/transfers without full re-seed
+- **Priority-Based Percentiles**: Only calculate against quality competition (Top 5 + MLS)
+- **Graceful Degradation**: Non-priority entities show "Building statistical profile" indicator
 
 ---
 
@@ -46,46 +58,142 @@ This document outlines the comprehensive plan for building a local SQLite databa
 ### System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        SCORACLE STATS SYSTEM                         │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  ┌──────────────────┐    ┌──────────────────┐    ┌───────────────┐  │
-│  │   API-Sports     │───▶│  Seed Pipeline   │───▶│  Stats DB     │  │
-│  │   (External)     │    │  (Weekly Cron)   │    │  (SQLite)     │  │
-│  └──────────────────┘    └──────────────────┘    └───────┬───────┘  │
-│                                                          │          │
-│                          ┌───────────────────────────────┘          │
-│                          ▼                                          │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │                    ANALYTICS LAYER                            │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐   │   │
-│  │  │ Percentile  │  │ Aggregation │  │ Comparison Engine   │   │   │
-│  │  │ Calculator  │  │ Service     │  │ (Player vs Player)  │   │   │
-│  │  └─────────────┘  └─────────────┘  └─────────────────────┘   │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-│                          │                                          │
-│                          ▼                                          │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │                    PRESENTATION LAYER                         │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐   │   │
-│  │  │ Radar/Spider│  │ Bar Charts  │  │ Comparison Tables   │   │   │
-│  │  │ Graphs      │  │ & Trends    │  │ & Rankings          │   │   │
-│  │  └─────────────┘  └─────────────┘  └─────────────────────┘   │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-│                                                                      │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     SCORACLE LOCAL-FIRST ARCHITECTURE                    │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  USER REQUESTS (Sub-10ms response)                                       │
+│  ─────────────────────────────────                                       │
+│  Frontend → EntityRepository → stats.sqlite → Response                   │
+│                                    │                                     │
+│                                    ├── Priority entity? → Full profile   │
+│                                    └── Non-priority? → "Building..." UI  │
+│                                                                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  BATCH SEEDING (2-3x/week, ~100 API calls)                              │
+│  ─────────────────────────────────────────                              │
+│                                                                          │
+│  ┌─────────────┐    ┌─────────────────────────────────────────────────┐ │
+│  │ API-Sports  │───▶│  TWO-PHASE SEEDING PIPELINE                     │ │
+│  │ (External)  │    │                                                 │ │
+│  └─────────────┘    │  Phase 1: DISCOVERY                             │ │
+│                     │  ├── Fetch league rosters                       │ │
+│                     │  ├── Compare against existing DB                │ │
+│                     │  └── Identify NEW entities (no profile_fetched) │ │
+│                     │                                                 │ │
+│                     │  Phase 2: PROFILE FETCH                         │ │
+│                     │  ├── Batch fetch profiles for NEW entities only │ │
+│                     │  └── Skip entities with profile_fetched_at set  │ │
+│                     │                                                 │ │
+│                     │  Phase 3: STATS UPDATE                          │ │
+│                     │  ├── Fetch current season stats                 │ │
+│                     │  └── Recalculate percentiles                    │ │
+│                     └─────────────────────────────────────────────────┘ │
+│                                      │                                   │
+│                                      ▼                                   │
+│                            ┌─────────────────┐                          │
+│                            │  stats.sqlite   │                          │
+│                            │  (Unified DB)   │                          │
+│                            └─────────────────┘                          │
+│                                                                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  DAILY ROSTER DIFF (Priority leagues only, ~10 calls)                   │
+│  ────────────────────────────────────────────────────                   │
+│  ├── Fetch current rosters for priority leagues                         │
+│  ├── Detect trades/transfers (player.current_team changed)              │
+│  ├── Update player_teams history                                        │
+│  └── Fetch profile for any genuinely NEW players                        │
+│                                                                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  NEWS (Real-time, no caching)                                           │
+│  ────────────────────────────                                           │
+│  Frontend → Google News RSS → Response (60s TTL max)                    │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Database Strategy
 
-- **Primary Database**: `instance/statsdb/stats.sqlite` - Single unified database
-- **Separate from Autocomplete**: Keeps existing `instance/localdb/*.sqlite` unchanged
+- **Unified Database**: `instance/statsdb/stats.sqlite` - Profiles + Stats + Percentiles
+- **Replaces Live API**: EntityRepository reads locally, never calls API-Sports
 - **Read-Only Production**: Database bundled with deployment, updates via CI/CD
+- **Autocomplete Unchanged**: Existing `instance/localdb/*.sqlite` remains separate
 
 ---
 
-## 3. Database Schema Design
+## 3. Tiered Data Coverage
+
+### Coverage Strategy by Sport
+
+| Sport | Coverage Type | Leagues | Data Level |
+|-------|---------------|---------|------------|
+| **NFL** | Full | NFL (1 league) | All teams, players, stats, profiles |
+| **NBA** | Full | NBA (1 league) | All teams, players, stats, profiles |
+| **Football** | Tiered | See below | Priority vs Minimal |
+
+### Football League Tiers
+
+#### Priority Leagues (Full Local Data)
+
+| League | API ID | Country | Why Priority |
+|--------|--------|---------|--------------|
+| Premier League | 39 | England | Top global viewership |
+| La Liga | 140 | Spain | Top European league |
+| Bundesliga | 78 | Germany | Top European league |
+| Serie A | 135 | Italy | Top European league |
+| Ligue 1 | 61 | France | Top European league |
+| MLS | 253 | USA | Primary US market |
+
+**Priority league entities receive:**
+- Full profile data (logo, photo, venue, bio, height, weight, etc.)
+- Complete season statistics
+- Percentile calculations (compared within priority pool)
+- Immediate widget rendering
+
+#### Non-Priority Leagues (Minimal + Fallback)
+
+All other football leagues receive:
+- **Minimal local data**: `id`, `name`, `league_id`, `normalized_name`, `tokens`
+- **No local stats**: Statistics fetched on-demand via live API
+- **No percentile badges**: Insufficient local data for comparison
+- **UI indicator**: "Building statistical profile" shown during render
+
+### API Call Budget (~100 calls/week)
+
+| Operation | Priority Leagues | Estimated Calls | Frequency |
+|-----------|------------------|-----------------|-----------|
+| Team rosters (NFL) | 1 league | 1 | 2x/week |
+| Team rosters (NBA) | 1 league | 1 | 2x/week |
+| Team rosters (Football) | 6 leagues | 6 | 2x/week |
+| Player profiles (NEW only) | ~50 new/week | 50 | As discovered |
+| Player stats (paginated) | All priority | 25 | 2x/week |
+| Team stats | All priority | 10 | 2x/week |
+| Daily roster diff | Priority only | 8 | Daily |
+| **Total** | | **~100/week** | |
+
+### Percentile Calculation Scope
+
+Percentiles are ONLY calculated using priority league data:
+
+```sql
+-- Football percentile query filters to priority leagues
+SELECT stat_value,
+       PERCENT_RANK() OVER (ORDER BY stat_value) as percentile
+FROM football_player_stats fps
+JOIN players p ON fps.player_id = p.id
+JOIN leagues l ON p.current_league_id = l.id
+WHERE l.priority_tier = 1  -- Top 5 European + MLS only
+  AND fps.stat_category = ?;
+```
+
+This ensures percentiles reflect meaningful comparisons against quality competition.
+
+---
+
+## 4. Database Schema Design
 
 ### Core Tables (Sport-Agnostic)
 
@@ -128,8 +236,15 @@ CREATE TABLE leagues (
     name TEXT NOT NULL,
     country TEXT,
     logo_url TEXT,
+    priority_tier INTEGER DEFAULT 0,  -- 1 = priority (full data), 0 = minimal
     is_active INTEGER DEFAULT 1
 );
+
+-- Priority tier values:
+--   1 = Priority league (Top 5 European + MLS for Football)
+--       Full profiles, stats, percentiles
+--   0 = Non-priority league
+--       Minimal data, live API fallback, no percentiles
 
 -- Teams master table
 CREATE TABLE teams (
@@ -142,12 +257,23 @@ CREATE TABLE teams (
     conference TEXT,               -- For NBA/NFL
     division TEXT,                 -- For NBA/NFL
     country TEXT,                  -- For Football
+    city TEXT,
     founded INTEGER,
     venue_name TEXT,
+    venue_city TEXT,
     venue_capacity INTEGER,
+    venue_surface TEXT,
+    venue_image TEXT,
+    -- Profile tracking
+    profile_fetched_at INTEGER,    -- NULL = needs fetch, timestamp = fetched
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
+
+-- Profile refresh strategy:
+--   profile_fetched_at = NULL → Entity discovered, needs profile fetch
+--   profile_fetched_at > 1 year ago → Consider refresh (photos may change)
+--   profile_fetched_at recent → Skip fetch, use cached profile
 
 -- Players master table
 CREATE TABLE players (
@@ -157,16 +283,27 @@ CREATE TABLE players (
     last_name TEXT,
     full_name TEXT NOT NULL,
     position TEXT,
+    position_group TEXT,           -- For NFL: 'offense', 'defense', 'special'
+    jersey_number INTEGER,
     nationality TEXT,
     birth_date TEXT,
+    birth_place TEXT,
     height_cm INTEGER,
     weight_kg INTEGER,
     photo_url TEXT,
     current_team_id INTEGER REFERENCES teams(id),
+    current_league_id INTEGER REFERENCES leagues(id),
     is_active INTEGER DEFAULT 1,
+    -- Profile tracking
+    profile_fetched_at INTEGER,    -- NULL = needs fetch, timestamp = fetched
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
+
+-- Index for finding entities needing profile fetch
+CREATE INDEX idx_teams_needs_profile ON teams(profile_fetched_at) WHERE profile_fetched_at IS NULL;
+CREATE INDEX idx_players_needs_profile ON players(profile_fetched_at) WHERE profile_fetched_at IS NULL;
+CREATE INDEX idx_players_current_league ON players(current_league_id);
 
 -- Player-Team history (for trades/transfers)
 CREATE TABLE player_teams (
@@ -176,8 +313,24 @@ CREATE TABLE player_teams (
     season_id INTEGER NOT NULL REFERENCES seasons(id),
     start_date TEXT,
     end_date TEXT,
+    detected_at INTEGER NOT NULL,  -- When we detected this assignment
     UNIQUE(player_id, team_id, season_id)
 );
+
+-- Minimal entities table (for non-priority league autocomplete)
+CREATE TABLE entities_minimal (
+    id INTEGER PRIMARY KEY,
+    entity_type TEXT NOT NULL,     -- 'team' or 'player'
+    sport_id TEXT NOT NULL,
+    league_id INTEGER,
+    name TEXT NOT NULL,
+    normalized_name TEXT,          -- Lowercase, accent-stripped
+    tokens TEXT,                   -- Space-separated search tokens
+    created_at INTEGER NOT NULL
+);
+
+CREATE INDEX idx_entities_minimal_type ON entities_minimal(entity_type, sport_id);
+CREATE INDEX idx_entities_minimal_search ON entities_minimal(normalized_name);
 ```
 
 ### Statistics Tables Architecture
@@ -210,9 +363,9 @@ ON percentile_cache(entity_type, sport_id, season_id, stat_category);
 
 ---
 
-## 4. Sport-Specific Data Models
+## 5. Sport-Specific Data Models
 
-### 4.1 NBA Statistics
+### 5.1 NBA Statistics
 
 #### Player Statistics Table
 
@@ -332,7 +485,7 @@ CREATE TABLE nba_team_stats (
 );
 ```
 
-### 4.2 NFL Statistics
+### 5.2 NFL Statistics
 
 #### Player Statistics Tables
 
@@ -479,7 +632,7 @@ CREATE TABLE nfl_team_stats (
 );
 ```
 
-### 4.3 Football (Soccer) Statistics
+### 5.3 Football (Soccer) Statistics
 
 #### Player Statistics Table
 
@@ -600,7 +753,7 @@ CREATE TABLE football_team_stats (
 
 ---
 
-## 5. Percentile Calculation System
+## 7. Percentile Calculation System
 
 ### Calculation Methodology
 
@@ -685,43 +838,135 @@ Each sport has key stat categories for creating visual profiles:
 
 ---
 
-## 6. Data Seeding & Automation
+## 6. Two-Phase Seeding System
 
-### Seed Pipeline Architecture
+### Overview
+
+The seeding system minimizes API calls by:
+1. **Discovery Phase**: Fetch rosters, detect what's new/changed
+2. **Profile Phase**: Only fetch profiles for genuinely new entities
+3. **Stats Phase**: Update statistics for all priority entities
+4. **Daily Diff**: Lightweight roster check for trades/transfers
+
+### Two-Phase Seeding Architecture
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│                     SEED PIPELINE                               │
-├────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  1. FETCH PHASE                                                │
-│  ┌──────────┐    ┌──────────┐    ┌──────────┐                  │
-│  │  Teams   │    │ Players  │    │  Stats   │                  │
-│  │ Fetcher  │    │ Fetcher  │    │ Fetcher  │                  │
-│  └────┬─────┘    └────┬─────┘    └────┬─────┘                  │
-│       │               │               │                         │
-│       ▼               ▼               ▼                         │
-│  2. TRANSFORM PHASE                                            │
-│  ┌──────────────────────────────────────────────────────┐      │
-│  │              Data Normalizer & Validator              │      │
-│  │  - Standardize field names across sports             │      │
-│  │  - Validate data types and ranges                    │      │
-│  │  - Handle missing/null values                        │      │
-│  └──────────────────────────────────────────────────────┘      │
-│       │                                                         │
-│       ▼                                                         │
-│  3. LOAD PHASE                                                 │
-│  ┌──────────────────────────────────────────────────────┐      │
-│  │                  SQLite Upserter                      │      │
-│  │  - Upsert teams/players/stats                        │      │
-│  │  - Update percentile cache                           │      │
-│  │  - Record sync metadata                              │      │
-│  └──────────────────────────────────────────────────────┘      │
-│                                                                 │
-└────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     TWO-PHASE SEEDING PIPELINE                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  PHASE 1: DISCOVERY (Minimal API calls)                                 │
+│  ════════════════════════════════════════                               │
+│                                                                          │
+│  ┌──────────────────┐                                                   │
+│  │ Fetch Rosters    │──▶ GET /teams?league={id} (1 call per league)    │
+│  │ (Teams + Players)│    GET /players?team={id} (paginated)            │
+│  └────────┬─────────┘                                                   │
+│           │                                                              │
+│           ▼                                                              │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │                    ENTITY DIFF ENGINE                             │   │
+│  │                                                                   │   │
+│  │  For each entity in API response:                                │   │
+│  │    ├── EXISTS in DB with profile_fetched_at? → Skip profile      │   │
+│  │    ├── EXISTS but profile_fetched_at NULL?   → Queue for fetch   │   │
+│  │    └── NEW entity not in DB?                 → Insert + Queue    │   │
+│  │                                                                   │   │
+│  │  Additionally for players:                                        │   │
+│  │    └── current_team changed? → Update player_teams history       │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│           │                                                              │
+│           ▼                                                              │
+│  Output: List of entity IDs needing profile fetch                       │
+│                                                                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  PHASE 2: PROFILE FETCH (Only for new entities)                         │
+│  ═══════════════════════════════════════════════                        │
+│                                                                          │
+│  ┌──────────────────┐                                                   │
+│  │ Profile Fetcher  │──▶ GET /teams?id={id}   (full profile)           │
+│  │ (Batch by queue) │    GET /players?id={id} (full profile)           │
+│  └────────┬─────────┘                                                   │
+│           │                                                              │
+│           ▼                                                              │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │  Profile fields populated:                                        │   │
+│  │  - Teams: logo, venue_*, founded, city                           │   │
+│  │  - Players: photo, height, weight, birth_date, nationality       │   │
+│  │                                                                   │   │
+│  │  SET profile_fetched_at = NOW()                                  │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  PHASE 3: STATS UPDATE (All priority entities)                          │
+│  ══════════════════════════════════════════════                         │
+│                                                                          │
+│  ┌──────────────────┐                                                   │
+│  │ Stats Fetcher    │──▶ GET /players/statistics?id={id}&season=...    │
+│  │ (Paginated)      │    GET /teams/statistics?id={id}&season=...      │
+│  └────────┬─────────┘                                                   │
+│           │                                                              │
+│           ▼                                                              │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │  Upsert into sport-specific stats tables                         │   │
+│  │  Recalculate percentile_cache (priority leagues only)            │   │
+│  │  Update sync_log with completion status                          │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Seed Script Structure
+### Daily Roster Diff (Trades/Transfers)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     DAILY ROSTER DIFF                                    │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  Runs: Daily during season (priority leagues only)                      │
+│  Cost: ~8-10 API calls (1 per priority league)                          │
+│                                                                          │
+│  ┌──────────────────┐                                                   │
+│  │ For each league: │                                                   │
+│  │ GET /players     │──▶ Fetch current rosters (team assignments)      │
+│  │ ?team={id}       │                                                   │
+│  └────────┬─────────┘                                                   │
+│           │                                                              │
+│           ▼                                                              │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │  Compare current_team_id vs API response:                         │   │
+│  │                                                                   │   │
+│  │  ├── Same team?     → No action                                  │   │
+│  │  ├── Different team? → Trade detected:                           │   │
+│  │  │   └── Close old player_teams record (set end_date)           │   │
+│  │  │   └── Create new player_teams record                         │   │
+│  │  │   └── Update player.current_team_id                          │   │
+│  │  └── New player?    → Insert player, queue profile fetch         │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Profile Refresh Strategy
+
+```python
+# Profiles are fetched ONCE and rarely refreshed
+# Photos are the main thing that changes (yearly at most)
+
+def needs_profile_fetch(entity) -> bool:
+    if entity.profile_fetched_at is None:
+        return True  # Never fetched
+
+    age = now() - entity.profile_fetched_at
+    if age > timedelta(days=365):
+        return True  # Annual refresh for photos
+
+    return False  # Use cached profile
+```
+
+### Seeding Script Structure
 
 ```
 backend/app/statsdb/
@@ -731,29 +976,57 @@ backend/app/statsdb/
 ├── models.py              # Pydantic models for validation
 ├── seeders/
 │   ├── __init__.py
-│   ├── base.py            # Base seeder class
-│   ├── nba_seeder.py      # NBA-specific seeding logic
-│   ├── nfl_seeder.py      # NFL-specific seeding logic
-│   └── football_seeder.py # Football-specific seeding logic
+│   ├── base.py            # Base seeder with two-phase logic
+│   ├── diff_engine.py     # Entity comparison + queue building
+│   ├── profile_fetcher.py # Batch profile fetching
+│   ├── nba_seeder.py      # NBA-specific transformations
+│   ├── nfl_seeder.py      # NFL-specific transformations
+│   └── football_seeder.py # Football-specific (priority tier aware)
 ├── percentiles/
 │   ├── __init__.py
 │   ├── calculator.py      # Percentile calculation logic
 │   └── cache.py           # Percentile cache management
+├── roster_diff/
+│   ├── __init__.py
+│   └── daily_diff.py      # Daily trade/transfer detection
 ├── queries/
 │   ├── __init__.py
 │   ├── players.py         # Player stat queries
 │   └── teams.py           # Team stat queries
-└── cli.py                 # Command-line interface for seeding
+└── cli.py                 # Command-line interface
 ```
 
 ### Automation Schedule
 
-| Task | Frequency | Trigger |
-|------|-----------|---------|
-| Full stats refresh | Weekly (Sunday night) | Cron/GitHub Action |
-| Incremental update | Daily (during season) | Cron/GitHub Action |
-| Percentile recalculation | After each data update | Automatic |
-| Schema migration | As needed | Manual/CI |
+| Task | Frequency | Trigger | API Calls |
+|------|-----------|---------|-----------|
+| Full seed (all sports) | Weekly (Sunday) | Cron/GitHub Action | ~50 |
+| Stats update only | Mid-week (Wed) | Cron/GitHub Action | ~30 |
+| Daily roster diff | Daily (in-season) | Cron/GitHub Action | ~8 |
+| Yearly profile refresh | Annually (preseason) | Manual | ~100 |
+| Percentile recalc | After each update | Automatic | 0 (local) |
+
+### In-Season Detection
+
+```python
+# Sports have different in-season periods
+SEASON_WINDOWS = {
+    "NFL": {"start_month": 9, "end_month": 2},   # Sep - Feb
+    "NBA": {"start_month": 10, "end_month": 6},  # Oct - Jun
+    "FOOTBALL": {"start_month": 8, "end_month": 5},  # Aug - May
+}
+
+def is_in_season(sport: str) -> bool:
+    """Determine if we should run daily diffs for this sport."""
+    window = SEASON_WINDOWS.get(sport)
+    current_month = datetime.now().month
+
+    if window["start_month"] > window["end_month"]:
+        # Season spans year boundary (e.g., NFL Sep-Feb)
+        return current_month >= window["start_month"] or current_month <= window["end_month"]
+    else:
+        return window["start_month"] <= current_month <= window["end_month"]
+```
 
 ### CLI Commands
 
@@ -761,25 +1034,241 @@ backend/app/statsdb/
 # Full database initialization
 python -m backend.app.statsdb.cli init
 
-# Seed specific sport
+# Two-phase seed for specific sport (discovery → profile → stats)
 python -m backend.app.statsdb.cli seed --sport NBA --season 2025
 
-# Seed all sports
-python -m backend.app.statsdb.cli seed --all
+# Seed all priority leagues
+python -m backend.app.statsdb.cli seed --all --priority-only
 
-# Update only new data (incremental)
-python -m backend.app.statsdb.cli update --sport NBA
+# Stats update only (skip profile phase)
+python -m backend.app.statsdb.cli update-stats --sport NFL
 
-# Recalculate percentiles
+# Daily roster diff
+python -m backend.app.statsdb.cli roster-diff --sport NBA
+
+# Force profile refresh (annual)
+python -m backend.app.statsdb.cli refresh-profiles --sport FOOTBALL --force
+
+# Recalculate percentiles (local, no API)
 python -m backend.app.statsdb.cli percentiles --sport NBA --season 2025
 
-# Export to JSON (for frontend)
-python -m backend.app.statsdb.cli export --format json --output ./exports/
+# Show seeding status
+python -m backend.app.statsdb.cli status
+# Output: Last sync times, entities needing profiles, in-season status
 ```
 
 ---
 
-## 7. API Integration
+## 8. Service Layer Architecture
+
+### Overview
+
+The service layer is redesigned for local-first data access. User requests never trigger API calls.
+
+### EntityRepository (New Core Service)
+
+```python
+# backend/app/services/entity_repository.py
+
+class EntityRepository:
+    """
+    Single source of truth for entity data.
+    Reads from local SQLite, never calls API-Sports.
+    """
+
+    def __init__(self, statsdb: StatsDB):
+        self.db = statsdb
+
+    async def get_player(self, player_id: int, sport: str) -> PlayerProfile | None:
+        """Fetch player profile + stats from local DB."""
+        player = await self.db.query_one(
+            "SELECT * FROM players WHERE id = ? AND sport_id = ?",
+            (player_id, sport)
+        )
+        if not player:
+            return None
+
+        # Check if this is a priority league entity
+        is_priority = await self._is_priority_entity(player_id, "player", sport)
+
+        if is_priority:
+            stats = await self._get_player_stats(player_id, sport)
+            percentiles = await self._get_percentiles(player_id, "player", sport)
+            return PlayerProfile(
+                player=player,
+                stats=stats,
+                percentiles=percentiles,
+                status="complete"
+            )
+        else:
+            # Non-priority: minimal data, indicate building status
+            return PlayerProfile(
+                player=player,
+                stats=None,
+                percentiles=None,
+                status="building"  # UI shows "Building statistical profile"
+            )
+
+    async def get_team(self, team_id: int, sport: str) -> TeamProfile | None:
+        """Fetch team profile + stats from local DB."""
+        # Similar pattern to get_player
+        ...
+
+    async def _is_priority_entity(
+        self, entity_id: int, entity_type: str, sport: str
+    ) -> bool:
+        """Check if entity belongs to a priority league."""
+        if sport in ("NBA", "NFL"):
+            return True  # Always full coverage
+
+        # For Football, check league priority tier
+        if entity_type == "player":
+            result = await self.db.query_one("""
+                SELECT l.priority_tier
+                FROM players p
+                JOIN leagues l ON p.current_league_id = l.id
+                WHERE p.id = ?
+            """, (entity_id,))
+        else:
+            result = await self.db.query_one("""
+                SELECT l.priority_tier
+                FROM teams t
+                JOIN leagues l ON t.league_id = l.id
+                WHERE t.id = ?
+            """, (entity_id,))
+
+        return result and result["priority_tier"] == 1
+```
+
+### Removing Live API Caching
+
+**Before (complex caching for live API):**
+```
+widget_service → singleflight → cache → API-Sports
+                     ↓
+              3 cache tiers (basic, stats, widget)
+              TTLs from 2 min to 30 days
+```
+
+**After (simple local reads):**
+```
+EntityRepository → SQLite (5-10ms reads)
+                     ↓
+              No caching needed (DB is the cache)
+```
+
+**Components to remove/simplify:**
+- `singleflight.py` - No longer needed (no thundering herd risk)
+- `cache.py` - Dramatically simplified or removed
+- `widget_cache`, `stats_cache`, `basic_cache` - Remove
+
+### Non-Priority Entity Fallback
+
+For non-priority football league entities, we still need to serve some data:
+
+```python
+class NonPriorityFallbackService:
+    """
+    Handles requests for entities outside priority leagues.
+    Uses live API with caching as fallback.
+    """
+
+    def __init__(self, apisports: ApiSportsService, cache: TTLCache):
+        self.api = apisports
+        self.cache = cache  # Simple 6-hour cache
+
+    async def get_stats(self, entity_id: int, entity_type: str, sport: str):
+        cache_key = f"fallback:{sport}:{entity_type}:{entity_id}"
+
+        # Check cache first
+        cached = self.cache.get(cache_key)
+        if cached:
+            return cached
+
+        # Live API call (only for non-priority)
+        stats = await self.api.get_statistics(entity_id, entity_type, sport)
+
+        # Cache for 6 hours
+        self.cache.set(cache_key, stats, ttl=21600)
+
+        return stats
+```
+
+### News Service (Real-Time)
+
+```python
+# backend/app/services/news_service.py
+
+class NewsService:
+    """
+    Real-time news with minimal caching.
+    Google News RSS is fast, so we prioritize freshness.
+    """
+
+    # Reduced TTL: 60 seconds max (was 10 minutes)
+    CACHE_TTL = 60
+
+    async def get_news(self, entity_name: str, sport: str, hours: int = 48):
+        cache_key = f"news:{sport}:{entity_name}:{hours}"
+
+        # Very short cache check
+        cached = self.cache.get(cache_key)
+        if cached:
+            return cached
+
+        # Fetch fresh from Google News RSS
+        articles = await self._fetch_google_news(entity_name, sport, hours)
+
+        # Short TTL for freshness
+        self.cache.set(cache_key, articles, ttl=self.CACHE_TTL)
+
+        return articles
+```
+
+### Request Flow Summary
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        REQUEST ROUTING                                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  GET /api/v1/widget/player/{id}?sport=NFL                               │
+│      │                                                                   │
+│      ▼                                                                   │
+│  EntityRepository.get_player(id, "NFL")                                 │
+│      │                                                                   │
+│      ├── NFL → Always priority → Full local data                        │
+│      │                                                                   │
+│      └── Return PlayerProfile(status="complete")                        │
+│                                                                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  GET /api/v1/widget/player/{id}?sport=FOOTBALL                          │
+│      │                                                                   │
+│      ▼                                                                   │
+│  EntityRepository.get_player(id, "FOOTBALL")                            │
+│      │                                                                   │
+│      ├── Check league.priority_tier                                     │
+│      │   ├── priority_tier = 1 → Full local data                       │
+│      │   └── priority_tier = 0 → Minimal data + "building" status      │
+│      │                                                                   │
+│      └── If "building" → Frontend shows indicator, may call fallback   │
+│                                                                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  GET /api/v1/news/{entity_name}?sport=NBA                               │
+│      │                                                                   │
+│      ▼                                                                   │
+│  NewsService.get_news(entity_name, "NBA")                               │
+│      │                                                                   │
+│      └── 60-second cache → Google News RSS → Fresh results              │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 9. API Integration
 
 ### New Backend Endpoints
 
@@ -880,7 +1369,7 @@ class StatsService:
 
 ---
 
-## 8. Extensibility Framework
+## Appendix A: Extensibility Framework
 
 ### Adding a New Sport
 
@@ -986,98 +1475,137 @@ SPORT_CONFIGS = {
 
 ---
 
-## 9. Implementation Phases
+## 10. Implementation Phases
 
-### Phase 1: Foundation (Week 1)
+### Phase 1: Schema & Foundation
 
-- [ ] Create database directory structure
-- [ ] Implement core schema (sports, seasons, teams, players)
-- [ ] Create connection manager with read/write modes
-- [ ] Build base seeder class
-- [ ] Create CLI scaffolding
+- [ ] Update database schema with new fields (`profile_fetched_at`, `priority_tier`, etc.)
+- [ ] Create `entities_minimal` table for non-priority entities
+- [ ] Add indexes for profile fetch tracking
+- [ ] Create migration scripts
+- [ ] Update connection manager
 
-### Phase 2: NBA Implementation (Week 2)
+### Phase 2: Two-Phase Seeding Infrastructure
 
-- [ ] Implement NBA-specific schema
-- [ ] Create NBA seeder with API-Sports integration
-- [ ] Seed current + previous season data
-- [ ] Test data integrity
+- [ ] Create `diff_engine.py` for entity comparison
+- [ ] Create `profile_fetcher.py` for batch profile fetching
+- [ ] Update base seeder with two-phase logic
+- [ ] Add `needs_profile_fetch()` logic
+- [ ] Implement profile queue system
 
-### Phase 3: NFL Implementation (Week 3)
+### Phase 3: Sport Seeders (Priority Coverage)
 
-- [ ] Implement NFL position-specific schemas
-- [ ] Create NFL seeder (handling multiple stat tables)
-- [ ] Seed current + previous season data
-- [ ] Test data integrity
+- [ ] Update NBA seeder (full coverage, always priority)
+- [ ] Update NFL seeder (full coverage, always priority)
+- [ ] Update Football seeder with priority tier awareness
+- [ ] Configure priority leagues (Top 5 European + MLS)
+- [ ] Implement minimal entity seeding for non-priority leagues
 
-### Phase 4: Football Implementation (Week 4)
+### Phase 4: Daily Roster Diff
 
-- [ ] Implement Football schema (multi-league)
-- [ ] Create Football seeder (handling 13+ leagues)
-- [ ] Seed current + previous season data
-- [ ] Test data integrity
+- [ ] Create `roster_diff/daily_diff.py`
+- [ ] Implement trade/transfer detection
+- [ ] Add `player_teams` history tracking
+- [ ] Create in-season detection logic
+- [ ] Set up daily cron trigger (priority leagues only)
 
-### Phase 5: Percentile System (Week 5)
+### Phase 5: EntityRepository Service
 
-- [ ] Implement percentile calculator
-- [ ] Create percentile cache system
-- [ ] Build comparison group logic
-- [ ] Create recalculation triggers
+- [ ] Create `entity_repository.py`
+- [ ] Implement `get_player()` with priority tier check
+- [ ] Implement `get_team()` with priority tier check
+- [ ] Add "building" status for non-priority entities
+- [ ] Remove/simplify `singleflight.py`, cache layers
 
-### Phase 6: API & Integration (Week 6)
+### Phase 6: Non-Priority Fallback
 
-- [ ] Create new stats endpoints
-- [ ] Integrate with existing services
-- [ ] Add caching layer
-- [ ] Frontend integration preparation
+- [ ] Create `NonPriorityFallbackService`
+- [ ] Implement 6-hour cache for live API fallback
+- [ ] Add frontend "Building statistical profile" indicator
+- [ ] Test fallback flow for non-priority entities
 
-### Phase 7: Automation (Week 7)
+### Phase 7: News Service Optimization
 
-- [ ] Set up GitHub Actions for weekly sync
-- [ ] Implement incremental update logic
-- [ ] Add monitoring and alerting
-- [ ] Documentation
+- [ ] Reduce news cache TTL to 60 seconds
+- [ ] Remove or simplify news caching layer
+- [ ] Test real-time news delivery
+
+### Phase 8: Percentile System
+
+- [ ] Update percentile calculator to filter by priority leagues only
+- [ ] Add `priority_tier` filter to all percentile queries
+- [ ] Recalculate percentile cache after seeding
+- [ ] Test percentile accuracy
+
+### Phase 9: API & Frontend Integration
+
+- [ ] Update widget endpoints to use EntityRepository
+- [ ] Add `status` field to API responses ("complete" | "building")
+- [ ] Update frontend to handle "building" status
+- [ ] Remove unused caching endpoints
+
+### Phase 10: Automation & Monitoring
+
+- [ ] Set up GitHub Actions for weekly seed
+- [ ] Set up GitHub Actions for daily roster diff
+- [ ] Add in-season detection to skip off-season diffs
+- [ ] Implement seeding status dashboard
+- [ ] Add error alerting for failed syncs
 
 ---
 
-## 10. File Structure
+## 11. File Structure
 
 ### Complete Directory Structure
 
 ```
 Scoracle/
 ├── instance/
-│   ├── localdb/                    # Existing autocomplete DBs
+│   ├── localdb/                    # Existing autocomplete DBs (unchanged)
 │   │   ├── nba.sqlite
 │   │   ├── nfl.sqlite
 │   │   └── football.sqlite
-│   └── statsdb/                    # NEW: Stats database
-│       └── stats.sqlite            # Unified stats database
+│   └── statsdb/                    # Unified entity + stats database
+│       └── stats.sqlite            # Single source of truth
 │
 ├── backend/
 │   └── app/
+│       ├── services/
+│       │   ├── entity_repository.py   # NEW: Local-first data access
+│       │   ├── news_service.py        # UPDATED: 60-second cache
+│       │   ├── fallback_service.py    # NEW: Non-priority API fallback
+│       │   ├── apisports.py           # UPDATED: Seeder-only, not user-facing
+│       │   ├── cache.py               # SIMPLIFIED: Minimal caching
+│       │   └── singleflight.py        # DEPRECATED: No longer needed
+│       │
 │       ├── database/               # Existing
 │       │   ├── local_dbs.py
 │       │   └── seed_local_dbs.py
 │       │
-│       └── statsdb/                # NEW: Stats database module
+│       └── statsdb/
 │           ├── __init__.py
 │           ├── connection.py       # DB connection manager
-│           ├── schema.py           # Schema definitions
+│           ├── schema.py           # Schema definitions + migrations
 │           ├── models.py           # Pydantic models
 │           │
 │           ├── seeders/
 │           │   ├── __init__.py
-│           │   ├── base.py         # Abstract base seeder
-│           │   ├── nba_seeder.py
-│           │   ├── nfl_seeder.py
-│           │   └── football_seeder.py
+│           │   ├── base.py         # Two-phase seeding base class
+│           │   ├── diff_engine.py  # NEW: Entity comparison + queue
+│           │   ├── profile_fetcher.py # NEW: Batch profile fetching
+│           │   ├── nba_seeder.py   # NBA (always priority)
+│           │   ├── nfl_seeder.py   # NFL (always priority)
+│           │   └── football_seeder.py # Football (priority-tier aware)
+│           │
+│           ├── roster_diff/        # NEW: Trade/transfer detection
+│           │   ├── __init__.py
+│           │   └── daily_diff.py   # Daily roster comparison
 │           │
 │           ├── percentiles/
 │           │   ├── __init__.py
-│           │   ├── calculator.py   # Percentile math
+│           │   ├── calculator.py   # Priority-league-only percentiles
 │           │   ├── cache.py        # Cache management
-│           │   └── config.py       # Stat categories config
+│           │   └── config.py       # Stat categories by sport
 │           │
 │           ├── queries/
 │           │   ├── __init__.py
@@ -1088,13 +1616,16 @@ Scoracle/
 │           │   ├── 001_initial.sql
 │           │   ├── 002_nba_stats.sql
 │           │   ├── 003_nfl_stats.sql
-│           │   └── 004_football_stats.sql
+│           │   ├── 004_football_stats.sql
+│           │   └── 005_profile_tracking.sql  # NEW: profile_fetched_at, priority_tier
 │           │
 │           └── cli.py              # Command-line interface
 │
 ├── .github/
 │   └── workflows/
-│       └── sync-stats.yml          # NEW: Weekly sync action
+│       ├── sync-stats-weekly.yml   # Weekly full seed (Sun)
+│       ├── sync-stats-midweek.yml  # Mid-week stats update (Wed)
+│       └── roster-diff-daily.yml   # Daily roster diff (in-season only)
 │
 └── STATS_DATABASE_PLAN.md          # This document
 ```
@@ -1132,13 +1663,33 @@ The following API-Sports endpoints will be used for data collection:
 
 ## Next Steps
 
-1. **Review this plan** and provide feedback
-2. **Provide API-Sports URLs** for each endpoint mentioned
-3. **Confirm priority order** of sports implementation
-4. **Discuss any additional requirements** for the percentile/visualization system
+1. **Review this plan** and provide feedback on the evolved architecture
+2. **Begin Phase 1**: Schema updates with `profile_fetched_at` and `priority_tier`
+3. **Implement two-phase seeding** with entity discovery and profile queue
+4. **Set up daily roster diff** for trade/transfer detection
+5. **Build EntityRepository** to replace live API widget calls
 
 ---
 
-*Document Version: 1.0*
+*Document Version: 2.0*
 *Created: December 25, 2024*
+*Updated: December 26, 2024*
 *Author: Claude (AI Assistant)*
+
+## Changelog
+
+### v2.0 (December 26, 2024)
+- Added tiered data coverage (priority vs non-priority leagues)
+- Introduced two-phase seeding (discovery → profile fetch)
+- Added daily roster diff for trade/transfer detection
+- Defined priority leagues: NFL, NBA, Top 5 European + MLS
+- Added `profile_fetched_at` for yearly profile refresh
+- Introduced EntityRepository for local-first data access
+- Reduced news cache to 60 seconds for real-time relevance
+- Added "building statistical profile" status for non-priority entities
+- Updated implementation phases to reflect new architecture
+- Added new file structure with `diff_engine.py`, `roster_diff/`, `entity_repository.py`
+
+### v1.0 (December 25, 2024)
+- Initial plan with core schema and sport-specific data models
+- Basic seeding pipeline and percentile calculation system
