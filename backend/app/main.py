@@ -5,7 +5,6 @@ Minimal routers: widgets (entity data), news (articles).
 from contextlib import asynccontextmanager
 import logging
 import os
-from pathlib import Path
 import httpx
 
 from fastapi import FastAPI
@@ -18,7 +17,6 @@ from app.config import settings
 from app.routers import widgets, news, twitter, reddit, stats
 from app.utils.middleware import CorrelationIdMiddleware, RateLimitMiddleware
 from app.utils.errors import build_error_payload, map_status_to_code
-from app.services.entity_index import initialize_entity_index
 
 # Configure logging if not already configured
 logging.basicConfig(level=logging.INFO)
@@ -36,31 +34,6 @@ async def lifespan(app: FastAPI):
     logger.info("Starting application")
     # follow_redirects=True is needed for Google News RSS which returns 302
     app.state.http_client = httpx.AsyncClient(timeout=timeout, limits=limits, follow_redirects=True)
-
-    # Initialize entity index for news validation
-    # Try multiple paths to find the database (local dev vs Vercel)
-    db_paths = [
-        Path(__file__).parent.parent.parent / "instance" / "localdb",  # Local: backend/../instance
-        Path("/var/task/instance/localdb"),  # Vercel absolute path
-        Path("instance/localdb"),  # Relative to cwd
-        Path(__file__).parent.parent / "instance" / "localdb",  # Alternative
-    ]
-
-    logger.info(f"Looking for entity database. CWD: {os.getcwd()}, __file__: {__file__}")
-
-    for db_path in db_paths:
-        logger.info(f"Checking path: {db_path} (exists: {db_path.exists()})")
-        if db_path.exists():
-            logger.info(f"Found entity database at {db_path}")
-            try:
-                initialize_entity_index(db_path)
-                logger.info("Entity index initialized successfully")
-            except Exception as e:
-                logger.error(f"Failed to initialize entity index: {e}", exc_info=True)
-            break
-    else:
-        logger.warning("Entity database not found in any expected location")
-
     yield
     client = getattr(app.state, "http_client", None)
     if client is not None:
@@ -113,16 +86,7 @@ app.include_router(reddit.router, prefix=settings.API_V1_STR)    # Reddit (futur
 
 @app.get("/health")
 async def health():
-    from app.services.entity_index import get_entity_index
-    entity_index = get_entity_index()
-    return {
-        "status": "ok",
-        "version": settings.PROJECT_VERSION,
-        "entity_index": {
-            "loaded": entity_index.is_loaded,
-            "patterns": len(entity_index._patterns) if entity_index.is_loaded else 0,
-        },
-    }
+    return {"status": "ok", "version": settings.PROJECT_VERSION}
 
 
 @app.get("/")
@@ -133,8 +97,8 @@ async def root_index():
         "endpoints": {
             "widget": "/api/v1/widget/{type}/{id}?sport=FOOTBALL|NBA|NFL",
             "stats": "/api/v1/stats/{type}/{id}?sport=FOOTBALL|NBA|NFL&category=offense|defense|...",
-            "news": "/api/v1/news?sport=NFL|NBA|FOOTBALL&entity_id=123&entity_type=player|team",
-            "news_legacy": "/api/v1/news/{entity_name}?sport=NFL|NBA|FOOTBALL",
+            "news": "/api/v1/news/{entity_name}?sport=NFL|NBA|FOOTBALL",
+            "news_sport": "/api/v1/news?sport=NFL|NBA|FOOTBALL",
         },
         "docs": "/api/docs",
         "health": "/health",
