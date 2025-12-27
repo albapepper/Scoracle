@@ -1,10 +1,13 @@
 """
-Stats Service - API-Sports statistics data fetching.
+Stats Service - Local-first statistics data access.
 
-Fetches statistical data from sport-specific API-Sports endpoints
-and transforms them into a unified format for the StatsCard component.
+Primary data source: Local stats database (EntityRepository)
+Fallback: Live API-Sports calls (for non-priority leagues or missing data)
 
-Endpoints used:
+Local-first architecture provides <10ms response times for priority leagues.
+API fallback ensures complete coverage for all leagues during transition.
+
+Endpoints used (fallback only):
 - Football Player: GET https://v3.football.api-sports.io/players?id={id}&season={season}
 - Football Team: GET https://v3.football.api-sports.io/teams/statistics?league={league_id}&season={season}&team={id}
 - NFL Player: GET https://v1.american-football.api-sports.io/players/statistics?id={id}&season={season}
@@ -25,6 +28,9 @@ from app.services.singleflight import singleflight
 from app.database.local_dbs import get_team_by_id
 
 logger = logging.getLogger(__name__)
+
+# Local database feature flag - set to True to enable local-first data
+LOCAL_FIRST_ENABLED = True
 
 # Cache TTL: 6 hours (stats update during/after games)
 STATS_CACHE_TTL = 6 * 60 * 60
@@ -287,6 +293,151 @@ def _transform_nba_player_stats(data: Dict[str, Any]) -> List[Dict[str, str]]:
 
 
 # =============================================================================
+# Local Database Lookups (Local-First Architecture)
+# =============================================================================
+
+def _get_stats_from_local_db(
+    entity_type: str,
+    entity_id: int,
+    sport: str,
+    season_year: int,
+) -> Optional[Dict[str, Any]]:
+    """
+    Try to get stats from the local stats database.
+
+    Returns formatted stats dict or None if not available locally.
+    """
+    if not LOCAL_FIRST_ENABLED:
+        return None
+
+    try:
+        from app.statsdb import get_stats_db, EntityRepository
+
+        db = get_stats_db(read_only=True)
+        if not db.is_initialized():
+            logger.debug("Local stats DB not initialized, falling back to API")
+            return None
+
+        repo = EntityRepository(db)
+
+        if entity_type == "player":
+            profile = repo.get_player_profile(entity_id, sport, season_year)
+            if profile and profile.stats:
+                return _transform_local_player_stats(profile.stats, sport)
+        elif entity_type == "team":
+            profile = repo.get_team_profile(entity_id, sport, season_year)
+            if profile and profile.stats:
+                return _transform_local_team_stats(profile.stats, sport)
+
+        return None
+
+    except Exception as e:
+        logger.warning(f"Local DB lookup failed for {entity_type} {entity_id}: {e}")
+        return None
+
+
+def _transform_local_player_stats(stats: Dict[str, Any], sport: str) -> Dict[str, Any]:
+    """Transform local DB player stats to StatsCard format."""
+    sport_upper = sport.upper()
+    stats_list = []
+
+    if sport_upper == "NBA":
+        stats_list = [
+            {"label": "Games Played", "value": str(stats.get("games_played", "-"))},
+            {"label": "Points/Game", "value": str(stats.get("points_per_game", "-"))},
+            {"label": "Minutes/Game", "value": str(stats.get("minutes_per_game", "-"))},
+            {"label": "FG%", "value": str(stats.get("fg_pct", "-"))},
+            {"label": "3PT%", "value": str(stats.get("tp_pct", "-"))},
+            {"label": "FT%", "value": str(stats.get("ft_pct", "-"))},
+            {"label": "Rebounds/Game", "value": str(stats.get("rebounds_per_game", "-"))},
+            {"label": "Assists/Game", "value": str(stats.get("assists_per_game", "-"))},
+            {"label": "Steals/Game", "value": str(stats.get("steals_per_game", "-"))},
+            {"label": "Blocks/Game", "value": str(stats.get("blocks_per_game", "-"))},
+        ]
+    elif sport_upper == "NFL":
+        # Check which stats are available based on position
+        if stats.get("passing_pass_yards"):
+            stats_list = [
+                {"label": "Pass Yards", "value": str(stats.get("passing_pass_yards", "-"))},
+                {"label": "Pass TDs", "value": str(stats.get("passing_pass_touchdowns", "-"))},
+                {"label": "Completion %", "value": str(stats.get("passing_completion_pct", "-"))},
+                {"label": "Passer Rating", "value": str(stats.get("passing_passer_rating", "-"))},
+                {"label": "Interceptions", "value": str(stats.get("passing_interceptions", "-"))},
+            ]
+        elif stats.get("rushing_rush_yards"):
+            stats_list = [
+                {"label": "Rush Yards", "value": str(stats.get("rushing_rush_yards", "-"))},
+                {"label": "Rush TDs", "value": str(stats.get("rushing_rush_touchdowns", "-"))},
+                {"label": "Yards/Carry", "value": str(stats.get("rushing_yards_per_carry", "-"))},
+                {"label": "Rush Attempts", "value": str(stats.get("rushing_rush_attempts", "-"))},
+            ]
+        elif stats.get("receiving_receiving_yards"):
+            stats_list = [
+                {"label": "Receiving Yards", "value": str(stats.get("receiving_receiving_yards", "-"))},
+                {"label": "Receptions", "value": str(stats.get("receiving_receptions", "-"))},
+                {"label": "Receiving TDs", "value": str(stats.get("receiving_receiving_touchdowns", "-"))},
+                {"label": "Yards/Reception", "value": str(stats.get("receiving_yards_per_reception", "-"))},
+            ]
+        elif stats.get("defense_tackles_total"):
+            stats_list = [
+                {"label": "Total Tackles", "value": str(stats.get("defense_tackles_total", "-"))},
+                {"label": "Sacks", "value": str(stats.get("defense_sacks", "-"))},
+                {"label": "Interceptions", "value": str(stats.get("defense_interceptions", "-"))},
+                {"label": "Passes Defended", "value": str(stats.get("defense_passes_defended", "-"))},
+            ]
+    elif sport_upper == "FOOTBALL":
+        stats_list = [
+            {"label": "Appearances", "value": str(stats.get("appearances", "-"))},
+            {"label": "Goals", "value": str(stats.get("goals", "-"))},
+            {"label": "Assists", "value": str(stats.get("assists", "-"))},
+            {"label": "Shots", "value": str(stats.get("shots_total", "-"))},
+            {"label": "Passes", "value": str(stats.get("passes_total", "-"))},
+            {"label": "Key Passes", "value": str(stats.get("passes_key", "-"))},
+            {"label": "Tackles", "value": str(stats.get("tackles_total", "-"))},
+            {"label": "Yellow Cards", "value": str(stats.get("cards_yellow", "-"))},
+        ]
+
+    return {"season": str(stats.get("season_id", "")), "stats": stats_list, "source": "local"}
+
+
+def _transform_local_team_stats(stats: Dict[str, Any], sport: str) -> Dict[str, Any]:
+    """Transform local DB team stats to StatsCard format."""
+    sport_upper = sport.upper()
+    stats_list = []
+
+    if sport_upper == "NBA":
+        stats_list = [
+            {"label": "Games Played", "value": str(stats.get("games_played", "-"))},
+            {"label": "Wins", "value": str(stats.get("wins", "-"))},
+            {"label": "Losses", "value": str(stats.get("losses", "-"))},
+            {"label": "Win %", "value": str(stats.get("win_pct", "-"))},
+            {"label": "Points/Game", "value": str(stats.get("points_per_game", "-"))},
+            {"label": "Opp Points/Game", "value": str(stats.get("opponent_ppg", "-"))},
+        ]
+    elif sport_upper == "NFL":
+        stats_list = [
+            {"label": "Wins", "value": str(stats.get("wins", "-"))},
+            {"label": "Losses", "value": str(stats.get("losses", "-"))},
+            {"label": "Ties", "value": str(stats.get("ties", "-"))},
+            {"label": "Points For", "value": str(stats.get("points_for", "-"))},
+            {"label": "Points Against", "value": str(stats.get("points_against", "-"))},
+            {"label": "Total Yards", "value": str(stats.get("total_yards", "-"))},
+        ]
+    elif sport_upper == "FOOTBALL":
+        stats_list = [
+            {"label": "Matches Played", "value": str(stats.get("matches_played", "-"))},
+            {"label": "Wins", "value": str(stats.get("wins", "-"))},
+            {"label": "Draws", "value": str(stats.get("draws", "-"))},
+            {"label": "Losses", "value": str(stats.get("losses", "-"))},
+            {"label": "Goals Scored", "value": str(stats.get("goals_for", "-"))},
+            {"label": "Goals Conceded", "value": str(stats.get("goals_against", "-"))},
+            {"label": "Clean Sheets", "value": str(stats.get("clean_sheets", "-"))},
+        ]
+
+    return {"season": str(stats.get("season_id", "")), "stats": stats_list, "source": "local"}
+
+
+# =============================================================================
 # Main Service Functions
 # =============================================================================
 
@@ -347,10 +498,20 @@ async def get_team_stats(
         if cached2 is not None:
             return cached2
 
-        # Fetch from API-Sports
+        # Try local database first (local-first architecture)
+        season_year = int(season) if season else int(_get_default_season(sport_upper))
+        local_result = _get_stats_from_local_db("team", int(team_id), sport_upper, season_year)
+        if local_result:
+            # Add season to result and cache
+            local_result["season"] = season
+            widget_cache.set(cache_key, local_result, ttl=STATS_CACHE_TTL)
+            logger.info(f"Local DB HIT: {cache_key}")
+            return local_result
+
+        # Fall back to API-Sports
         base = _get_base_url(sport_upper)
         headers = _get_headers()
-        
+
         # Build endpoint and params based on sport
         if sport_upper == "FOOTBALL":
             # Football: /teams/statistics?league={league_id}&season={season}&team={id}
@@ -457,10 +618,20 @@ async def get_player_stats(
         if cached2 is not None:
             return cached2
 
-        # Fetch from API-Sports
+        # Try local database first (local-first architecture)
+        season_year = int(season) if season else int(_get_default_season(sport_upper))
+        local_result = _get_stats_from_local_db("player", int(player_id), sport_upper, season_year)
+        if local_result:
+            # Add season to result and cache
+            local_result["season"] = season
+            widget_cache.set(cache_key, local_result, ttl=STATS_CACHE_TTL)
+            logger.info(f"Local DB HIT: {cache_key}")
+            return local_result
+
+        # Fall back to API-Sports
         base = _get_base_url(sport_upper)
         headers = _get_headers()
-        
+
         # Build endpoint and params based on sport
         if sport_upper == "FOOTBALL":
             # Football: /players?id={id}&season={season}

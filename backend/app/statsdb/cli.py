@@ -6,6 +6,8 @@ Usage:
     python -m backend.app.statsdb.cli init           # Initialize database
     python -m backend.app.statsdb.cli seed --sport NBA --season 2025
     python -m backend.app.statsdb.cli seed --all
+    python -m backend.app.statsdb.cli seed-2phase --sport FOOTBALL --season 2024
+    python -m backend.app.statsdb.cli diff --sport FOOTBALL --season 2024
     python -m backend.app.statsdb.cli percentiles --sport NBA --season 2025
     python -m backend.app.statsdb.cli status
     python -m backend.app.statsdb.cli export --format json
@@ -193,6 +195,172 @@ async def cmd_seed_async(args: argparse.Namespace) -> int:
 def cmd_seed(args: argparse.Namespace) -> int:
     """Wrapper to run async seed command."""
     return asyncio.run(cmd_seed_async(args))
+
+
+async def cmd_seed_2phase_async(args: argparse.Namespace) -> int:
+    """Run two-phase seeding (discovery -> profile fetch -> stats)."""
+    from .seeders import NBASeeder, NFLSeeder, FootballSeeder
+
+    db = get_db()
+    api = await get_api_service()
+
+    # Initialize database if needed
+    if not db.is_initialized():
+        from .schema import init_database
+        logger.info("Database not initialized, running initialization...")
+        init_database(db)
+
+    sports_to_seed = []
+    if args.all:
+        sports_to_seed = ["NBA", "NFL", "FOOTBALL"]
+    elif args.sport:
+        sports_to_seed = [args.sport.upper()]
+    else:
+        logger.error("Must specify --sport or --all")
+        return 1
+
+    season = args.season or 2024
+
+    seeder_map = {
+        "NBA": NBASeeder,
+        "NFL": NFLSeeder,
+        "FOOTBALL": FootballSeeder,
+    }
+
+    for sport_id in sports_to_seed:
+        seeder_class = seeder_map.get(sport_id)
+        if not seeder_class:
+            logger.warning("Unknown sport: %s", sport_id)
+            continue
+
+        logger.info("Running two-phase seeding for %s season %d...", sport_id, season)
+        seeder = seeder_class(db, api)
+
+        try:
+            if sport_id == "FOOTBALL":
+                # For Football, seed each priority league
+                from .seeders.football_seeder import PRIORITY_LEAGUES
+
+                for league in PRIORITY_LEAGUES:
+                    logger.info("Seeding Football league: %s (ID: %d)", league["name"], league["id"])
+                    result = await seeder.seed_two_phase(
+                        season,
+                        league_id=league["id"],
+                        skip_profiles=args.skip_profiles,
+                    )
+                    _log_two_phase_result(sport_id, league["id"], result)
+            else:
+                result = await seeder.seed_two_phase(
+                    season,
+                    skip_profiles=args.skip_profiles,
+                )
+                _log_two_phase_result(sport_id, None, result)
+
+        except Exception as e:
+            logger.error("Failed to seed %s: %s", sport_id, e)
+            import traceback
+            traceback.print_exc()
+
+    # Update metadata
+    db.set_meta("last_full_sync", datetime.utcnow().isoformat())
+    db.close()
+    return 0
+
+
+def _log_two_phase_result(sport_id: str, league_id: Optional[int], result: dict) -> None:
+    """Log two-phase seeding result."""
+    discovery = result.get("discovery", {})
+    league_str = f" (league {league_id})" if league_id else ""
+    logger.info(
+        "%s%s: Discovered %d teams (%d new), %d players (%d new, %d transfers)",
+        sport_id,
+        league_str,
+        discovery.get("teams_discovered", 0),
+        discovery.get("teams_new", 0),
+        discovery.get("players_discovered", 0),
+        discovery.get("players_new", 0),
+        discovery.get("players_transferred", 0),
+    )
+    logger.info(
+        "%s%s: Fetched %d profiles, seeded %d player stats, %d team stats",
+        sport_id,
+        league_str,
+        result.get("profiles_fetched", 0),
+        result.get("player_stats", 0),
+        result.get("team_stats", 0),
+    )
+
+
+def cmd_seed_2phase(args: argparse.Namespace) -> int:
+    """Wrapper to run async two-phase seed command."""
+    return asyncio.run(cmd_seed_2phase_async(args))
+
+
+async def cmd_diff_async(args: argparse.Namespace) -> int:
+    """Run roster diff to detect trades/transfers."""
+    from .roster_diff import RosterDiffEngine
+
+    db = get_db()
+    api = await get_api_service()
+
+    if not db.is_initialized():
+        logger.error("Database not initialized. Run 'init' first.")
+        return 1
+
+    engine = RosterDiffEngine(db, api)
+    season = args.season or 2024
+
+    try:
+        if args.all:
+            # Run all priority diffs
+            results = await engine.run_all_priority_diffs(season)
+            total_new = sum(len(r.new_players) for r in results)
+            total_transfers = sum(len(r.transferred_players) for r in results)
+            logger.info(
+                "All diffs complete: %d new players, %d transfers across %d leagues/sports",
+                total_new,
+                total_transfers,
+                len(results),
+            )
+        else:
+            # Single sport/league diff
+            if not args.sport:
+                logger.error("Must specify --sport or --all")
+                return 1
+
+            sport_id = args.sport.upper()
+            league_id = args.league
+
+            if sport_id == "FOOTBALL" and not league_id:
+                logger.error("FOOTBALL requires --league parameter")
+                return 1
+
+            result = await engine.run_diff(sport_id, season, league_id)
+            logger.info("Diff result: %s", result.to_dict())
+
+            if result.new_players:
+                logger.info("New players needing profile fetch: %s", result.new_players[:10])
+                if len(result.new_players) > 10:
+                    logger.info("... and %d more", len(result.new_players) - 10)
+
+            if result.transferred_players:
+                for player_id, from_team, to_team in result.transferred_players[:10]:
+                    logger.info("Transfer: player %d from team %d to team %d", player_id, from_team, to_team)
+
+    except Exception as e:
+        logger.error("Diff failed: %s", e)
+        import traceback
+        traceback.print_exc()
+        return 1
+    finally:
+        db.close()
+
+    return 0
+
+
+def cmd_diff(args: argparse.Namespace) -> int:
+    """Wrapper to run async diff command."""
+    return asyncio.run(cmd_diff_async(args))
 
 
 def cmd_percentiles(args: argparse.Namespace) -> int:
@@ -404,12 +572,33 @@ def main() -> int:
     # status command
     status_parser = subparsers.add_parser("status", help="Show database status")
 
-    # seed command
-    seed_parser = subparsers.add_parser("seed", help="Seed data from API-Sports")
+    # seed command (legacy full sync)
+    seed_parser = subparsers.add_parser("seed", help="Seed data from API-Sports (full sync)")
     seed_parser.add_argument("--sport", help="Sport to seed (NBA, NFL, FOOTBALL)")
     seed_parser.add_argument("--all", action="store_true", help="Seed all sports")
     seed_parser.add_argument("--season", type=int, help="Season year to seed")
     seed_parser.add_argument("--current-season", type=int, help="Mark this season as current")
+
+    # seed-2phase command (recommended)
+    seed2_parser = subparsers.add_parser(
+        "seed-2phase",
+        help="Two-phase seeding (discovery -> profiles -> stats)",
+    )
+    seed2_parser.add_argument("--sport", help="Sport to seed (NBA, NFL, FOOTBALL)")
+    seed2_parser.add_argument("--all", action="store_true", help="Seed all sports")
+    seed2_parser.add_argument("--season", type=int, help="Season year to seed")
+    seed2_parser.add_argument(
+        "--skip-profiles",
+        action="store_true",
+        help="Skip profile fetch phase (use if profiles already fetched)",
+    )
+
+    # diff command
+    diff_parser = subparsers.add_parser("diff", help="Run roster diff (detect trades/transfers)")
+    diff_parser.add_argument("--sport", help="Sport (NBA, NFL, FOOTBALL)")
+    diff_parser.add_argument("--all", action="store_true", help="Run diff for all priority leagues")
+    diff_parser.add_argument("--season", type=int, help="Season year")
+    diff_parser.add_argument("--league", type=int, help="League ID (required for FOOTBALL)")
 
     # percentiles command
     pct_parser = subparsers.add_parser("percentiles", help="Recalculate percentiles")
@@ -445,6 +634,8 @@ def main() -> int:
         "init": cmd_init,
         "status": cmd_status,
         "seed": cmd_seed,
+        "seed-2phase": cmd_seed_2phase,
+        "diff": cmd_diff,
         "percentiles": cmd_percentiles,
         "export": cmd_export,
         "query": cmd_query,

@@ -14,7 +14,8 @@ from pathlib import Path
 from typing import Any, Iterator, Optional
 
 # Database file location
-DEFAULT_DB_DIR = Path(__file__).parent.parent.parent.parent.parent / "instance" / "statsdb"
+# Path: backend/app/statsdb/connection.py → Scoracle/ → statsdb/
+DEFAULT_DB_DIR = Path(__file__).parent.parent.parent.parent / "statsdb"
 DEFAULT_DB_PATH = DEFAULT_DB_DIR / "stats.sqlite"
 
 

@@ -61,9 +61,16 @@ class NFLSeeder(BaseSeeder):
     # Data Fetching
     # =========================================================================
 
-    async def fetch_teams(self, season: int) -> list[dict[str, Any]]:
-        """Fetch NFL teams from API-Sports."""
-        teams = await self.api.list_teams(sport="NFL", season=season)
+    async def fetch_teams(
+        self,
+        season: int,
+        league_id: Optional[int] = None,
+    ) -> list[dict[str, Any]]:
+        """Fetch NFL teams from API-Sports.
+
+        Note: NFL doesn't use league_id, parameter included for interface compliance.
+        """
+        teams = await self.api.list_teams("NFL", season=str(season))
 
         result = []
         for team in teams:
@@ -83,15 +90,20 @@ class NFLSeeder(BaseSeeder):
         self,
         season: int,
         team_id: Optional[int] = None,
+        league_id: Optional[int] = None,
     ) -> list[dict[str, Any]]:
-        """Fetch NFL players from API-Sports."""
+        """Fetch NFL players from API-Sports.
+
+        Note: NFL doesn't use league_id, parameter included for interface compliance.
+        Uses paginated fetching (all players across all teams).
+        """
         all_players = []
         page = 1
 
         while True:
             players = await self.api.list_players(
-                sport="NFL",
-                season=season,
+                "NFL",
+                season=str(season),
                 page=page,
             )
 
@@ -135,9 +147,9 @@ class NFLSeeder(BaseSeeder):
         """Fetch player statistics from API-Sports."""
         try:
             stats = await self.api.get_player_statistics(
-                player_id=player_id,
-                sport="NFL",
-                season=season,
+                str(player_id),
+                "NFL",
+                str(season),
             )
             return stats
         except Exception as e:
@@ -152,13 +164,105 @@ class NFLSeeder(BaseSeeder):
         """Fetch team statistics from API-Sports."""
         try:
             stats = await self.api.get_team_statistics(
-                team_id=team_id,
-                sport="NFL",
-                season=season,
+                str(team_id),
+                "NFL",
+                str(season),
             )
             return stats
         except Exception as e:
             logger.warning("Failed to fetch stats for team %d: %s", team_id, e)
+            return None
+
+    async def fetch_team_profile(self, team_id: int) -> Optional[dict[str, Any]]:
+        """Fetch detailed team profile from API-Sports.
+
+        Returns extended team info including venue details.
+        API: GET /teams?id={team_id}
+        """
+        try:
+            response = await self.api.get_team_profile(str(team_id), "NFL")
+
+            if not response:
+                return None
+
+            team = response
+
+            # Handle country - may be string or dict
+            country = team.get("country")
+            if isinstance(country, dict):
+                country = country.get("name") or country.get("code") or "USA"
+            elif not country:
+                country = "USA"
+
+            # Handle venue - may be dict or string
+            venue = team.get("venue")
+            if isinstance(venue, dict):
+                venue_name = venue.get("name") or team.get("stadium")
+                venue_city = venue.get("city") or team.get("city")
+                venue_capacity = venue.get("capacity")
+                venue_surface = venue.get("surface")
+            else:
+                venue_name = team.get("stadium")
+                venue_city = team.get("city")
+                venue_capacity = None
+                venue_surface = None
+
+            return {
+                "id": team["id"],
+                "name": team["name"],
+                "abbreviation": team.get("abbreviation") or team.get("code"),
+                "logo_url": team.get("logo_url") or team.get("logo"),
+                "conference": team.get("conference"),
+                "division": team.get("division"),
+                "city": team.get("city"),
+                "country": country,
+                "founded": team.get("founded") or team.get("established"),
+                "venue_name": venue_name,
+                "venue_city": venue_city,
+                "venue_capacity": venue_capacity,
+                "venue_surface": venue_surface,
+            }
+        except Exception as e:
+            logger.warning("Failed to fetch profile for team %d: %s", team_id, e)
+            return None
+
+    async def fetch_player_profile(self, player_id: int) -> Optional[dict[str, Any]]:
+        """Fetch detailed player profile from API-Sports.
+
+        Returns extended player info including full biographical data.
+        API: GET /players?id={player_id}
+        """
+        try:
+            response = await self.api.get_player_profile(str(player_id), "NFL")
+
+            if not response:
+                return None
+
+            player = response
+
+            # Extract team from nested structure
+            team = player.get("team") or {}
+            current_team_id = team.get("id") if isinstance(team, dict) else None
+            position = player.get("position")
+
+            return {
+                "id": player["id"],
+                "first_name": player.get("first_name") or player.get("firstname"),
+                "last_name": player.get("last_name") or player.get("lastname"),
+                "full_name": self._build_full_name(player),
+                "position": position,
+                "position_group": self._get_position_group(position),
+                "nationality": player.get("nationality") or player.get("country"),
+                "birth_date": player.get("birth_date") or player.get("birth", {}).get("date") if isinstance(player.get("birth"), dict) else player.get("birth_date"),
+                "birth_place": player.get("birth", {}).get("place") if isinstance(player.get("birth"), dict) else None,
+                "height_cm": self._parse_height(player),
+                "weight_kg": self._parse_weight(player),
+                "photo_url": player.get("photo_url") or player.get("image"),
+                "current_team_id": current_team_id,
+                "jersey_number": player.get("number"),
+            }
+        except Exception as e:
+            logger.warning("Failed to fetch profile for player %d: %s", player_id, e)
             return None
 
     # =========================================================================

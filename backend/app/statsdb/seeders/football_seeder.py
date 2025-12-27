@@ -2,7 +2,14 @@
 Football (Soccer) specific seeder for stats database.
 
 Handles fetching and transforming Football player and team statistics
-from the API-Sports Football API. Supports multiple leagues.
+from the API-Sports Football API. Supports tiered league coverage.
+
+Priority Leagues (Full Data + Stats):
+  - Top 5 European: Premier League, La Liga, Bundesliga, Serie A, Ligue 1
+  - MLS (USA market, but excluded from percentile calculations)
+
+Non-Priority Leagues:
+  - Minimal data for autocomplete only
 """
 
 from __future__ import annotations
@@ -16,38 +23,52 @@ from .base import BaseSeeder
 logger = logging.getLogger(__name__)
 
 
-# Major leagues to seed
-MAJOR_LEAGUES = [
-    {"id": 39, "name": "Premier League", "country": "England"},
-    {"id": 140, "name": "La Liga", "country": "Spain"},
-    {"id": 135, "name": "Serie A", "country": "Italy"},
-    {"id": 78, "name": "Bundesliga", "country": "Germany"},
-    {"id": 61, "name": "Ligue 1", "country": "France"},
-    {"id": 94, "name": "Primeira Liga", "country": "Portugal"},
-    {"id": 88, "name": "Eredivisie", "country": "Netherlands"},
-    {"id": 144, "name": "Belgian Pro League", "country": "Belgium"},
-    {"id": 203, "name": "Super Lig", "country": "Turkey"},
-    {"id": 235, "name": "Russian Premier League", "country": "Russia"},
-    {"id": 2, "name": "Champions League", "country": "Europe"},
-    {"id": 3, "name": "Europa League", "country": "Europe"},
-    {"id": 848, "name": "Europa Conference League", "country": "Europe"},
+# Priority leagues with full data coverage
+# priority_tier: 1 = full data, 0 = minimal
+# include_in_percentiles: 1 = used for percentile calcs (Top 5 European), 0 = excluded
+PRIORITY_LEAGUES = [
+    {"id": 39, "name": "Premier League", "country": "England", "priority_tier": 1, "include_in_percentiles": 1},
+    {"id": 140, "name": "La Liga", "country": "Spain", "priority_tier": 1, "include_in_percentiles": 1},
+    {"id": 78, "name": "Bundesliga", "country": "Germany", "priority_tier": 1, "include_in_percentiles": 1},
+    {"id": 135, "name": "Serie A", "country": "Italy", "priority_tier": 1, "include_in_percentiles": 1},
+    {"id": 61, "name": "Ligue 1", "country": "France", "priority_tier": 1, "include_in_percentiles": 1},
+    {"id": 253, "name": "MLS", "country": "USA", "priority_tier": 1, "include_in_percentiles": 0},  # Full data, no percentiles
 ]
+
+# Non-priority leagues (minimal data, for reference)
+NON_PRIORITY_LEAGUES = [
+    {"id": 94, "name": "Primeira Liga", "country": "Portugal", "priority_tier": 0, "include_in_percentiles": 0},
+    {"id": 88, "name": "Eredivisie", "country": "Netherlands", "priority_tier": 0, "include_in_percentiles": 0},
+    {"id": 144, "name": "Belgian Pro League", "country": "Belgium", "priority_tier": 0, "include_in_percentiles": 0},
+    {"id": 203, "name": "Super Lig", "country": "Turkey", "priority_tier": 0, "include_in_percentiles": 0},
+    {"id": 2, "name": "Champions League", "country": "Europe", "priority_tier": 0, "include_in_percentiles": 0},
+    {"id": 3, "name": "Europa League", "country": "Europe", "priority_tier": 0, "include_in_percentiles": 0},
+]
+
+# Default to priority leagues only
+DEFAULT_LEAGUES = PRIORITY_LEAGUES
 
 
 class FootballSeeder(BaseSeeder):
-    """Seeder for Football (Soccer) statistics."""
+    """Seeder for Football (Soccer) statistics with tiered league support."""
 
     sport_id = "FOOTBALL"
 
-    def __init__(self, *args, leagues: Optional[list[dict]] = None, **kwargs):
+    def __init__(self, *args, leagues: Optional[list[dict]] = None, priority_only: bool = True, **kwargs):
         """
         Initialize the Football seeder.
 
         Args:
-            leagues: List of leagues to seed. Defaults to MAJOR_LEAGUES.
+            leagues: List of leagues to seed. Defaults to priority leagues.
+            priority_only: If True, only seed priority leagues. Defaults to True.
         """
         super().__init__(*args, **kwargs)
-        self.leagues = leagues or MAJOR_LEAGUES
+        if leagues:
+            self.leagues = leagues
+        elif priority_only:
+            self.leagues = PRIORITY_LEAGUES
+        else:
+            self.leagues = PRIORITY_LEAGUES + NON_PRIORITY_LEAGUES
 
     def _get_season_label(self, season_year: int) -> str:
         """Football seasons span two years (e.g., 2024-25)."""
@@ -59,17 +80,19 @@ class FootballSeeder(BaseSeeder):
     # =========================================================================
 
     def ensure_leagues(self) -> list[int]:
-        """Ensure all configured leagues exist in the database."""
+        """Ensure all configured leagues exist in the database with priority tiers."""
         league_ids = []
 
         for league in self.leagues:
             self.db.execute(
                 """
-                INSERT INTO leagues (id, sport_id, name, country, is_active)
-                VALUES (?, ?, ?, ?, 1)
+                INSERT INTO leagues (id, sport_id, name, country, priority_tier, include_in_percentiles, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, 1)
                 ON CONFLICT(id) DO UPDATE SET
                     name = excluded.name,
                     country = excluded.country,
+                    priority_tier = excluded.priority_tier,
+                    include_in_percentiles = excluded.include_in_percentiles,
                     updated_at = ?
                 """,
                 (
@@ -77,30 +100,77 @@ class FootballSeeder(BaseSeeder):
                     self.sport_id,
                     league["name"],
                     league["country"],
+                    league.get("priority_tier", 0),
+                    league.get("include_in_percentiles", 0),
                     int(time.time()),
                 ),
             )
             league_ids.append(league["id"])
 
+        logger.info(
+            "Ensured %d leagues (%d priority, %d with percentiles)",
+            len(league_ids),
+            sum(1 for lg in self.leagues if lg.get("priority_tier") == 1),
+            sum(1 for lg in self.leagues if lg.get("include_in_percentiles") == 1),
+        )
         return league_ids
+
+    async def seed_two_phase(
+        self,
+        season: int,
+        league_id: Optional[int] = None,
+        skip_profiles: bool = False,
+    ) -> dict[str, Any]:
+        """
+        Override to ensure leagues exist before discovery phase.
+
+        Football teams have a foreign key to leagues, so we must
+        insert the league records first.
+        """
+        # Ensure leagues exist before inserting teams
+        self.ensure_leagues()
+
+        # Call parent implementation
+        return await super().seed_two_phase(season, league_id, skip_profiles)
 
     # =========================================================================
     # Data Fetching
     # =========================================================================
 
-    async def fetch_teams(self, season: int) -> list[dict[str, Any]]:
-        """Fetch Football teams from API-Sports for all leagues."""
+    async def fetch_teams(
+        self,
+        season: int,
+        league_id: Optional[int] = None,
+    ) -> list[dict[str, Any]]:
+        """
+        Fetch Football teams from API-Sports.
+
+        Uses: GET /teams?league={id}&season={year}
+
+        Args:
+            season: Season year
+            league_id: Optional specific league. If None, fetches all configured leagues.
+
+        Returns:
+            List of team data dicts
+        """
         all_teams = []
         seen_ids = set()
 
-        for league in self.leagues:
-            league_id = league["id"]
+        # Determine which leagues to fetch
+        if league_id:
+            leagues_to_fetch = [lg for lg in self.leagues if lg["id"] == league_id]
+        else:
+            leagues_to_fetch = self.leagues
+
+        for league in leagues_to_fetch:
+            lid = league["id"]
 
             try:
                 teams = await self.api.list_teams(
-                    sport="FOOTBALL",
-                    league=league_id,
-                    season=season,
+                    "FOOTBALL",
+                    league=lid,
+                    season=str(season),
                 )
 
                 for team in teams:
@@ -109,20 +179,27 @@ class FootballSeeder(BaseSeeder):
                         continue
 
                     seen_ids.add(team_id)
+                    venue = team.get("venue", {}) if isinstance(team.get("venue"), dict) else {}
+
                     all_teams.append({
                         "id": team_id,
                         "name": team["name"],
                         "abbreviation": team.get("code") or team.get("abbreviation"),
                         "logo_url": team.get("logo_url") or team.get("logo"),
                         "country": team.get("country") or league["country"],
-                        "league_id": league_id,
-                        "venue_name": team.get("venue", {}).get("name") if isinstance(team.get("venue"), dict) else None,
-                        "venue_capacity": team.get("venue", {}).get("capacity") if isinstance(team.get("venue"), dict) else None,
+                        "league_id": lid,
+                        "venue_name": venue.get("name"),
+                        "venue_city": venue.get("city"),
+                        "venue_capacity": venue.get("capacity"),
+                        "venue_surface": venue.get("surface"),
+                        "venue_image": venue.get("image"),
                         "founded": team.get("founded"),
                     })
 
+                logger.debug("Fetched %d teams from league %d", len(teams), lid)
+
             except Exception as e:
-                logger.warning("Failed to fetch teams for league %d: %s", league_id, e)
+                logger.warning("Failed to fetch teams for league %d: %s", lid, e)
 
         return all_teams
 
@@ -130,31 +207,47 @@ class FootballSeeder(BaseSeeder):
         self,
         season: int,
         team_id: Optional[int] = None,
+        league_id: Optional[int] = None,
     ) -> list[dict[str, Any]]:
-        """Fetch Football players from API-Sports."""
+        """
+        Fetch Football players from API-Sports using league-based pagination.
+
+        Uses: GET /players?league={id}&season={year}&page=N (20 players per page)
+
+        This is more efficient than team-based fetching:
+        - League-based: ~40 calls for 800 players (entire league)
+        - Team-based: 20 calls × 1 per team = 20 calls for same data
+
+        Args:
+            season: Season year
+            team_id: Ignored for Football (use league_id instead)
+            league_id: Optional specific league. If None, fetches all configured leagues.
+
+        Returns:
+            List of player data dicts with current_league_id set
+        """
         all_players = []
         seen_ids = set()
 
-        # If specific team, just fetch that team
-        if team_id:
-            teams_to_fetch = [{"id": team_id}]
+        # Determine which leagues to fetch
+        if league_id:
+            leagues_to_fetch = [lg for lg in self.leagues if lg["id"] == league_id]
         else:
-            # Fetch players from all seeded teams
-            teams_to_fetch = self.db.fetchall(
-                "SELECT id FROM teams WHERE sport_id = ?",
-                (self.sport_id,),
-            )
+            leagues_to_fetch = self.leagues
 
-        for team in teams_to_fetch:
-            tid = team["id"]
+        for league in leagues_to_fetch:
+            lid = league["id"]
             page = 1
+            max_pages = 100  # Safety limit (~2000 players per league)
 
-            while page <= 10:  # Limit pages per team
+            while page <= max_pages:
                 try:
+                    # League-based fetching: GET /players?league={id}&season={year}&page=N
                     players = await self.api.list_players(
-                        sport="FOOTBALL",
-                        season=season,
+                        "FOOTBALL",
+                        season=str(season),
                         page=page,
+                        league=lid,
                     )
 
                     if not players:
@@ -166,7 +259,8 @@ class FootballSeeder(BaseSeeder):
                             continue
 
                         seen_ids.add(player_id)
-                        team_data = player.get("team") or {}
+                        team_data = player.get("team") or player.get("statistics", [{}])[0].get("team") or {}
+                        birth = player.get("birth", {}) or {}
 
                         all_players.append({
                             "id": player_id,
@@ -176,22 +270,125 @@ class FootballSeeder(BaseSeeder):
                             "position": player.get("position"),
                             "position_group": self._get_position_group(player.get("position")),
                             "nationality": player.get("nationality"),
-                            "birth_date": player.get("birth_date") or player.get("birth", {}).get("date"),
-                            "birth_place": player.get("birth", {}).get("place"),
+                            "birth_date": player.get("birth_date") or birth.get("date"),
+                            "birth_place": birth.get("place"),
                             "height_cm": self._parse_height(player),
                             "weight_kg": self._parse_weight(player),
                             "photo_url": player.get("photo_url") or player.get("photo"),
                             "current_team_id": team_data.get("id") if isinstance(team_data, dict) else None,
+                            "current_league_id": lid,  # Track which league this player is in
                             "jersey_number": player.get("number"),
                         })
+
+                    # Check if we've reached the last page
+                    if len(players) < 20:  # API returns 20 per page
+                        break
 
                     page += 1
 
                 except Exception as e:
-                    logger.warning("Failed to fetch players for team %d page %d: %s", tid, page, e)
+                    logger.warning("Failed to fetch players for league %d page %d: %s", lid, page, e)
                     break
 
+            logger.info("Fetched %d players from league %d (%d pages)", len([p for p in all_players if p.get("current_league_id") == lid]), lid, page)
+
         return all_players
+
+    async def fetch_team_profile(self, team_id: int) -> Optional[dict[str, Any]]:
+        """
+        Fetch full team profile from API-Sports.
+
+        Uses: GET /teams?id={id}
+
+        The Football API returns full profile data including venue details
+        in the teams endpoint.
+
+        Args:
+            team_id: Team ID
+
+        Returns:
+            Full team profile data or None
+        """
+        try:
+            team = await self.api.get_team_profile(str(team_id), "FOOTBALL")
+
+            if team:
+                venue = team.get("venue", {}) if isinstance(team.get("venue"), dict) else {}
+
+                return {
+                    "id": team["id"],
+                    "name": team["name"],
+                    "abbreviation": team.get("code") or team.get("abbreviation"),
+                    "logo_url": team.get("logo_url") or team.get("logo"),
+                    "country": team.get("country"),
+                    "city": venue.get("city"),
+                    "founded": team.get("founded"),
+                    "venue_name": venue.get("name"),
+                    "venue_city": venue.get("city"),
+                    "venue_capacity": venue.get("capacity"),
+                    "venue_surface": venue.get("surface"),
+                    "venue_image": venue.get("image"),
+                }
+
+            return None
+        except Exception as e:
+            logger.warning("Failed to fetch profile for team %d: %s", team_id, e)
+            return None
+
+    async def fetch_player_profile(self, player_id: int) -> Optional[dict[str, Any]]:
+        """
+        Fetch full player profile from API-Sports.
+
+        Uses: GET /players?id={id}&season={year}
+
+        Note: The Football /players endpoint includes both profile info AND stats
+        in a single call, so we get everything we need here.
+
+        Args:
+            player_id: Player ID
+
+        Returns:
+            Full player profile data or None
+        """
+        try:
+            player = await self.api.get_player_profile(str(player_id), "FOOTBALL")
+
+            if player:
+                # Football player profile has nested structure
+                player_data = player.get("player", player) or player
+                birth = player_data.get("birth", {}) or {}
+                team_data = player_data.get("team") or {}
+
+                # If there's statistics data, get team from there
+                stats = player.get("statistics", [])
+                if stats and isinstance(stats, list) and stats[0]:
+                    team_data = stats[0].get("team", team_data) or team_data
+                    league_data = stats[0].get("league", {}) or {}
+                else:
+                    league_data = {}
+
+                return {
+                    "id": player_data.get("id") or player.get("id"),
+                    "first_name": player_data.get("first_name") or player_data.get("firstname"),
+                    "last_name": player_data.get("last_name") or player_data.get("lastname"),
+                    "full_name": self._build_full_name(player_data),
+                    "position": player_data.get("position"),
+                    "position_group": self._get_position_group(player_data.get("position")),
+                    "nationality": player_data.get("nationality"),
+                    "birth_date": player_data.get("birth_date") or birth.get("date"),
+                    "birth_place": birth.get("place"),
+                    "height_cm": self._parse_height(player_data),
+                    "weight_kg": self._parse_weight(player_data),
+                    "photo_url": player_data.get("photo_url") or player_data.get("photo"),
+                    "current_team_id": team_data.get("id") if isinstance(team_data, dict) else None,
+                    "current_league_id": league_data.get("id"),
+                    "jersey_number": player_data.get("number"),
+                }
+
+            return None
+        except Exception as e:
+            logger.warning("Failed to fetch profile for player %d: %s", player_id, e)
+            return None
 
     async def fetch_player_stats(
         self,
@@ -201,9 +398,9 @@ class FootballSeeder(BaseSeeder):
         """Fetch player statistics from API-Sports."""
         try:
             stats = await self.api.get_player_statistics(
-                player_id=player_id,
-                sport="FOOTBALL",
-                season=season,
+                str(player_id),
+                "FOOTBALL",
+                str(season),
             )
             return stats
         except Exception as e:
@@ -218,9 +415,9 @@ class FootballSeeder(BaseSeeder):
         """Fetch team statistics from API-Sports."""
         try:
             stats = await self.api.get_team_statistics(
-                team_id=team_id,
-                sport="FOOTBALL",
-                season=season,
+                str(team_id),
+                "FOOTBALL",
+                str(season),
             )
             return stats
         except Exception as e:

@@ -52,7 +52,21 @@ class LeagueModel(BaseModel):
     country: Optional[str] = None
     country_code: Optional[str] = None
     logo_url: Optional[str] = None
+    priority_tier: int = 0  # 1 = full data, 0 = minimal
+    include_in_percentiles: int = 0  # 1 = used in percentile calcs, 0 = excluded
     is_active: bool = True
+
+    @computed_field
+    @property
+    def is_priority(self) -> bool:
+        """Whether this league has full data coverage."""
+        return self.priority_tier == 1
+
+    @computed_field
+    @property
+    def has_percentiles(self) -> bool:
+        """Whether this league is included in percentile calculations."""
+        return self.include_in_percentiles == 1
 
 
 class TeamModel(BaseModel):
@@ -70,8 +84,18 @@ class TeamModel(BaseModel):
     city: Optional[str] = None
     founded: Optional[int] = None
     venue_name: Optional[str] = None
+    venue_city: Optional[str] = None
     venue_capacity: Optional[int] = None
+    venue_surface: Optional[str] = None
+    venue_image: Optional[str] = None
+    profile_fetched_at: Optional[int] = None  # NULL = needs fetch, timestamp = fetched
     is_active: bool = True
+
+    @computed_field
+    @property
+    def needs_profile_fetch(self) -> bool:
+        """Whether this team needs its profile fetched."""
+        return self.profile_fetched_at is None
 
 
 class PlayerModel(BaseModel):
@@ -91,8 +115,16 @@ class PlayerModel(BaseModel):
     weight_kg: Optional[int] = None
     photo_url: Optional[str] = None
     current_team_id: Optional[int] = None
+    current_league_id: Optional[int] = None  # For Football players (percentile filtering)
     jersey_number: Optional[int] = None
+    profile_fetched_at: Optional[int] = None  # NULL = needs fetch, timestamp = fetched
     is_active: bool = True
+
+    @computed_field
+    @property
+    def needs_profile_fetch(self) -> bool:
+        """Whether this player needs its profile fetched."""
+        return self.profile_fetched_at is None
 
 
 # =============================================================================
@@ -245,6 +277,13 @@ class EntityPercentiles(BaseModel):
 # =============================================================================
 
 
+class ProfileStatus:
+    """Status constants for entity profiles."""
+
+    COMPLETE = "complete"  # Full data available
+    BUILDING = "building"  # Non-priority league, minimal data
+
+
 class PlayerProfile(BaseModel):
     """Complete player profile with stats and percentiles."""
 
@@ -253,6 +292,7 @@ class PlayerProfile(BaseModel):
     stats: Optional[dict[str, Any]] = None
     percentiles: Optional[EntityPercentiles] = None
     comparison_group: Optional[str] = None
+    status: str = ProfileStatus.COMPLETE  # "complete" or "building"
 
 
 class TeamProfile(BaseModel):
@@ -261,6 +301,19 @@ class TeamProfile(BaseModel):
     team: TeamModel
     stats: Optional[dict[str, Any]] = None
     percentiles: Optional[EntityPercentiles] = None
+    status: str = ProfileStatus.COMPLETE  # "complete" or "building"
+
+
+class EntityMinimal(BaseModel):
+    """Minimal entity data for non-priority leagues (autocomplete only)."""
+
+    id: int
+    entity_type: str  # "team" or "player"
+    sport_id: str
+    league_id: Optional[int] = None
+    name: str
+    normalized_name: Optional[str] = None
+    tokens: Optional[str] = None
 
 
 class ComparisonResult(BaseModel):

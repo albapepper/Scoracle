@@ -3,6 +3,11 @@ Base seeder class for stats database population.
 
 All sport-specific seeders inherit from this class and implement
 the abstract methods for data transformation.
+
+Two-Phase Seeding Architecture:
+  Phase 1: DISCOVERY - Fetch rosters, identify new/changed entities
+  Phase 2: PROFILE FETCH - Fetch full profiles for new entities only
+  Phase 3: STATS UPDATE - Update statistics for all entities
 """
 
 from __future__ import annotations
@@ -10,6 +15,7 @@ from __future__ import annotations
 import logging
 import time
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
@@ -17,6 +23,20 @@ if TYPE_CHECKING:
     from ...services.apisports import ApiSportsService
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class DiscoveryResult:
+    """Result of the discovery phase."""
+
+    teams_discovered: int = 0
+    teams_new: int = 0
+    teams_updated: int = 0
+    players_discovered: int = 0
+    players_new: int = 0
+    players_updated: int = 0
+    players_transferred: int = 0  # Players who changed teams
+    entities_needing_profile: list[tuple[str, int]] = field(default_factory=list)  # [("player", 123), ("team", 456)]
 
 
 class BaseSeeder(ABC):
@@ -178,34 +198,42 @@ class BaseSeeder(ABC):
     # Team Management
     # =========================================================================
 
-    def upsert_team(self, team_data: dict[str, Any]) -> int:
+    def upsert_team(self, team_data: dict[str, Any], mark_profile_fetched: bool = False) -> int:
         """
         Insert or update a team record.
 
         Args:
             team_data: Team data matching TeamModel schema
+            mark_profile_fetched: If True, set profile_fetched_at to now
 
         Returns:
             Team ID
         """
+        profile_fetched_at = int(time.time()) if mark_profile_fetched else team_data.get("profile_fetched_at")
+
         self.db.execute(
             """
             INSERT INTO teams (
                 id, sport_id, league_id, name, abbreviation, logo_url,
                 conference, division, country, city, founded,
-                venue_name, venue_capacity, updated_at
+                venue_name, venue_city, venue_capacity, venue_surface, venue_image,
+                profile_fetched_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 name = excluded.name,
                 abbreviation = excluded.abbreviation,
-                logo_url = excluded.logo_url,
+                logo_url = COALESCE(excluded.logo_url, teams.logo_url),
                 conference = excluded.conference,
                 division = excluded.division,
                 country = excluded.country,
                 city = excluded.city,
-                venue_name = excluded.venue_name,
-                venue_capacity = excluded.venue_capacity,
+                venue_name = COALESCE(excluded.venue_name, teams.venue_name),
+                venue_city = COALESCE(excluded.venue_city, teams.venue_city),
+                venue_capacity = COALESCE(excluded.venue_capacity, teams.venue_capacity),
+                venue_surface = COALESCE(excluded.venue_surface, teams.venue_surface),
+                venue_image = COALESCE(excluded.venue_image, teams.venue_image),
+                profile_fetched_at = COALESCE(excluded.profile_fetched_at, teams.profile_fetched_at),
                 updated_at = excluded.updated_at
             """,
             (
@@ -221,7 +249,11 @@ class BaseSeeder(ABC):
                 team_data.get("city"),
                 team_data.get("founded"),
                 team_data.get("venue_name"),
+                team_data.get("venue_city"),
                 team_data.get("venue_capacity"),
+                team_data.get("venue_surface"),
+                team_data.get("venue_image"),
+                profile_fetched_at,
                 int(time.time()),
             ),
         )
@@ -231,35 +263,44 @@ class BaseSeeder(ABC):
     # Player Management
     # =========================================================================
 
-    def upsert_player(self, player_data: dict[str, Any]) -> int:
+    def upsert_player(self, player_data: dict[str, Any], mark_profile_fetched: bool = False) -> int:
         """
         Insert or update a player record.
 
         Args:
             player_data: Player data matching PlayerModel schema
+            mark_profile_fetched: If True, set profile_fetched_at to now
 
         Returns:
             Player ID
         """
+        profile_fetched_at = int(time.time()) if mark_profile_fetched else player_data.get("profile_fetched_at")
+
         self.db.execute(
             """
             INSERT INTO players (
                 id, sport_id, first_name, last_name, full_name,
                 position, position_group, nationality, birth_date, birth_place,
-                height_cm, weight_kg, photo_url, current_team_id, jersey_number,
-                updated_at
+                height_cm, weight_kg, photo_url, current_team_id, current_league_id,
+                jersey_number, profile_fetched_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 first_name = excluded.first_name,
                 last_name = excluded.last_name,
                 full_name = excluded.full_name,
                 position = excluded.position,
                 position_group = excluded.position_group,
-                nationality = excluded.nationality,
-                photo_url = excluded.photo_url,
+                nationality = COALESCE(excluded.nationality, players.nationality),
+                birth_date = COALESCE(excluded.birth_date, players.birth_date),
+                birth_place = COALESCE(excluded.birth_place, players.birth_place),
+                height_cm = COALESCE(excluded.height_cm, players.height_cm),
+                weight_kg = COALESCE(excluded.weight_kg, players.weight_kg),
+                photo_url = COALESCE(excluded.photo_url, players.photo_url),
                 current_team_id = excluded.current_team_id,
+                current_league_id = excluded.current_league_id,
                 jersey_number = excluded.jersey_number,
+                profile_fetched_at = COALESCE(excluded.profile_fetched_at, players.profile_fetched_at),
                 updated_at = excluded.updated_at
             """,
             (
@@ -277,40 +318,370 @@ class BaseSeeder(ABC):
                 player_data.get("weight_kg"),
                 player_data.get("photo_url"),
                 player_data.get("current_team_id"),
+                player_data.get("current_league_id"),
                 player_data.get("jersey_number"),
+                profile_fetched_at,
                 int(time.time()),
             ),
         )
         return player_data["id"]
 
     # =========================================================================
+    # Two-Phase Seeding: Discovery & Profile Fetch
+    # =========================================================================
+
+    def get_entities_needing_profile(self, entity_type: str) -> list[int]:
+        """
+        Get entities that need their profile fetched.
+
+        Args:
+            entity_type: 'team' or 'player'
+
+        Returns:
+            List of entity IDs needing profile fetch
+        """
+        table = "teams" if entity_type == "team" else "players"
+        result = self.db.fetchall(
+            f"SELECT id FROM {table} WHERE sport_id = ? AND profile_fetched_at IS NULL",
+            (self.sport_id,),
+        )
+        return [r["id"] for r in result]
+
+    def mark_profile_fetched(self, entity_type: str, entity_id: int) -> None:
+        """
+        Mark an entity's profile as fetched.
+
+        Args:
+            entity_type: 'team' or 'player'
+            entity_id: Entity ID
+        """
+        table = "teams" if entity_type == "team" else "players"
+        self.db.execute(
+            f"UPDATE {table} SET profile_fetched_at = ? WHERE id = ?",
+            (int(time.time()), entity_id),
+        )
+
+    def detect_team_changes(self, player_id: int, new_team_id: Optional[int], season_id: int) -> bool:
+        """
+        Detect if a player has changed teams and update player_teams history.
+
+        Args:
+            player_id: Player ID
+            new_team_id: New team ID from API
+            season_id: Current season ID
+
+        Returns:
+            True if player changed teams (transfer detected)
+        """
+        existing = self.db.fetchone(
+            "SELECT current_team_id FROM players WHERE id = ?",
+            (player_id,),
+        )
+
+        if not existing:
+            return False
+
+        old_team_id = existing.get("current_team_id")
+
+        if old_team_id != new_team_id:
+            # Close old player_teams record
+            if old_team_id:
+                self.db.execute(
+                    """
+                    UPDATE player_teams
+                    SET end_date = date('now'), is_current = 0
+                    WHERE player_id = ? AND team_id = ? AND is_current = 1
+                    """,
+                    (player_id, old_team_id),
+                )
+
+            # Create new player_teams record
+            if new_team_id:
+                self.db.execute(
+                    """
+                    INSERT OR IGNORE INTO player_teams
+                    (player_id, team_id, season_id, start_date, is_current, detected_at)
+                    VALUES (?, ?, ?, date('now'), 1, ?)
+                    """,
+                    (player_id, new_team_id, season_id, int(time.time())),
+                )
+
+            return True
+
+        return False
+
+    async def run_discovery_phase(
+        self,
+        season: int,
+        league_id: Optional[int] = None,
+    ) -> DiscoveryResult:
+        """
+        Phase 1: Discovery - Fetch rosters and identify new/changed entities.
+
+        This phase:
+        - Fetches all teams and players from the API
+        - Compares against existing DB records
+        - Identifies NEW entities (profile_fetched_at is NULL)
+        - Detects player transfers (team changes)
+        - Does NOT fetch full profiles yet
+
+        Args:
+            season: Season year
+            league_id: Optional league ID for Football
+
+        Returns:
+            DiscoveryResult with counts and list of entities needing profiles
+        """
+        result = DiscoveryResult()
+        season_id = self.ensure_season(season)
+        sync_id = self._start_sync("incremental", "discovery", season_id)
+
+        try:
+            # Fetch teams (minimal data)
+            teams = await self.fetch_teams(season, league_id=league_id)
+            for team_data in teams:
+                existing = self.db.fetchone(
+                    "SELECT id, profile_fetched_at FROM teams WHERE id = ?",
+                    (team_data["id"],),
+                )
+
+                if existing:
+                    result.teams_updated += 1
+                else:
+                    result.teams_new += 1
+
+                # Always upsert (updates basic info, preserves profile data)
+                self.upsert_team(team_data)
+
+                # Queue for profile fetch if never fetched
+                if not existing or existing.get("profile_fetched_at") is None:
+                    result.entities_needing_profile.append(("team", team_data["id"]))
+
+                result.teams_discovered += 1
+
+            # Fetch players (minimal data)
+            players = await self.fetch_players(season, league_id=league_id)
+            for player_data in players:
+                existing = self.db.fetchone(
+                    "SELECT id, profile_fetched_at, current_team_id FROM players WHERE id = ?",
+                    (player_data["id"],),
+                )
+
+                if existing:
+                    result.players_updated += 1
+                    # Check for transfer
+                    if self.detect_team_changes(
+                        player_data["id"],
+                        player_data.get("current_team_id"),
+                        season_id,
+                    ):
+                        result.players_transferred += 1
+                else:
+                    result.players_new += 1
+
+                # Always upsert
+                self.upsert_player(player_data)
+
+                # Queue for profile fetch if never fetched
+                if not existing or existing.get("profile_fetched_at") is None:
+                    result.entities_needing_profile.append(("player", player_data["id"]))
+
+                result.players_discovered += 1
+
+            self._complete_sync(
+                sync_id,
+                result.teams_discovered + result.players_discovered,
+                result.teams_new + result.players_new,
+                result.teams_updated + result.players_updated,
+            )
+
+            logger.info(
+                "Discovery complete for %s season %d: %d teams (%d new), %d players (%d new, %d transfers)",
+                self.sport_id,
+                season,
+                result.teams_discovered,
+                result.teams_new,
+                result.players_discovered,
+                result.players_new,
+                result.players_transferred,
+            )
+
+            return result
+
+        except Exception as e:
+            self._fail_sync(sync_id, str(e))
+            raise
+
+    async def run_profile_fetch_phase(
+        self,
+        entities: list[tuple[str, int]],
+    ) -> int:
+        """
+        Phase 2: Profile Fetch - Fetch full profiles for new entities only.
+
+        This phase:
+        - Fetches complete profile data (photos, venue details, bio)
+        - Only for entities in the provided list
+        - Marks profile_fetched_at after successful fetch
+
+        Args:
+            entities: List of (entity_type, entity_id) tuples to fetch
+
+        Returns:
+            Number of profiles fetched
+        """
+        if not entities:
+            logger.info("No entities need profile fetch")
+            return 0
+
+        sync_id = self._start_sync("incremental", "profiles")
+        fetched = 0
+
+        try:
+            for entity_type, entity_id in entities:
+                try:
+                    if entity_type == "team":
+                        profile_data = await self.fetch_team_profile(entity_id)
+                        if profile_data:
+                            self.upsert_team(profile_data, mark_profile_fetched=True)
+                            fetched += 1
+                    elif entity_type == "player":
+                        profile_data = await self.fetch_player_profile(entity_id)
+                        if profile_data:
+                            self.upsert_player(profile_data, mark_profile_fetched=True)
+                            fetched += 1
+                except Exception as e:
+                    logger.warning("Failed to fetch profile for %s %d: %s", entity_type, entity_id, e)
+                    continue
+
+            self._complete_sync(sync_id, len(entities), fetched, 0)
+            logger.info("Profile fetch complete: %d/%d entities", fetched, len(entities))
+            return fetched
+
+        except Exception as e:
+            self._fail_sync(sync_id, str(e))
+            raise
+
+    async def seed_two_phase(
+        self,
+        season: int,
+        league_id: Optional[int] = None,
+        skip_profiles: bool = False,
+    ) -> dict[str, Any]:
+        """
+        Run the complete two-phase seeding process.
+
+        Phase 1: Discovery - Find all entities, detect changes
+        Phase 2: Profile Fetch - Get full profiles for new entities
+        Phase 3: Stats Update - Update statistics
+
+        Args:
+            season: Season year
+            league_id: Optional league ID (for Football)
+            skip_profiles: If True, skip profile fetch phase
+
+        Returns:
+            Summary of seeding results
+        """
+        # Phase 1: Discovery
+        discovery = await self.run_discovery_phase(season, league_id=league_id)
+
+        # Phase 2: Profile Fetch (only for new entities)
+        profiles_fetched = 0
+        if not skip_profiles and discovery.entities_needing_profile:
+            profiles_fetched = await self.run_profile_fetch_phase(
+                discovery.entities_needing_profile
+            )
+
+        # Phase 3: Stats Update
+        player_stats = await self.seed_player_stats(season)
+        team_stats = await self.seed_team_stats(season)
+
+        return {
+            "discovery": {
+                "teams_discovered": discovery.teams_discovered,
+                "teams_new": discovery.teams_new,
+                "players_discovered": discovery.players_discovered,
+                "players_new": discovery.players_new,
+                "players_transferred": discovery.players_transferred,
+            },
+            "profiles_fetched": profiles_fetched,
+            "player_stats": player_stats,
+            "team_stats": team_stats,
+        }
+
+    # =========================================================================
     # Abstract Methods (Must be implemented by subclasses)
     # =========================================================================
 
     @abstractmethod
-    async def fetch_teams(self, season: int) -> list[dict[str, Any]]:
+    async def fetch_teams(
+        self,
+        season: int,
+        league_id: Optional[int] = None,
+    ) -> list[dict[str, Any]]:
         """
-        Fetch teams from API-Sports.
+        Fetch teams from API-Sports (discovery phase).
 
         Args:
             season: Season year
+            league_id: Optional league ID (for Football)
 
         Returns:
-            List of team data dicts
+            List of team data dicts with minimal info
         """
         pass
 
     @abstractmethod
-    async def fetch_players(self, season: int, team_id: Optional[int] = None) -> list[dict[str, Any]]:
+    async def fetch_players(
+        self,
+        season: int,
+        team_id: Optional[int] = None,
+        league_id: Optional[int] = None,
+    ) -> list[dict[str, Any]]:
         """
-        Fetch players from API-Sports.
+        Fetch players from API-Sports (discovery phase).
+
+        For Football, uses league-based fetching: /players?league={id}&season={year}&page=N
+        For NBA/NFL, uses team-based fetching: /players?team={id}&season={year}
 
         Args:
             season: Season year
-            team_id: Optional team ID to filter by
+            team_id: Optional team ID (for NBA/NFL)
+            league_id: Optional league ID (for Football)
 
         Returns:
-            List of player data dicts
+            List of player data dicts with minimal info
+        """
+        pass
+
+    @abstractmethod
+    async def fetch_team_profile(self, team_id: int) -> Optional[dict[str, Any]]:
+        """
+        Fetch full team profile from API-Sports (profile fetch phase).
+
+        Includes: logo, venue details, founded year, etc.
+
+        Args:
+            team_id: Team ID
+
+        Returns:
+            Full team profile data or None
+        """
+        pass
+
+    @abstractmethod
+    async def fetch_player_profile(self, player_id: int) -> Optional[dict[str, Any]]:
+        """
+        Fetch full player profile from API-Sports (profile fetch phase).
+
+        Includes: photo, height, weight, birth date, nationality, etc.
+
+        Args:
+            player_id: Player ID
+
+        Returns:
+            Full player profile data or None
         """
         pass
 

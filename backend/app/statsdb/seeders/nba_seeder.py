@@ -30,9 +30,16 @@ class NBASeeder(BaseSeeder):
     # Data Fetching
     # =========================================================================
 
-    async def fetch_teams(self, season: int) -> list[dict[str, Any]]:
-        """Fetch NBA teams from API-Sports."""
-        teams = await self.api.list_teams(sport="NBA", season=season)
+    async def fetch_teams(
+        self,
+        season: int,
+        league_id: Optional[int] = None,
+    ) -> list[dict[str, Any]]:
+        """Fetch NBA teams from API-Sports.
+
+        Note: NBA doesn't use league_id, parameter included for interface compliance.
+        """
+        teams = await self.api.list_teams("NBA")
 
         result = []
         for team in teams:
@@ -52,49 +59,60 @@ class NBASeeder(BaseSeeder):
         self,
         season: int,
         team_id: Optional[int] = None,
+        league_id: Optional[int] = None,
     ) -> list[dict[str, Any]]:
-        """Fetch NBA players from API-Sports."""
+        """Fetch NBA players from API-Sports.
+
+        Note: NBA doesn't use league_id, parameter included for interface compliance.
+        Uses /players endpoint with team parameter to get players per team.
+        """
         all_players = []
-        page = 1
+        seen_ids = set()
 
-        while True:
-            players = await self.api.list_players(
-                sport="NBA",
-                season=season,
-                page=page,
-            )
+        # Get all teams first
+        teams = await self.fetch_teams(season)
+        logger.info("Fetching players for %d NBA teams...", len(teams))
 
-            if not players:
-                break
+        for team_data in teams:
+            tid = team_data["id"]
 
-            for player in players:
-                # Extract team ID from nested structure
-                team = player.get("team") or {}
-                current_team_id = team.get("id") if isinstance(team, dict) else None
+            try:
+                # Use /players endpoint with team and season params
+                players = await self.api.list_players(
+                    "NBA",
+                    season=str(season),
+                    team_id=tid,
+                )
 
-                all_players.append({
-                    "id": player["id"],
-                    "first_name": player.get("first_name") or player.get("firstname"),
-                    "last_name": player.get("last_name") or player.get("lastname"),
-                    "full_name": self._build_full_name(player),
-                    "position": player.get("position"),
-                    "position_group": self._get_position_group(player.get("position")),
-                    "nationality": player.get("nationality") or player.get("country"),
-                    "birth_date": player.get("birth_date") or player.get("birth", {}).get("date"),
-                    "height_cm": self._parse_height(player),
-                    "weight_kg": self._parse_weight(player),
-                    "photo_url": player.get("photo_url"),
-                    "current_team_id": current_team_id,
-                    "jersey_number": player.get("jersey"),
-                })
+                for player in players:
+                    player_id = player.get("id")
+                    if not player_id or player_id in seen_ids:
+                        continue
 
-            page += 1
+                    seen_ids.add(player_id)
 
-            # Safety limit
-            if page > 50:
-                logger.warning("Reached page limit for NBA players")
-                break
+                    all_players.append({
+                        "id": player_id,
+                        "first_name": player.get("first_name") or player.get("firstname"),
+                        "last_name": player.get("last_name") or player.get("lastname"),
+                        "full_name": player.get("name") or self._build_full_name(player),
+                        "position": player.get("position"),
+                        "position_group": self._get_position_group(player.get("position")),
+                        "nationality": player.get("nationality") or player.get("country"),
+                        "birth_date": player.get("birth_date"),
+                        "height_cm": self._parse_height(player),
+                        "weight_kg": self._parse_weight(player),
+                        "photo_url": player.get("photo_url"),
+                        "current_team_id": tid,
+                        "jersey_number": player.get("jersey"),
+                    })
 
+                logger.debug("Fetched %d players from team %d", len(players), tid)
+
+            except Exception as e:
+                logger.warning("Failed to fetch players for team %d: %s", tid, e)
+
+        logger.info("Total NBA players fetched: %d", len(all_players))
         return all_players
 
     async def fetch_player_stats(
@@ -105,9 +123,9 @@ class NBASeeder(BaseSeeder):
         """Fetch player statistics from API-Sports."""
         try:
             stats = await self.api.get_player_statistics(
-                player_id=player_id,
-                sport="NBA",
-                season=season,
+                str(player_id),
+                "NBA",
+                str(season),
             )
             return stats
         except Exception as e:
@@ -122,13 +140,103 @@ class NBASeeder(BaseSeeder):
         """Fetch team statistics from API-Sports."""
         try:
             stats = await self.api.get_team_statistics(
-                team_id=team_id,
-                sport="NBA",
-                season=season,
+                str(team_id),
+                "NBA",
+                str(season),
             )
             return stats
         except Exception as e:
             logger.warning("Failed to fetch stats for team %d: %s", team_id, e)
+            return None
+
+    async def fetch_team_profile(self, team_id: int) -> Optional[dict[str, Any]]:
+        """Fetch detailed team profile from API-Sports.
+
+        Returns extended team info including venue details.
+        API: GET /teams?id={team_id}
+        """
+        try:
+            response = await self.api.get_team_profile(str(team_id), "NBA")
+
+            if not response:
+                return None
+
+            team = response
+
+            # Handle venue - may be dict or string
+            venue = team.get("venue")
+            if isinstance(venue, dict):
+                venue_name = venue.get("name") or team.get("arena")
+                venue_city = venue.get("city") or team.get("city")
+                venue_capacity = venue.get("capacity")
+            else:
+                venue_name = team.get("arena")
+                venue_city = team.get("city")
+                venue_capacity = None
+
+            # Handle leagues nested structure
+            leagues = team.get("leagues")
+            conference = team.get("conference")
+            division = team.get("division")
+            if isinstance(leagues, dict):
+                standard = leagues.get("standard", {})
+                if isinstance(standard, dict):
+                    conference = conference or standard.get("conference")
+                    division = division or standard.get("division")
+
+            return {
+                "id": team["id"],
+                "name": team["name"],
+                "abbreviation": team.get("abbreviation") or team.get("code") or team.get("nickname"),
+                "logo_url": team.get("logo_url") or team.get("logo"),
+                "conference": conference,
+                "division": division,
+                "city": team.get("city"),
+                "founded": team.get("founded"),
+                "venue_name": venue_name,
+                "venue_city": venue_city,
+                "venue_capacity": venue_capacity,
+            }
+        except Exception as e:
+            logger.warning("Failed to fetch profile for team %d: %s", team_id, e)
+            return None
+
+    async def fetch_player_profile(self, player_id: int) -> Optional[dict[str, Any]]:
+        """Fetch detailed player profile from API-Sports.
+
+        Returns extended player info including full biographical data.
+        API: GET /players?id={player_id}
+        """
+        try:
+            response = await self.api.get_player_profile(str(player_id), "NBA")
+
+            if not response:
+                return None
+
+            player = response
+
+            # Extract team from nested structure
+            team = player.get("team") or {}
+            current_team_id = team.get("id") if isinstance(team, dict) else None
+
+            return {
+                "id": player["id"],
+                "first_name": player.get("first_name") or player.get("firstname"),
+                "last_name": player.get("last_name") or player.get("lastname"),
+                "full_name": self._build_full_name(player),
+                "position": player.get("position"),
+                "position_group": self._get_position_group(player.get("position")),
+                "nationality": player.get("nationality") or player.get("country"),
+                "birth_date": player.get("birth_date") or player.get("birth", {}).get("date"),
+                "birth_place": player.get("birth", {}).get("place") if isinstance(player.get("birth"), dict) else None,
+                "height_cm": self._parse_height(player),
+                "weight_kg": self._parse_weight(player),
+                "photo_url": player.get("photo_url"),
+                "current_team_id": current_team_id,
+                "jersey_number": player.get("jersey"),
+            }
+        except Exception as e:
+            logger.warning("Failed to fetch profile for player %d: %s", player_id, e)
             return None
 
     # =========================================================================
@@ -190,7 +298,8 @@ class NBASeeder(BaseSeeder):
         steals = stats.get("steals") or stats.get("steals", 0) or 0
         blocks = stats.get("blocks") or stats.get("blocks", 0) or 0
         fouls = stats.get("pFouls") or stats.get("personal_fouls", 0) or 0
-        plus_minus = stats.get("plusMinus") or stats.get("plus_minus", 0) or 0
+        pm_raw = stats.get("plusMinus") or stats.get("plus_minus", 0) or 0
+        plus_minus = int(pm_raw) if isinstance(pm_raw, (int, float, str)) and str(pm_raw).lstrip("+-").isdigit() else 0
 
         # Calculate per-game averages
         gp = max(games_played, 1)  # Avoid division by zero
