@@ -38,7 +38,7 @@ async def seed_football_api():
 	for season in seasons:
 		for league_id in FOOTBALL_LEAGUES:
 			try:
-				rows = await apisports_service.list_football_teams(league_id, season=season)
+				rows = await apisports_service.list_teams("FOOTBALL", league=league_id, season=season)
 				league_name = LEAGUE_NAMES.get(league_id, f"League {league_id}")
 				for r in rows:
 					tid = r.get("id")
@@ -67,7 +67,7 @@ async def seed_football_api():
 			page = 1
 			while True:
 				try:
-					rows = await apisports_service.list_football_players(league_id, season=season, page=page)
+					rows = await apisports_service.list_players("FOOTBALL", season=season, page=page, league=league_id)
 					if not rows:
 						break
 					for r in rows:
@@ -106,7 +106,7 @@ async def seed_football_api():
 async def seed_nba_api():
 	print("Seeding NBA teams via API...")
 	try:
-		rows = await apisports_service.list_nba_teams(league='standard')
+		rows = await apisports_service.list_teams("NBA", league="standard")
 		teams: List[Tuple[int, str, str]] = []
 		# Fetch division info for each team
 		for r in rows:
@@ -116,7 +116,7 @@ async def seed_nba_api():
 				# Fetch team details to get division
 				division = None
 				try:
-					team_details = await apisports_service.get_basketball_team_basic(str(team_id))
+					team_details = await apisports_service.get_team_basic(str(team_id), "NBA")
 					division = team_details.get("division")
 					if division:
 						# Format: "Atlantic" -> "Atlantic Division"
@@ -158,7 +158,7 @@ async def seed_nba_api():
 	# NBA players endpoint requires team parameter - iterate through all teams
 	# Fetch both 2024 and 2025 seasons to include injured/suspended/moved players
 	try:
-		team_rows = await apisports_service.list_nba_teams(league='standard')
+		team_rows = await apisports_service.list_teams("NBA", league="standard")
 		print(f"NBA players: got {len(team_rows)} teams to iterate")
 	except Exception as e:
 		print("nba players teams fetch warn:", e)
@@ -175,7 +175,7 @@ async def seed_nba_api():
 				continue
 			try:
 				# Fetch players for this team (season + team, no league/page parameter)
-				roster = await apisports_service.list_nba_team_players(team_id=int(tid), season=season)
+				roster = await apisports_service.list_players("NBA", season=season, team_id=int(tid))
 				if not roster:
 					continue
 				for r in roster:
@@ -216,7 +216,7 @@ async def seed_nfl_api():
 	NFL_LEAGUE_ID = 1
 	# 1) Try listing
 	try:
-		rows = await apisports_service.list_nfl_teams(league=NFL_LEAGUE_ID)
+		rows = await apisports_service.list_teams("NFL", league=NFL_LEAGUE_ID)
 	except Exception as e:
 		print("nfl teams list warn:", e)
 		rows = []
@@ -229,7 +229,7 @@ async def seed_nfl_api():
 			# Fetch team details to get division
 			division = None
 			try:
-				team_details = await apisports_service.get_nfl_team_basic(str(team_id))
+				team_details = await apisports_service.get_team_basic(str(team_id), "NFL")
 				division = team_details.get("division")
 				if division:
 					# Format: "AFC North" -> "AFC North Division" or keep as is
@@ -265,7 +265,7 @@ async def seed_nfl_api():
 					# Try to get division
 					division = None
 					try:
-						team_details = await apisports_service.get_nfl_team_basic(str(tid))
+						team_details = await apisports_service.get_team_basic(str(tid), "NFL")
 						division = team_details.get("division")
 						if division and "Division" not in division:
 							division = f"{division} Division"
@@ -285,7 +285,7 @@ async def seed_nfl_api():
 		found_dicts: List[dict] = []
 		for tid in range(1, 65):
 			try:
-				t = await apisports_service.get_nfl_team_by_id(tid)
+				t = await apisports_service.get_team_basic(str(tid), "NFL")
 			except Exception as e:
 				print(f"nfl team id probe warn ({tid}):", e)
 				continue
@@ -305,7 +305,7 @@ async def seed_nfl_api():
 	# Use team_rows from teams seeding if available, otherwise fetch again
 	if not team_rows:
 		try:
-			team_rows = await apisports_service.list_nfl_teams(league=NFL_LEAGUE_ID)
+			team_rows = await apisports_service.list_teams("NFL", league=NFL_LEAGUE_ID)
 		except Exception as e:
 			print("nfl players teams fetch warn:", e)
 			team_rows = []
@@ -321,7 +321,7 @@ async def seed_nfl_api():
 				continue
 			try:
 				# Fetch players for this team (season + team, no league/page parameter)
-				roster = await apisports_service.list_nfl_team_players(team_id=int(tid), season=season)
+				roster = await apisports_service.list_players("NFL", season=season, team_id=int(tid))
 				if not roster:
 					continue
 				for r in roster:

@@ -4,8 +4,8 @@ NFL-specific seeder for stats database.
 Handles fetching and transforming NFL player and team statistics
 from the API-Sports American Football API.
 
-NFL stats are position-specific, so this seeder handles multiple
-stat tables based on player position.
+Uses a unified nfl_player_stats table - position-based display is
+handled by widgets at query time, not at ingestion.
 """
 
 from __future__ import annotations
@@ -24,35 +24,6 @@ class NFLSeeder(BaseSeeder):
 
     sport_id = "NFL"
 
-    # Position to stat table mapping
-    POSITION_TABLES = {
-        "QB": ["passing", "rushing"],
-        "RB": ["rushing", "receiving"],
-        "FB": ["rushing", "receiving"],
-        "WR": ["receiving", "rushing"],
-        "TE": ["receiving"],
-        "OL": [],
-        "OT": [],
-        "OG": [],
-        "C": [],
-        "DL": ["defense"],
-        "DE": ["defense"],
-        "DT": ["defense"],
-        "NT": ["defense"],
-        "LB": ["defense"],
-        "ILB": ["defense"],
-        "OLB": ["defense"],
-        "MLB": ["defense"],
-        "DB": ["defense"],
-        "CB": ["defense"],
-        "S": ["defense"],
-        "FS": ["defense"],
-        "SS": ["defense"],
-        "K": ["kicking"],
-        "P": ["kicking"],
-        "LS": [],
-    }
-
     def _get_season_label(self, season_year: int) -> str:
         """NFL seasons are single year."""
         return str(season_year)
@@ -66,10 +37,7 @@ class NFLSeeder(BaseSeeder):
         season: int,
         league_id: Optional[int] = None,
     ) -> list[dict[str, Any]]:
-        """Fetch NFL teams from API-Sports.
-
-        Note: NFL doesn't use league_id, parameter included for interface compliance.
-        """
+        """Fetch NFL teams from API-Sports."""
         teams = await self.api.list_teams("NFL", season=str(season))
 
         result = []
@@ -92,11 +60,7 @@ class NFLSeeder(BaseSeeder):
         team_id: Optional[int] = None,
         league_id: Optional[int] = None,
     ) -> list[dict[str, Any]]:
-        """Fetch NFL players from API-Sports.
-
-        Note: NFL doesn't use league_id, parameter included for interface compliance.
-        Uses paginated fetching (all players across all teams).
-        """
+        """Fetch NFL players from API-Sports (paginated)."""
         all_players = []
         page = 1
 
@@ -111,14 +75,12 @@ class NFLSeeder(BaseSeeder):
                 break
 
             for player in players:
-                team = player.get("team") or {}
-                current_team_id = team.get("id") if isinstance(team, dict) else None
                 position = player.get("position")
 
                 all_players.append({
                     "id": player["id"],
-                    "first_name": player.get("first_name") or player.get("firstname"),
-                    "last_name": player.get("last_name") or player.get("lastname"),
+                    "first_name": player.get("first_name"),
+                    "last_name": player.get("last_name"),
                     "full_name": self._build_full_name(player),
                     "position": position,
                     "position_group": self._get_position_group(position),
@@ -127,7 +89,7 @@ class NFLSeeder(BaseSeeder):
                     "height_cm": self._parse_height(player),
                     "weight_kg": self._parse_weight(player),
                     "photo_url": player.get("photo_url"),
-                    "current_team_id": current_team_id,
+                    "current_team_id": player.get("team_id"),
                     "jersey_number": player.get("number"),
                 })
 
@@ -160,13 +122,17 @@ class NFLSeeder(BaseSeeder):
         self,
         team_id: int,
         season: int,
+        league_id: Optional[int] = None,
     ) -> Optional[dict[str, Any]]:
-        """Fetch team statistics from API-Sports."""
+        """Fetch team statistics from API-Sports (uses standings endpoint)."""
         try:
+            if league_id is None:
+                league_id = 1
             stats = await self.api.get_team_statistics(
                 str(team_id),
                 "NFL",
                 str(season),
+                league_id=league_id,
             )
             return stats
         except Exception as e:
@@ -174,27 +140,19 @@ class NFLSeeder(BaseSeeder):
             return None
 
     async def fetch_team_profile(self, team_id: int) -> Optional[dict[str, Any]]:
-        """Fetch detailed team profile from API-Sports.
-
-        Returns extended team info including venue details.
-        API: GET /teams?id={team_id}
-        """
+        """Fetch detailed team profile from API-Sports."""
         try:
             response = await self.api.get_team_profile(str(team_id), "NFL")
-
             if not response:
                 return None
 
             team = response
-
-            # Handle country - may be string or dict
             country = team.get("country")
             if isinstance(country, dict):
                 country = country.get("name") or country.get("code") or "USA"
             elif not country:
                 country = "USA"
 
-            # Handle venue - may be dict or string
             venue = team.get("venue")
             if isinstance(venue, dict):
                 venue_name = venue.get("name") or team.get("stadium")
@@ -227,20 +185,13 @@ class NFLSeeder(BaseSeeder):
             return None
 
     async def fetch_player_profile(self, player_id: int) -> Optional[dict[str, Any]]:
-        """Fetch detailed player profile from API-Sports.
-
-        Returns extended player info including full biographical data.
-        API: GET /players?id={player_id}
-        """
+        """Fetch detailed player profile from API-Sports."""
         try:
             response = await self.api.get_player_profile(str(player_id), "NFL")
-
             if not response:
                 return None
 
             player = response
-
-            # Extract team from nested structure
             team = player.get("team") or {}
             current_team_id = team.get("id") if isinstance(team, dict) else None
             position = player.get("position")
@@ -277,233 +228,225 @@ class NFLSeeder(BaseSeeder):
         team_id: Optional[int] = None,
     ) -> dict[str, Any]:
         """
-        Transform API stats to database schema.
+        Transform API stats to unified nfl_player_stats table schema.
 
-        Returns a dict with keys for each stat type the player has.
+        NFL API returns stats in teams[0].groups[] format. We flatten
+        all stat groups into a single row. Widgets handle position-based display.
         """
-        stats = raw_stats if isinstance(raw_stats, dict) else {}
+        raw = raw_stats if isinstance(raw_stats, dict) else {}
 
-        if "response" in stats and stats["response"]:
-            stats = stats["response"][0] if isinstance(stats["response"], list) else stats["response"]
+        if "response" in raw and raw["response"]:
+            raw = raw["response"][0] if isinstance(raw["response"], list) else raw["response"]
 
-        result = {
-            "player_id": player_id,
-            "season_id": season_id,
-            "team_id": team_id,
-        }
+        # Convert NFL teams[0].groups[] format to flat structure
+        stats = self._convert_nfl_stats_format(raw)
 
-        # Get player position to determine which stats to extract
-        player = self.db.get_player(player_id, self.sport_id)
-        position = player.get("position") if player else None
-
-        # Extract stats based on position
-        stat_tables = self.POSITION_TABLES.get(position, [])
-
-        if "passing" in stat_tables or self._has_passing_stats(stats):
-            result["passing"] = self._transform_passing_stats(stats, player_id, season_id, team_id)
-
-        if "rushing" in stat_tables or self._has_rushing_stats(stats):
-            result["rushing"] = self._transform_rushing_stats(stats, player_id, season_id, team_id)
-
-        if "receiving" in stat_tables or self._has_receiving_stats(stats):
-            result["receiving"] = self._transform_receiving_stats(stats, player_id, season_id, team_id)
-
-        if "defense" in stat_tables or self._has_defense_stats(stats):
-            result["defense"] = self._transform_defense_stats(stats, player_id, season_id, team_id)
-
-        if "kicking" in stat_tables or self._has_kicking_stats(stats):
-            result["kicking"] = self._transform_kicking_stats(stats, player_id, season_id, team_id)
-
-        return result
-
-    def _transform_passing_stats(
-        self,
-        stats: dict,
-        player_id: int,
-        season_id: int,
-        team_id: Optional[int],
-    ) -> dict[str, Any]:
-        """Transform passing statistics."""
+        # Extract stats from each group
         passing = stats.get("passing", {}) or {}
-
-        attempts = passing.get("attempts", 0) or 0
-        completions = passing.get("completions", 0) or 0
-        yards = passing.get("yards", 0) or 0
-        touchdowns = passing.get("touchdowns", 0) or 0
-        interceptions = passing.get("interceptions", 0) or 0
-
-        games = stats.get("games", {}).get("played", 1) or 1
-
-        return {
-            "player_id": player_id,
-            "season_id": season_id,
-            "team_id": team_id,
-            "games_played": games,
-            "games_started": stats.get("games", {}).get("started", 0) or 0,
-            "pass_attempts": attempts,
-            "pass_completions": completions,
-            "completion_pct": self._safe_pct(completions, attempts),
-            "pass_yards": yards,
-            "pass_yards_per_game": round(yards / games, 1),
-            "yards_per_attempt": round(yards / max(attempts, 1), 1),
-            "yards_per_completion": round(yards / max(completions, 1), 1),
-            "pass_touchdowns": touchdowns,
-            "interceptions": interceptions,
-            "td_int_ratio": round(touchdowns / max(interceptions, 1), 2),
-            "passer_rating": self._calculate_passer_rating(completions, attempts, yards, touchdowns, interceptions),
-            "sacks_taken": passing.get("sacks", 0) or 0,
-            "sack_yards_lost": passing.get("sack_yards", 0) or 0,
-            "longest_pass": passing.get("longest", 0) or 0,
-            "updated_at": int(time.time()),
-        }
-
-    def _transform_rushing_stats(
-        self,
-        stats: dict,
-        player_id: int,
-        season_id: int,
-        team_id: Optional[int],
-    ) -> dict[str, Any]:
-        """Transform rushing statistics."""
         rushing = stats.get("rushing", {}) or {}
-
-        attempts = rushing.get("attempts", 0) or 0
-        yards = rushing.get("yards", 0) or 0
-        touchdowns = rushing.get("touchdowns", 0) or 0
-
-        games = stats.get("games", {}).get("played", 1) or 1
-
-        return {
-            "player_id": player_id,
-            "season_id": season_id,
-            "team_id": team_id,
-            "games_played": games,
-            "rush_attempts": attempts,
-            "rush_yards": yards,
-            "rush_yards_per_game": round(yards / games, 1),
-            "yards_per_carry": round(yards / max(attempts, 1), 1),
-            "rush_touchdowns": touchdowns,
-            "longest_rush": rushing.get("longest", 0) or 0,
-            "fumbles": rushing.get("fumbles", 0) or stats.get("fumbles", {}).get("total", 0) or 0,
-            "fumbles_lost": rushing.get("fumbles_lost", 0) or stats.get("fumbles", {}).get("lost", 0) or 0,
-            "updated_at": int(time.time()),
-        }
-
-    def _transform_receiving_stats(
-        self,
-        stats: dict,
-        player_id: int,
-        season_id: int,
-        team_id: Optional[int],
-    ) -> dict[str, Any]:
-        """Transform receiving statistics."""
         receiving = stats.get("receiving", {}) or {}
-
-        targets = receiving.get("targets", 0) or 0
-        receptions = receiving.get("receptions", 0) or 0
-        yards = receiving.get("yards", 0) or 0
-        touchdowns = receiving.get("touchdowns", 0) or 0
-
-        games = stats.get("games", {}).get("played", 1) or 1
-
-        return {
-            "player_id": player_id,
-            "season_id": season_id,
-            "team_id": team_id,
-            "games_played": games,
-            "targets": targets,
-            "receptions": receptions,
-            "catch_pct": self._safe_pct(receptions, targets),
-            "receiving_yards": yards,
-            "receiving_yards_per_game": round(yards / games, 1),
-            "yards_per_reception": round(yards / max(receptions, 1), 1),
-            "yards_per_target": round(yards / max(targets, 1), 1),
-            "receiving_touchdowns": touchdowns,
-            "longest_reception": receiving.get("longest", 0) or 0,
-            "yards_after_catch": receiving.get("yac", 0) or 0,
-            "fumbles": receiving.get("fumbles", 0) or 0,
-            "fumbles_lost": receiving.get("fumbles_lost", 0) or 0,
-            "updated_at": int(time.time()),
-        }
-
-    def _transform_defense_stats(
-        self,
-        stats: dict,
-        player_id: int,
-        season_id: int,
-        team_id: Optional[int],
-    ) -> dict[str, Any]:
-        """Transform defensive statistics."""
         defense = stats.get("defense", {}) or {}
-        tackles_data = defense.get("tackles", {}) or {}
-
-        tackles_total = tackles_data.get("total", 0) or defense.get("tackles", 0) or 0
-        tackles_solo = tackles_data.get("solo", 0) or 0
-        tackles_assist = tackles_data.get("assists", 0) or 0
-
-        games = stats.get("games", {}).get("played", 1) or 1
-
-        return {
-            "player_id": player_id,
-            "season_id": season_id,
-            "team_id": team_id,
-            "games_played": games,
-            "games_started": stats.get("games", {}).get("started", 0) or 0,
-            "tackles_total": tackles_total,
-            "tackles_solo": tackles_solo,
-            "tackles_assist": tackles_assist,
-            "tackles_for_loss": defense.get("tfl", 0) or 0,
-            "sacks": defense.get("sacks", 0) or 0,
-            "sack_yards": defense.get("sack_yards", 0) or 0,
-            "qb_hits": defense.get("qb_hits", 0) or 0,
-            "interceptions": defense.get("interceptions", 0) or 0,
-            "int_yards": defense.get("int_yards", 0) or 0,
-            "int_touchdowns": defense.get("int_tds", 0) or 0,
-            "passes_defended": defense.get("passes_defended", 0) or 0,
-            "forced_fumbles": defense.get("forced_fumbles", 0) or 0,
-            "fumble_recoveries": defense.get("fumble_recoveries", 0) or 0,
-            "updated_at": int(time.time()),
-        }
-
-    def _transform_kicking_stats(
-        self,
-        stats: dict,
-        player_id: int,
-        season_id: int,
-        team_id: Optional[int],
-    ) -> dict[str, Any]:
-        """Transform kicking/punting statistics."""
         kicking = stats.get("kicking", {}) or {}
         punting = stats.get("punting", {}) or {}
+        returns = stats.get("returns", {}) or {}
+        games_data = stats.get("games", {}) or {}
 
-        fg_made = kicking.get("fg_made", 0) or 0
-        fg_attempts = kicking.get("fg_attempts", 0) or 0
-        xp_made = kicking.get("xp_made", 0) or 0
-        xp_attempts = kicking.get("xp_attempts", 0) or 0
+        games = games_data.get("played", 0) or 0
+        games_started = games_data.get("started", 0) or 0
 
-        games = stats.get("games", {}).get("played", 1) or 1
-
+        # Build unified stats dict - all columns, most will be 0/NULL for any given player
         return {
             "player_id": player_id,
             "season_id": season_id,
             "team_id": team_id,
+
+            # Games
             "games_played": games,
-            "fg_attempts": fg_attempts,
-            "fg_made": fg_made,
-            "fg_pct": self._safe_pct(fg_made, fg_attempts),
-            "fg_long": kicking.get("fg_long", 0) or 0,
-            "xp_attempts": xp_attempts,
-            "xp_made": xp_made,
-            "xp_pct": self._safe_pct(xp_made, xp_attempts),
-            "total_points": (fg_made * 3) + xp_made,
-            "punts": punting.get("punts", 0) or 0,
-            "punt_yards": punting.get("yards", 0) or 0,
-            "punt_avg": punting.get("average", 0) or 0,
-            "punt_long": punting.get("longest", 0) or 0,
-            "punts_inside_20": punting.get("inside_20", 0) or 0,
-            "touchbacks": punting.get("touchbacks", 0) or 0,
+            "games_started": games_started,
+
+            # Passing
+            "pass_attempts": self._safe_int(passing.get("attempts")),
+            "pass_completions": self._safe_int(passing.get("completions")),
+            "pass_yards": self._safe_int(passing.get("yards")),
+            "pass_touchdowns": self._safe_int(passing.get("touchdowns")),
+            "interceptions_thrown": self._safe_int(passing.get("interceptions")),
+            "passer_rating": self._safe_float(passing.get("passer_rating")),
+            "completion_pct": self._safe_float(passing.get("completion_pct")),
+            "yards_per_attempt": self._safe_float(passing.get("yards_per_attempt")),
+            "longest_pass": self._safe_int(passing.get("longest")),
+            "sacks_taken": self._safe_int(passing.get("sacks")),
+            "sack_yards_lost": self._safe_int(passing.get("sack_yards")),
+
+            # Rushing
+            "rush_attempts": self._safe_int(rushing.get("attempts")),
+            "rush_yards": self._safe_int(rushing.get("yards")),
+            "rush_touchdowns": self._safe_int(rushing.get("touchdowns")),
+            "yards_per_carry": self._safe_float(rushing.get("yards_per_carry")),
+            "longest_rush": self._safe_int(rushing.get("longest")),
+            "rush_fumbles": self._safe_int(rushing.get("fumbles")),
+            "rush_fumbles_lost": self._safe_int(rushing.get("fumbles_lost")),
+
+            # Receiving
+            "targets": self._safe_int(receiving.get("targets")),
+            "receptions": self._safe_int(receiving.get("receptions")),
+            "receiving_yards": self._safe_int(receiving.get("yards")),
+            "receiving_touchdowns": self._safe_int(receiving.get("touchdowns")),
+            "yards_per_reception": self._safe_float(receiving.get("yards_per_reception")),
+            "longest_reception": self._safe_int(receiving.get("longest")),
+            "yards_after_catch": self._safe_int(receiving.get("yac")),
+            "rec_fumbles": self._safe_int(receiving.get("fumbles")),
+            "rec_fumbles_lost": self._safe_int(receiving.get("fumbles_lost")),
+
+            # Defense
+            "tackles_total": self._safe_int(defense.get("tackles_total")),
+            "tackles_solo": self._safe_int(defense.get("tackles_solo")),
+            "tackles_assist": self._safe_int(defense.get("tackles_assist")),
+            "tackles_for_loss": self._safe_int(defense.get("tackles_for_loss")),
+            "sacks": self._safe_float(defense.get("sacks")),
+            "sack_yards": self._safe_int(defense.get("sack_yards")),
+            "qb_hits": self._safe_int(defense.get("qb_hits")),
+            "def_interceptions": self._safe_int(defense.get("interceptions")),
+            "int_yards": self._safe_int(defense.get("int_yards")),
+            "int_touchdowns": self._safe_int(defense.get("int_tds")),
+            "passes_defended": self._safe_int(defense.get("passes_defended")),
+            "forced_fumbles": self._safe_int(defense.get("forced_fumbles")),
+            "fumble_recoveries": self._safe_int(defense.get("fumble_recoveries")),
+
+            # Kicking
+            "fg_attempts": self._safe_int(kicking.get("fg_attempts")),
+            "fg_made": self._safe_int(kicking.get("fg_made")),
+            "fg_pct": self._safe_float(kicking.get("fg_pct")),
+            "fg_long": self._safe_int(kicking.get("fg_long")),
+            "xp_attempts": self._safe_int(kicking.get("xp_attempts")),
+            "xp_made": self._safe_int(kicking.get("xp_made")),
+            "xp_pct": self._safe_float(kicking.get("xp_pct")),
+            "kicking_points": self._safe_int(kicking.get("points")),
+
+            # Punting
+            "punts": self._safe_int(punting.get("punts")),
+            "punt_yards": self._safe_int(punting.get("yards")),
+            "punt_avg": self._safe_float(punting.get("average")),
+            "punt_long": self._safe_int(punting.get("longest")),
+            "punts_inside_20": self._safe_int(punting.get("inside_20")),
+            "touchbacks": self._safe_int(punting.get("touchbacks")),
+
+            # Returns
+            "kick_returns": self._safe_int(returns.get("kick_returns")),
+            "kick_return_yards": self._safe_int(returns.get("kick_return_yards")),
+            "kick_return_touchdowns": self._safe_int(returns.get("kick_return_tds")),
+            "punt_returns": self._safe_int(returns.get("punt_returns")),
+            "punt_return_yards": self._safe_int(returns.get("punt_return_yards")),
+            "punt_return_touchdowns": self._safe_int(returns.get("punt_return_tds")),
+
             "updated_at": int(time.time()),
         }
+
+    def _convert_nfl_stats_format(self, raw: dict[str, Any]) -> dict[str, Any]:
+        """
+        Convert NFL API teams[0].groups[] format to flat structure.
+
+        Input: {"teams": [{"groups": [{"name": "Passing", "statistics": [...]}]}]}
+        Output: {"passing": {"yards": 1000, ...}, "rushing": {...}, ...}
+        """
+        result: dict[str, Any] = {"games": {"played": 0, "started": 0}}
+
+        teams = raw.get("teams", [])
+        if not teams:
+            return result
+
+        team_data = teams[0] if teams else {}
+        groups = team_data.get("groups", [])
+
+        # Map group names to internal keys
+        group_map = {
+            "passing": "passing",
+            "rushing": "rushing",
+            "receiving": "receiving",
+            "defense": "defense",
+            "kicking": "kicking",
+            "punting": "punting",
+            "scoring": "scoring",
+            "returns": "returns",
+            "kick returns": "returns",
+            "punt returns": "returns",
+        }
+
+        # Stat name mappings from API to our schema
+        stat_key_map = {
+            # Passing
+            "passing_attempts": "attempts",
+            "completions": "completions",
+            "completion_pct": "completion_pct",
+            "yards": "yards",
+            "yards_per_pass_avg": "yards_per_attempt",
+            "longest_pass": "longest",
+            "passing_touchdowns": "touchdowns",
+            "interceptions": "interceptions",
+            "sacks": "sacks",
+            "sacked_yards_lost": "sack_yards",
+            "quaterback_rating": "passer_rating",
+            "quarterback_rating": "passer_rating",
+            # Rushing
+            "rushing_attempts": "attempts",
+            "yards_per_rush_avg": "yards_per_carry",
+            "longest_rush": "longest",
+            "rushing_touchdowns": "touchdowns",
+            "fumbles": "fumbles",
+            "fumbles_lost": "fumbles_lost",
+            # Receiving
+            "targets": "targets",
+            "receptions": "receptions",
+            "receiving_yards": "yards",
+            "yards_per_reception": "yards_per_reception",
+            "longest_reception": "longest",
+            "receiving_touchdowns": "touchdowns",
+            # Defense
+            "unassisted_tackles": "tackles_solo",
+            "assisted_tackles": "tackles_assist",
+            "total_tackles": "tackles_total",
+            "tackles_for_loss": "tackles_for_loss",
+            "passes_defended": "passes_defended",
+            "forced_fumbles": "forced_fumbles",
+            "fumbles_recovered": "fumble_recoveries",
+            "interception_yards": "int_yards",
+            "interception_touchdowns": "int_tds",
+        }
+
+        for group in groups:
+            group_name = (group.get("name") or "").lower()
+            internal_key = group_map.get(group_name)
+
+            if not internal_key:
+                continue
+
+            statistics = group.get("statistics", [])
+            group_stats = result.get(internal_key, {})
+
+            for stat in statistics:
+                stat_name = (stat.get("name") or "").lower().replace(" ", "_")
+                stat_value = stat.get("value")
+
+                if stat_value is None:
+                    continue
+
+                # Convert string values to numbers
+                if isinstance(stat_value, str):
+                    stat_value = stat_value.replace(",", "")
+                    try:
+                        if "." in stat_value:
+                            stat_value = float(stat_value)
+                        else:
+                            stat_value = int(stat_value)
+                    except (ValueError, TypeError):
+                        pass
+
+                # Map stat name to our expected key
+                mapped_key = stat_key_map.get(stat_name, stat_name)
+                group_stats[mapped_key] = stat_value
+
+            result[internal_key] = group_stats
+
+        return result
 
     def transform_team_stats(
         self,
@@ -511,20 +454,21 @@ class NFLSeeder(BaseSeeder):
         team_id: int,
         season_id: int,
     ) -> dict[str, Any]:
-        """Transform API team stats to database schema."""
+        """Transform API team stats to database schema (from standings endpoint)."""
         stats = raw_stats if isinstance(raw_stats, dict) else {}
 
         if "response" in stats and stats["response"]:
             stats = stats["response"][0] if isinstance(stats["response"], list) else stats["response"]
 
-        games = stats.get("games", {}) or {}
-        wins = games.get("wins", 0) or 0
-        losses = games.get("losses", 0) or 0
-        ties = games.get("ties", 0) or 0
+        # Standings format: {won, lost, ties, points: {for, against}, ...}
+        wins = stats.get("won", 0) or 0
+        losses = stats.get("lost", 0) or 0
+        ties = stats.get("ties", 0) or 0
         games_played = wins + losses + ties
 
-        offense = stats.get("offense", {}) or {}
-        defense = stats.get("defense", {}) or {}
+        points = stats.get("points", {}) or {}
+        points_for = points.get("for", 0) or 0
+        points_against = points.get("against", 0) or 0
 
         return {
             "team_id": team_id,
@@ -534,19 +478,18 @@ class NFLSeeder(BaseSeeder):
             "losses": losses,
             "ties": ties,
             "win_pct": self._safe_pct(wins, games_played),
-            "points_for": stats.get("points", {}).get("for", 0) or 0,
-            "points_against": stats.get("points", {}).get("against", 0) or 0,
-            "point_differential": (stats.get("points", {}).get("for", 0) or 0) - (stats.get("points", {}).get("against", 0) or 0),
-            "total_yards": offense.get("yards", 0) or 0,
-            "yards_per_game": round(offense.get("yards", 0) / max(games_played, 1), 1),
-            "pass_yards": offense.get("pass_yards", 0) or 0,
-            "rush_yards": offense.get("rush_yards", 0) or 0,
-            "turnovers": offense.get("turnovers", 0) or 0,
-            "yards_allowed": defense.get("yards", 0) or 0,
-            "pass_yards_allowed": defense.get("pass_yards", 0) or 0,
-            "rush_yards_allowed": defense.get("rush_yards", 0) or 0,
-            "takeaways": defense.get("takeaways", 0) or 0,
-            "sacks": defense.get("sacks", 0) or 0,
+            "points_for": points_for,
+            "points_against": points_against,
+            "point_differential": points_for - points_against,
+            "total_yards": 0,
+            "yards_per_game": 0.0,
+            "pass_yards": 0,
+            "rush_yards": 0,
+            "turnovers": 0,
+            "yards_allowed": 0,
+            "pass_yards_allowed": 0,
+            "rush_yards_allowed": 0,
+            "takeaways": 0,
             "updated_at": int(time.time()),
         }
 
@@ -555,42 +498,48 @@ class NFLSeeder(BaseSeeder):
     # =========================================================================
 
     def upsert_player_stats(self, stats: dict[str, Any]) -> None:
-        """Insert or update NFL player statistics."""
-        player_id = stats["player_id"]
-        season_id = stats["season_id"]
-
-        if "passing" in stats:
-            self._upsert_passing_stats(stats["passing"])
-
-        if "rushing" in stats:
-            self._upsert_rushing_stats(stats["rushing"])
-
-        if "receiving" in stats:
-            self._upsert_receiving_stats(stats["receiving"])
-
-        if "defense" in stats:
-            self._upsert_defense_stats(stats["defense"])
-
-        if "kicking" in stats:
-            self._upsert_kicking_stats(stats["kicking"])
-
-    def _upsert_passing_stats(self, stats: dict[str, Any]) -> None:
-        """Upsert passing statistics."""
+        """Insert or update NFL player statistics into unified table."""
         self.db.execute(
             """
-            INSERT INTO nfl_player_passing (
+            INSERT INTO nfl_player_stats (
                 player_id, season_id, team_id, games_played, games_started,
-                pass_attempts, pass_completions, completion_pct,
-                pass_yards, pass_yards_per_game, yards_per_attempt, yards_per_completion,
-                pass_touchdowns, interceptions, td_int_ratio, passer_rating,
-                sacks_taken, sack_yards_lost, longest_pass, updated_at
+                pass_attempts, pass_completions, pass_yards, pass_touchdowns,
+                interceptions_thrown, passer_rating, completion_pct, yards_per_attempt,
+                longest_pass, sacks_taken, sack_yards_lost,
+                rush_attempts, rush_yards, rush_touchdowns, yards_per_carry,
+                longest_rush, rush_fumbles, rush_fumbles_lost,
+                targets, receptions, receiving_yards, receiving_touchdowns,
+                yards_per_reception, longest_reception, yards_after_catch,
+                rec_fumbles, rec_fumbles_lost,
+                tackles_total, tackles_solo, tackles_assist, tackles_for_loss,
+                sacks, sack_yards, qb_hits, def_interceptions, int_yards,
+                int_touchdowns, passes_defended, forced_fumbles, fumble_recoveries,
+                fg_attempts, fg_made, fg_pct, fg_long, xp_attempts, xp_made, xp_pct,
+                kicking_points, punts, punt_yards, punt_avg, punt_long,
+                punts_inside_20, touchbacks,
+                kick_returns, kick_return_yards, kick_return_touchdowns,
+                punt_returns, punt_return_yards, punt_return_touchdowns,
+                updated_at
             )
             VALUES (
                 :player_id, :season_id, :team_id, :games_played, :games_started,
-                :pass_attempts, :pass_completions, :completion_pct,
-                :pass_yards, :pass_yards_per_game, :yards_per_attempt, :yards_per_completion,
-                :pass_touchdowns, :interceptions, :td_int_ratio, :passer_rating,
-                :sacks_taken, :sack_yards_lost, :longest_pass, :updated_at
+                :pass_attempts, :pass_completions, :pass_yards, :pass_touchdowns,
+                :interceptions_thrown, :passer_rating, :completion_pct, :yards_per_attempt,
+                :longest_pass, :sacks_taken, :sack_yards_lost,
+                :rush_attempts, :rush_yards, :rush_touchdowns, :yards_per_carry,
+                :longest_rush, :rush_fumbles, :rush_fumbles_lost,
+                :targets, :receptions, :receiving_yards, :receiving_touchdowns,
+                :yards_per_reception, :longest_reception, :yards_after_catch,
+                :rec_fumbles, :rec_fumbles_lost,
+                :tackles_total, :tackles_solo, :tackles_assist, :tackles_for_loss,
+                :sacks, :sack_yards, :qb_hits, :def_interceptions, :int_yards,
+                :int_touchdowns, :passes_defended, :forced_fumbles, :fumble_recoveries,
+                :fg_attempts, :fg_made, :fg_pct, :fg_long, :xp_attempts, :xp_made, :xp_pct,
+                :kicking_points, :punts, :punt_yards, :punt_avg, :punt_long,
+                :punts_inside_20, :touchbacks,
+                :kick_returns, :kick_return_yards, :kick_return_touchdowns,
+                :punt_returns, :punt_return_yards, :punt_return_touchdowns,
+                :updated_at
             )
             ON CONFLICT(player_id, season_id) DO UPDATE SET
                 team_id = excluded.team_id,
@@ -598,113 +547,31 @@ class NFLSeeder(BaseSeeder):
                 games_started = excluded.games_started,
                 pass_attempts = excluded.pass_attempts,
                 pass_completions = excluded.pass_completions,
-                completion_pct = excluded.completion_pct,
                 pass_yards = excluded.pass_yards,
-                pass_yards_per_game = excluded.pass_yards_per_game,
-                yards_per_attempt = excluded.yards_per_attempt,
-                yards_per_completion = excluded.yards_per_completion,
                 pass_touchdowns = excluded.pass_touchdowns,
-                interceptions = excluded.interceptions,
-                td_int_ratio = excluded.td_int_ratio,
+                interceptions_thrown = excluded.interceptions_thrown,
                 passer_rating = excluded.passer_rating,
+                completion_pct = excluded.completion_pct,
+                yards_per_attempt = excluded.yards_per_attempt,
+                longest_pass = excluded.longest_pass,
                 sacks_taken = excluded.sacks_taken,
                 sack_yards_lost = excluded.sack_yards_lost,
-                longest_pass = excluded.longest_pass,
-                updated_at = excluded.updated_at
-            """,
-            stats,
-        )
-
-    def _upsert_rushing_stats(self, stats: dict[str, Any]) -> None:
-        """Upsert rushing statistics."""
-        self.db.execute(
-            """
-            INSERT INTO nfl_player_rushing (
-                player_id, season_id, team_id, games_played,
-                rush_attempts, rush_yards, rush_yards_per_game, yards_per_carry,
-                rush_touchdowns, longest_rush, fumbles, fumbles_lost, updated_at
-            )
-            VALUES (
-                :player_id, :season_id, :team_id, :games_played,
-                :rush_attempts, :rush_yards, :rush_yards_per_game, :yards_per_carry,
-                :rush_touchdowns, :longest_rush, :fumbles, :fumbles_lost, :updated_at
-            )
-            ON CONFLICT(player_id, season_id) DO UPDATE SET
-                team_id = excluded.team_id,
-                games_played = excluded.games_played,
                 rush_attempts = excluded.rush_attempts,
                 rush_yards = excluded.rush_yards,
-                rush_yards_per_game = excluded.rush_yards_per_game,
-                yards_per_carry = excluded.yards_per_carry,
                 rush_touchdowns = excluded.rush_touchdowns,
+                yards_per_carry = excluded.yards_per_carry,
                 longest_rush = excluded.longest_rush,
-                fumbles = excluded.fumbles,
-                fumbles_lost = excluded.fumbles_lost,
-                updated_at = excluded.updated_at
-            """,
-            stats,
-        )
-
-    def _upsert_receiving_stats(self, stats: dict[str, Any]) -> None:
-        """Upsert receiving statistics."""
-        self.db.execute(
-            """
-            INSERT INTO nfl_player_receiving (
-                player_id, season_id, team_id, games_played,
-                targets, receptions, catch_pct,
-                receiving_yards, receiving_yards_per_game, yards_per_reception, yards_per_target,
-                receiving_touchdowns, longest_reception, yards_after_catch,
-                fumbles, fumbles_lost, updated_at
-            )
-            VALUES (
-                :player_id, :season_id, :team_id, :games_played,
-                :targets, :receptions, :catch_pct,
-                :receiving_yards, :receiving_yards_per_game, :yards_per_reception, :yards_per_target,
-                :receiving_touchdowns, :longest_reception, :yards_after_catch,
-                :fumbles, :fumbles_lost, :updated_at
-            )
-            ON CONFLICT(player_id, season_id) DO UPDATE SET
-                team_id = excluded.team_id,
-                games_played = excluded.games_played,
+                rush_fumbles = excluded.rush_fumbles,
+                rush_fumbles_lost = excluded.rush_fumbles_lost,
                 targets = excluded.targets,
                 receptions = excluded.receptions,
-                catch_pct = excluded.catch_pct,
                 receiving_yards = excluded.receiving_yards,
-                receiving_yards_per_game = excluded.receiving_yards_per_game,
-                yards_per_reception = excluded.yards_per_reception,
-                yards_per_target = excluded.yards_per_target,
                 receiving_touchdowns = excluded.receiving_touchdowns,
+                yards_per_reception = excluded.yards_per_reception,
                 longest_reception = excluded.longest_reception,
                 yards_after_catch = excluded.yards_after_catch,
-                fumbles = excluded.fumbles,
-                fumbles_lost = excluded.fumbles_lost,
-                updated_at = excluded.updated_at
-            """,
-            stats,
-        )
-
-    def _upsert_defense_stats(self, stats: dict[str, Any]) -> None:
-        """Upsert defensive statistics."""
-        self.db.execute(
-            """
-            INSERT INTO nfl_player_defense (
-                player_id, season_id, team_id, games_played, games_started,
-                tackles_total, tackles_solo, tackles_assist, tackles_for_loss,
-                sacks, sack_yards, qb_hits,
-                interceptions, int_yards, int_touchdowns, passes_defended,
-                forced_fumbles, fumble_recoveries, updated_at
-            )
-            VALUES (
-                :player_id, :season_id, :team_id, :games_played, :games_started,
-                :tackles_total, :tackles_solo, :tackles_assist, :tackles_for_loss,
-                :sacks, :sack_yards, :qb_hits,
-                :interceptions, :int_yards, :int_touchdowns, :passes_defended,
-                :forced_fumbles, :fumble_recoveries, :updated_at
-            )
-            ON CONFLICT(player_id, season_id) DO UPDATE SET
-                team_id = excluded.team_id,
-                games_played = excluded.games_played,
-                games_started = excluded.games_started,
+                rec_fumbles = excluded.rec_fumbles,
+                rec_fumbles_lost = excluded.rec_fumbles_lost,
                 tackles_total = excluded.tackles_total,
                 tackles_solo = excluded.tackles_solo,
                 tackles_assist = excluded.tackles_assist,
@@ -712,38 +579,12 @@ class NFLSeeder(BaseSeeder):
                 sacks = excluded.sacks,
                 sack_yards = excluded.sack_yards,
                 qb_hits = excluded.qb_hits,
-                interceptions = excluded.interceptions,
+                def_interceptions = excluded.def_interceptions,
                 int_yards = excluded.int_yards,
                 int_touchdowns = excluded.int_touchdowns,
                 passes_defended = excluded.passes_defended,
                 forced_fumbles = excluded.forced_fumbles,
                 fumble_recoveries = excluded.fumble_recoveries,
-                updated_at = excluded.updated_at
-            """,
-            stats,
-        )
-
-    def _upsert_kicking_stats(self, stats: dict[str, Any]) -> None:
-        """Upsert kicking/punting statistics."""
-        self.db.execute(
-            """
-            INSERT INTO nfl_player_kicking (
-                player_id, season_id, team_id, games_played,
-                fg_attempts, fg_made, fg_pct, fg_long,
-                xp_attempts, xp_made, xp_pct, total_points,
-                punts, punt_yards, punt_avg, punt_long, punts_inside_20, touchbacks,
-                updated_at
-            )
-            VALUES (
-                :player_id, :season_id, :team_id, :games_played,
-                :fg_attempts, :fg_made, :fg_pct, :fg_long,
-                :xp_attempts, :xp_made, :xp_pct, :total_points,
-                :punts, :punt_yards, :punt_avg, :punt_long, :punts_inside_20, :touchbacks,
-                :updated_at
-            )
-            ON CONFLICT(player_id, season_id) DO UPDATE SET
-                team_id = excluded.team_id,
-                games_played = excluded.games_played,
                 fg_attempts = excluded.fg_attempts,
                 fg_made = excluded.fg_made,
                 fg_pct = excluded.fg_pct,
@@ -751,13 +592,19 @@ class NFLSeeder(BaseSeeder):
                 xp_attempts = excluded.xp_attempts,
                 xp_made = excluded.xp_made,
                 xp_pct = excluded.xp_pct,
-                total_points = excluded.total_points,
+                kicking_points = excluded.kicking_points,
                 punts = excluded.punts,
                 punt_yards = excluded.punt_yards,
                 punt_avg = excluded.punt_avg,
                 punt_long = excluded.punt_long,
                 punts_inside_20 = excluded.punts_inside_20,
                 touchbacks = excluded.touchbacks,
+                kick_returns = excluded.kick_returns,
+                kick_return_yards = excluded.kick_return_yards,
+                kick_return_touchdowns = excluded.kick_return_touchdowns,
+                punt_returns = excluded.punt_returns,
+                punt_return_yards = excluded.punt_return_yards,
+                punt_return_touchdowns = excluded.punt_return_touchdowns,
                 updated_at = excluded.updated_at
             """,
             stats,
@@ -771,14 +618,14 @@ class NFLSeeder(BaseSeeder):
                 team_id, season_id, games_played, wins, losses, ties, win_pct,
                 points_for, points_against, point_differential,
                 total_yards, yards_per_game, pass_yards, rush_yards, turnovers,
-                yards_allowed, pass_yards_allowed, rush_yards_allowed, takeaways, sacks,
+                yards_allowed, pass_yards_allowed, rush_yards_allowed, takeaways,
                 updated_at
             )
             VALUES (
                 :team_id, :season_id, :games_played, :wins, :losses, :ties, :win_pct,
                 :points_for, :points_against, :point_differential,
                 :total_yards, :yards_per_game, :pass_yards, :rush_yards, :turnovers,
-                :yards_allowed, :pass_yards_allowed, :rush_yards_allowed, :takeaways, :sacks,
+                :yards_allowed, :pass_yards_allowed, :rush_yards_allowed, :takeaways,
                 :updated_at
             )
             ON CONFLICT(team_id, season_id) DO UPDATE SET
@@ -799,7 +646,6 @@ class NFLSeeder(BaseSeeder):
                 pass_yards_allowed = excluded.pass_yards_allowed,
                 rush_yards_allowed = excluded.rush_yards_allowed,
                 takeaways = excluded.takeaways,
-                sacks = excluded.sacks,
                 updated_at = excluded.updated_at
             """,
             stats,
@@ -810,7 +656,13 @@ class NFLSeeder(BaseSeeder):
     # =========================================================================
 
     def _build_full_name(self, player: dict) -> str:
-        """Build full name from first and last name."""
+        """Build full name from first and last name, or use name directly.
+
+        NFL API returns full name in 'name' field rather than separate first/last.
+        """
+        # NFL uses 'name' for full name
+        if player.get("name"):
+            return player["name"]
         first = player.get("first_name") or player.get("firstname") or ""
         last = player.get("last_name") or player.get("lastname") or ""
         return f"{first} {last}".strip() or "Unknown"
@@ -866,7 +718,6 @@ class NFLSeeder(BaseSeeder):
             return None
 
         if isinstance(weight, (int, float)):
-            # Assume pounds
             return int(weight * 0.453592)
         elif isinstance(weight, str):
             try:
@@ -876,55 +727,34 @@ class NFLSeeder(BaseSeeder):
 
         return None
 
-    def _safe_pct(self, made: int, attempted: int) -> float:
+    def _safe_pct(self, made: int, total: int) -> float:
         """Calculate percentage safely."""
-        if not attempted:
+        if not total:
             return 0.0
-        return round((made / attempted) * 100, 1)
+        return round((made / total) * 100, 1)
 
-    def _calculate_passer_rating(
-        self,
-        completions: int,
-        attempts: int,
-        yards: int,
-        touchdowns: int,
-        interceptions: int,
-    ) -> float:
-        """Calculate NFL passer rating."""
-        if attempts == 0:
+    def _safe_int(self, value: Any) -> int:
+        """Safely convert value to int."""
+        if value is None:
+            return 0
+        if isinstance(value, (int, float)):
+            return int(value)
+        if isinstance(value, str):
+            try:
+                return int(float(value.replace(",", "")))
+            except (ValueError, TypeError):
+                return 0
+        return 0
+
+    def _safe_float(self, value: Any) -> float:
+        """Safely convert value to float."""
+        if value is None:
             return 0.0
-
-        # NFL passer rating formula
-        a = max(0, min(((completions / attempts) - 0.3) * 5, 2.375))
-        b = max(0, min(((yards / attempts) - 3) * 0.25, 2.375))
-        c = max(0, min((touchdowns / attempts) * 20, 2.375))
-        d = max(0, min(2.375 - ((interceptions / attempts) * 25), 2.375))
-
-        rating = ((a + b + c + d) / 6) * 100
-        return round(rating, 1)
-
-    def _has_passing_stats(self, stats: dict) -> bool:
-        """Check if stats contain passing data."""
-        passing = stats.get("passing", {})
-        return bool(passing and (passing.get("attempts", 0) or passing.get("yards", 0)))
-
-    def _has_rushing_stats(self, stats: dict) -> bool:
-        """Check if stats contain rushing data."""
-        rushing = stats.get("rushing", {})
-        return bool(rushing and (rushing.get("attempts", 0) or rushing.get("yards", 0)))
-
-    def _has_receiving_stats(self, stats: dict) -> bool:
-        """Check if stats contain receiving data."""
-        receiving = stats.get("receiving", {})
-        return bool(receiving and (receiving.get("targets", 0) or receiving.get("receptions", 0)))
-
-    def _has_defense_stats(self, stats: dict) -> bool:
-        """Check if stats contain defensive data."""
-        defense = stats.get("defense", {})
-        return bool(defense and (defense.get("tackles", 0) or defense.get("sacks", 0)))
-
-    def _has_kicking_stats(self, stats: dict) -> bool:
-        """Check if stats contain kicking/punting data."""
-        kicking = stats.get("kicking", {})
-        punting = stats.get("punting", {})
-        return bool(kicking or punting)
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            try:
+                return float(value.replace(",", ""))
+            except (ValueError, TypeError):
+                return 0.0
+        return 0.0

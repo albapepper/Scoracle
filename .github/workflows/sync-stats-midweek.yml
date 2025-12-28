@@ -1,0 +1,127 @@
+# Mid-Week Stats Update
+# Runs every Wednesday at 6:00 AM UTC
+# Updates stats only (skips profile fetching)
+
+name: Midweek Stats Update
+
+on:
+  schedule:
+    # Every Wednesday at 6:00 AM UTC
+    - cron: '0 6 * * 3'
+  workflow_dispatch:
+    inputs:
+      sport:
+        description: 'Sport to update (leave empty for all)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - 'NBA'
+          - 'NFL'
+          - 'FOOTBALL'
+      season:
+        description: 'Season year (default: current)'
+        required: false
+        type: string
+
+env:
+  PYTHON_VERSION: '3.11'
+  STATSDB_PATH: 'instance/statsdb/stats.sqlite'
+
+jobs:
+  update:
+    name: Update Stats
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Create statsdb directory
+        run: mkdir -p instance/statsdb
+
+      - name: Download existing database
+        uses: actions/download-artifact@v4
+        with:
+          name: stats-database
+          path: instance/statsdb/
+        continue-on-error: true
+
+      - name: Check database exists
+        id: check-db
+        run: |
+          if [ -f "${{ env.STATSDB_PATH }}" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "::warning::Database not found. Run weekly sync first."
+          fi
+
+      - name: Run stats update (skip profiles)
+        if: steps.check-db.outputs.exists == 'true'
+        env:
+          API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
+        run: |
+          # Determine arguments
+          ARGS="--all --skip-profiles"
+          if [ -n "${{ inputs.sport }}" ]; then
+            ARGS="--sport ${{ inputs.sport }} --skip-profiles"
+          fi
+          if [ -n "${{ inputs.season }}" ]; then
+            ARGS="$ARGS --season ${{ inputs.season }}"
+          fi
+
+          echo "Running: python -m backend.app.statsdb.cli seed-2phase $ARGS"
+          python -m backend.app.statsdb.cli seed-2phase $ARGS
+
+      - name: Recalculate percentiles
+        if: steps.check-db.outputs.exists == 'true'
+        run: |
+          SEASON_ARG=""
+          if [ -n "${{ inputs.season }}" ]; then
+            SEASON_ARG="--season ${{ inputs.season }}"
+          fi
+          python -m backend.app.statsdb.cli percentiles $SEASON_ARG
+
+      - name: Show database status
+        if: steps.check-db.outputs.exists == 'true'
+        run: python -m backend.app.statsdb.cli status
+
+      - name: Upload updated database
+        if: steps.check-db.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: stats-database
+          path: ${{ env.STATSDB_PATH }}
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Commit database changes
+        if: steps.check-db.outputs.exists == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          if [ -f "${{ env.STATSDB_PATH }}" ]; then
+            git add "${{ env.STATSDB_PATH }}"
+            git diff --staged --quiet || git commit -m "chore: midweek stats update $(date +%Y-%m-%d)"
+          fi
+
+      - name: Push changes
+        if: steps.check-db.outputs.exists == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+        continue-on-error: true

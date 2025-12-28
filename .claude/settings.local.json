@@ -8,7 +8,11 @@
       "Bash(npx tsc:*)",
       "Bash(dir \"C:\\\\Users\\\\albap\\\\OneDrive\\\\Documents\\\\GitHub\\\\Scoracle\" /s /ad)",
       "Bash(findstr:*)",
-      "Bash(sqlite3:*)"
+      "Bash(sqlite3:*)",
+      "Bash(set PYTHONPATH=.)",
+      "Bash(set PYTHONPATH=%CD%)",
+      "Bash(del \"c:\\\\Users\\\\albap\\\\OneDrive\\\\Documents\\\\GitHub\\\\Scoracle\\\\statsdb\\\\stats.sqlite\")",
+      "Bash(if exist statsdbstats.sqlite del statsdbstats.sqlite)"
     ]
   }
 }

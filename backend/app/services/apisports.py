@@ -81,21 +81,45 @@ class ApiSportsService:
             logger.error(f"API-Sports {sport_key} network error", extra={"endpoint": endpoint, "error": str(e)})
             raise HTTPException(status_code=502, detail="API-Sports network error")
 
-    def _parse_name(self, name: str) -> tuple:
-        """Split a full name into first and last name."""
-        parts = (name or "").split()
-        first = parts[0] if parts else None
-        last = " ".join(parts[1:]) if len(parts) > 1 else None
-        return first, last
-
-    def _aggregate_nba_player_stats(self, games: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _aggregate_nba_player_stats(self, games: List[Dict[str, Any]], target_season: Optional[int] = None) -> Dict[str, Any]:
         """Aggregate NBA game-by-game stats into season totals.
 
         The NBA API returns individual game records. This method sums them
         into season totals for storage in the stats database.
+
+        Args:
+            games: List of game records from the API
+            target_season: If provided, only aggregate games from this season
         """
         if not games:
             return {}
+
+        # Filter games by season if target_season specified
+        if target_season:
+            filtered_games = []
+            for game in games:
+                # Game records have game.season or team.season
+                game_data = game.get("game", {}) or {}
+                game_season = game_data.get("season")
+
+                # Also check team structure for season
+                if not game_season:
+                    team_data = game.get("team", {}) or {}
+                    game_season = team_data.get("season")
+
+                # If we can extract a season, filter by it
+                if game_season:
+                    try:
+                        if int(game_season) == target_season:
+                            filtered_games.append(game)
+                    except (ValueError, TypeError):
+                        # Can't parse season, include the game
+                        filtered_games.append(game)
+                else:
+                    # No season info, include the game
+                    filtered_games.append(game)
+
+            games = filtered_games if filtered_games else games
 
         # Use first game as template for player/team info
         first_game = games[0]
@@ -202,49 +226,56 @@ class ApiSportsService:
         }
 
     def _normalize_player(self, p: Dict[str, Any], sport_key: str) -> Dict[str, Any]:
-        """Normalize player data across sports to a common format."""
+        """Map API field names to consistent database column names.
+
+        Minimal transformation - just field name mapping.
+        Heavy transformation/cleaning happens at output (widgets).
+        """
         sport_key_up = sport_key.upper()
 
         if sport_key_up == "FOOTBALL":
+            # Football nests player data under "player" key
             player = p.get("player", p)
             stats_list = p.get("statistics", [])
-            team_abbr = None
-            if stats_list:
-                team = (stats_list[0].get("team") or {})
-                team_abbr = team.get("name")
+            team = stats_list[0].get("team", {}) if stats_list else {}
             return {
                 "id": player.get("id"),
-                "name": player.get("name"),
                 "first_name": player.get("firstname"),
                 "last_name": player.get("lastname"),
-                "team_abbr": team_abbr,
+                "position": player.get("position"),
+                "nationality": player.get("nationality"),
+                "photo_url": player.get("photo"),
+                "team_id": team.get("id"),
             }
+
         elif sport_key_up == "NBA":
-            team_abbr = None
+            # NBA: firstname/lastName, position in leagues.standard.pos
             teams = p.get("teams") or []
-            if teams:
-                last_team = teams[-1]
-                team_abbr = (last_team.get("team") or {}).get("code") or (last_team.get("team") or {}).get("name")
-            first_name = p.get("firstname") or p.get("firstName")
-            last_name = p.get("lastname") or p.get("lastName")
-            full_name = f"{first_name or ''} {last_name or ''}".strip() or None
+            team = teams[-1].get("team", {}) if teams else {}
+            leagues = p.get("leagues") or {}
+            standard = leagues.get("standard", {}) if isinstance(leagues, dict) else {}
             return {
                 "id": p.get("id"),
-                "name": full_name,
-                "first_name": first_name,
-                "last_name": last_name,
-                "team_abbr": team_abbr,
+                "first_name": p.get("firstname") or p.get("firstName"),
+                "last_name": p.get("lastname") or p.get("lastName"),
+                "position": standard.get("pos") if isinstance(standard, dict) else None,
+                "nationality": p.get("country"),
+                "photo_url": None,
+                "team_id": team.get("id"),
             }
+
         else:  # NFL
-            full_name = p.get("name") or ""
-            first, last = self._parse_name(full_name)
+            # NFL: name is full name, position at top level
             team = p.get("team") or {}
             return {
                 "id": p.get("id"),
-                "name": full_name,
-                "first_name": first,
-                "last_name": last,
-                "team_abbr": team.get("name") or team.get("code"),
+                "first_name": p.get("firstname"),
+                "last_name": p.get("lastname"),
+                "name": p.get("name"),  # Full name - split at output if needed
+                "position": p.get("position"),
+                "nationality": None,
+                "photo_url": p.get("image"),
+                "team_id": team.get("id"),
             }
 
     def _normalize_team(self, t: Dict[str, Any], sport_key: str) -> Dict[str, Any]:
@@ -318,76 +349,6 @@ class ApiSportsService:
         return profile
 
     # --- Generic basic info endpoints ---
-
-    async def get_player_basic(self, player_id: str, sport_key: str, season: Optional[str] = None) -> Dict[str, Any]:
-        """Fetch minimal player info by id for any sport."""
-        sport_key_up = sport_key.upper()
-        cache_key = f"apisports:{sport_key_up.lower()}:player_basic:{player_id}:{season or ''}"
-        cached = basic_cache.get(cache_key)
-        if cached is not None:
-            return cached
-
-        config = self._get_sport_config(sport_key_up)
-        params = {"id": player_id}
-        if season or config.get("season"):
-            params["season"] = season or config["season"]
-
-        payload = await self._request(sport_key_up, "players", params)
-        resp = payload.get("response")
-        if not resp:
-            raise HTTPException(status_code=404, detail=f"{sport_key_up} player not found")
-
-        p = resp[0]
-        normalized = self._normalize_player(p, sport_key_up)
-
-        # Build result with team info
-        if sport_key_up == "FOOTBALL":
-            player = p.get("player", p)
-            stats_list = p.get("statistics", [])
-            team_id = team_name = None
-            if stats_list:
-                team = stats_list[0].get("team") or {}
-                team_id = team.get("id")
-                team_name = team.get("name")
-            result = {
-                "id": player.get("id"),
-                "first_name": normalized["first_name"],
-                "last_name": normalized["last_name"],
-                "position": None,
-                "team": {"id": team_id, "name": team_name, "abbreviation": team_name},
-            }
-        elif sport_key_up == "NBA":
-            teams = p.get("teams") or []
-            team_id = team_name = team_abbr = None
-            if teams:
-                last_team = teams[-1]
-                t = last_team.get("team") or {}
-                team_id = t.get("id")
-                team_name = t.get("name")
-                team_abbr = t.get("code") or team_name
-            result = {
-                "id": p.get("id"),
-                "first_name": normalized["first_name"],
-                "last_name": normalized["last_name"],
-                "position": p.get("position"),
-                "team": {"id": team_id, "name": team_name, "abbreviation": team_abbr},
-            }
-        else:  # NFL
-            team = p.get("team") or {}
-            result = {
-                "id": p.get("id"),
-                "first_name": normalized["first_name"],
-                "last_name": normalized["last_name"],
-                "position": p.get("position"),
-                "team": {
-                    "id": team.get("id"),
-                    "name": team.get("name"),
-                    "abbreviation": team.get("code") or team.get("name"),
-                },
-            }
-
-        basic_cache.set(cache_key, result, ttl=300)
-        return result
 
     async def get_team_basic(self, team_id: str, sport_key: str) -> Dict[str, Any]:
         """Fetch minimal team info by id for any sport."""
@@ -614,42 +575,48 @@ class ApiSportsService:
             player = row.get("player") or {}
             team = row.get("team") or {}
 
-            if sport_key_up == "NBA":
-                first_name = player.get("firstname") or player.get("firstName")
-                last_name = player.get("lastname") or player.get("lastName")
-                full_name = f"{first_name or ''} {last_name or ''}".strip() or None
-            else:
-                full_name = player.get("name") or ""
-                first_name, last_name = self._parse_name(full_name)
-
+            # Minimal field mapping - no transformation
             out.append({
                 "id": player.get("id"),
-                "name": full_name,
-                "first_name": first_name,
-                "last_name": last_name,
-                "team_abbr": team.get("code") or team.get("name"),
+                "first_name": player.get("firstname") or player.get("firstName"),
+                "last_name": player.get("lastname") or player.get("lastName"),
+                "name": player.get("name"),  # Full name if available
+                "position": player.get("pos") or player.get("position"),
+                "photo_url": player.get("photo") or player.get("image"),
+                "team_id": team.get("id"),
             })
         return out
 
     # --- Statistics endpoints ---
 
-    async def get_player_statistics(self, player_id: str, sport_key: str, season: Optional[str] = None) -> Dict[str, Any]:
+    async def get_player_statistics(
+        self, player_id: str, sport_key: str, season: Optional[str] = None, league_id: Optional[int] = None
+    ) -> Dict[str, Any]:
         """Fetch player statistics for any sport."""
         sport_key_up = sport_key.upper()
-        cache_key = f"apisports:{sport_key_up.lower()}:player_stats:{player_id}:{season or ''}"
+        cache_key = f"apisports:{sport_key_up.lower()}:player_stats:{player_id}:{season or ''}:{league_id or ''}"
         cached = stats_cache.get(cache_key)
         if cached is not None:
             return cached
 
-        # NBA uses 'id' param, others use 'player'
-        if sport_key_up == "NBA":
+        # Different sports use different endpoints and params:
+        # - NBA: /players/statistics with id param, returns game-by-game stats
+        # - NFL: /players/statistics with id param, returns season stats
+        # - Football: /players with id+league+season params (no /players/statistics endpoint), stats embedded
+        if sport_key_up == "FOOTBALL":
             params: Dict[str, Any] = {"id": player_id}
+            if season:
+                params["season"] = int(season) if str(season).isdigit() else season
+            if league_id:
+                params["league"] = league_id
+            payload = await self._request(sport_key_up, "players", params)
         else:
-            params: Dict[str, Any] = {"player": player_id}
-        if season:
-            params["season"] = int(season) if str(season).isdigit() else season
+            # NBA and NFL use 'id' param for /players/statistics
+            params: Dict[str, Any] = {"id": player_id}
+            if season:
+                params["season"] = int(season) if str(season).isdigit() else season
+            payload = await self._request(sport_key_up, "players/statistics", params)
 
-        payload = await self._request(sport_key_up, "players/statistics", params)
         rows = payload.get("response")
         if not rows:
             stats_cache.set(cache_key, {}, ttl=120)
@@ -657,30 +624,64 @@ class ApiSportsService:
 
         # NBA returns game-by-game stats - aggregate them into season totals
         if sport_key_up == "NBA" and isinstance(rows, list) and len(rows) > 1:
-            result = self._aggregate_nba_player_stats(rows)
+            # Parse season to int for filtering
+            target_season = None
+            if season:
+                try:
+                    target_season = int(season)
+                except (ValueError, TypeError):
+                    pass
+            result = self._aggregate_nba_player_stats(rows, target_season=target_season)
         else:
             result = rows[0] if isinstance(rows, list) else rows
         stats_cache.set(cache_key, result, ttl=300)
         return result
 
-    async def get_team_statistics(self, team_id: str, sport_key: str, season: Optional[str] = None) -> Dict[str, Any]:
+    async def get_team_statistics(
+        self, team_id: str, sport_key: str, season: Optional[str] = None, league_id: Optional[int] = None
+    ) -> Dict[str, Any]:
         """Fetch team statistics for any sport."""
         sport_key_up = sport_key.upper()
-        cache_key = f"apisports:{sport_key_up.lower()}:team_stats:{team_id}:{season or ''}"
+        cache_key = f"apisports:{sport_key_up.lower()}:team_stats:{team_id}:{season or ''}:{league_id or ''}"
         cached = stats_cache.get(cache_key)
         if cached is not None:
             return cached
 
-        # NBA uses 'id' param, others use 'team'
+        # NFL uses standings endpoint (no teams/statistics endpoint available)
+        # Format: /standings?league=1&season=2025&team={id}
+        if sport_key_up == "NFL":
+            config = self._get_sport_config(sport_key_up)
+            params: Dict[str, Any] = {
+                "team": team_id,
+                "league": league_id if league_id else config.get("league", 1),
+            }
+            if season:
+                params["season"] = int(season) if str(season).isdigit() else season
+            payload = await self._request(sport_key_up, "standings", params)
+            rows = payload.get("response", [])
+            # Standings returns a list, take first match
+            result = rows[0] if rows else {}
+            stats_cache.set(cache_key, result, ttl=300)
+            return result
+
+        # NBA uses 'id' param, Football uses 'team' param
+        # Football also requires 'league' param
         if sport_key_up == "NBA":
             params: Dict[str, Any] = {"id": team_id}
         else:
             params: Dict[str, Any] = {"team": team_id}
         if season:
             params["season"] = int(season) if str(season).isdigit() else season
+        if sport_key_up == "FOOTBALL" and league_id:
+            params["league"] = league_id
 
         payload = await self._request(sport_key_up, "teams/statistics", params)
-        result = payload.get("response") or {}
+        resp = payload.get("response")
+        # NBA returns a list, others return a dict
+        if isinstance(resp, list):
+            result = resp[0] if resp else {}
+        else:
+            result = resp or {}
         stats_cache.set(cache_key, result, ttl=300)
         return result
 
@@ -690,96 +691,5 @@ class ApiSportsService:
         if season:
             params["season"] = int(season) if str(season).isdigit() else season
         return await self._request(sport_key, "standings", params)
-
-    # --- Legacy compatibility methods (delegate to generic) ---
-
-    async def get_basketball_player_basic(self, player_id: str, season: Optional[str] = None) -> Dict[str, Any]:
-        return await self.get_player_basic(player_id, "NBA", season)
-
-    async def get_basketball_team_basic(self, team_id: str) -> Dict[str, Any]:
-        return await self.get_team_basic(team_id, "NBA")
-
-    async def get_basketball_player_statistics(self, player_id: str, season: Optional[str] = None) -> Dict[str, Any]:
-        return await self.get_player_statistics(player_id, "NBA", season)
-
-    async def get_basketball_team_statistics(self, team_id: str, season: Optional[str] = None) -> Dict[str, Any]:
-        return await self.get_team_statistics(team_id, "NBA", season)
-
-    async def get_basketball_standings(self, season: Optional[str] = None) -> Dict[str, Any]:
-        return await self.get_standings("NBA", season)
-
-    async def get_football_player_basic(self, player_id: str, season: Optional[str] = None) -> Dict[str, Any]:
-        return await self.get_player_basic(player_id, "FOOTBALL", season)
-
-    async def get_football_team_basic(self, team_id: str) -> Dict[str, Any]:
-        return await self.get_team_basic(team_id, "FOOTBALL")
-
-    async def get_nfl_player_basic(self, player_id: str, season: Optional[str] = None) -> Dict[str, Any]:
-        return await self.get_player_basic(player_id, "NFL", season)
-
-    async def get_nfl_team_basic(self, team_id: str) -> Dict[str, Any]:
-        return await self.get_team_basic(team_id, "NFL")
-
-    async def get_nfl_team_by_id(self, team_id: int) -> Optional[Dict[str, Any]]:
-        try:
-            return await self.get_team_basic(str(team_id), "NFL")
-        except HTTPException:
-            return None
-
-    # Legacy profile methods
-    async def get_nba_player_profile(self, player_id: str) -> Dict[str, Any]:
-        return await self.get_player_profile(player_id, "NBA")
-
-    async def get_nba_team_profile(self, team_id: str) -> Dict[str, Any]:
-        return await self.get_team_profile(team_id, "NBA")
-
-    async def get_football_player_profile(self, player_id: str) -> Dict[str, Any]:
-        return await self.get_player_profile(player_id, "FOOTBALL")
-
-    async def get_football_team_profile(self, team_id: str) -> Dict[str, Any]:
-        return await self.get_team_profile(team_id, "FOOTBALL")
-
-    async def get_nfl_player_profile(self, player_id: str) -> Dict[str, Any]:
-        return await self.get_player_profile(player_id, "NFL")
-
-    async def get_nfl_team_profile(self, team_id: str) -> Dict[str, Any]:
-        return await self.get_team_profile(team_id, "NFL")
-
-    # Legacy list methods
-    async def list_football_teams(self, league_id: int, season: Optional[str] = None) -> List[Dict[str, Any]]:
-        return await self.list_teams("FOOTBALL", league=league_id, season=season)
-
-    async def list_football_players(self, league_id: int, season: str, page: int = 1) -> List[Dict[str, Any]]:
-        return await self.list_players("FOOTBALL", season=season, page=page, league=league_id)
-
-    async def list_nfl_teams(self, league: Optional[int] = None, season: Optional[str] = None) -> List[Dict[str, Any]]:
-        config = self._get_sport_config("NFL")
-        return await self.list_teams("NFL", league=league, season=season or config.get("season"))
-
-    async def list_nfl_players(self, season: str, page: int = 1, league: Optional[int] = None) -> List[Dict[str, Any]]:
-        return await self.list_players("NFL", season=season, page=page, league=league)
-
-    async def list_nfl_team_players(self, team_id: int, season: Optional[str], page: int = 1) -> List[Dict[str, Any]]:
-        return await self.list_players("NFL", season=season, page=page, team_id=team_id)
-
-    async def list_nfl_team_statistics_players(self, team_id: int, season: Optional[str]) -> List[Dict[str, Any]]:
-        return await self.list_players_from_statistics("NFL", team_id=team_id, season=season)
-
-    async def list_nfl_statistics_players(self, season: Optional[str], league: Optional[int] = None, page: int = 1) -> List[Dict[str, Any]]:
-        return await self.list_players_from_statistics("NFL", season=season, league=league, page=page)
-
-    async def list_nba_teams(self, league: Optional[str] = "standard") -> List[Dict[str, Any]]:
-        return await self.list_teams("NBA", league=league)
-
-    async def list_nba_players(self, season: Optional[str], page: int = 1, league: Optional[str] = "standard") -> List[Dict[str, Any]]:
-        return await self.list_players("NBA", season=season, page=page, league=league)
-
-    async def list_nba_team_players(self, team_id: int, season: Optional[str], page: int = 1) -> List[Dict[str, Any]]:
-        # Note: NBA players endpoint doesn't support league parameter
-        return await self.list_players("NBA", season=season, page=page, team_id=team_id)
-
-    async def list_nba_team_statistics_players(self, team_id: int, season: Optional[str]) -> List[Dict[str, Any]]:
-        return await self.list_players_from_statistics("NBA", team_id=team_id, season=season)
-
 
 apisports_service = ApiSportsService()

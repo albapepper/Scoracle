@@ -394,13 +394,18 @@ class FootballSeeder(BaseSeeder):
         self,
         player_id: int,
         season: int,
+        league_id: Optional[int] = None,
     ) -> Optional[dict[str, Any]]:
-        """Fetch player statistics from API-Sports."""
+        """Fetch player statistics from API-Sports.
+
+        Note: Football requires league_id for player statistics.
+        """
         try:
             stats = await self.api.get_player_statistics(
                 str(player_id),
                 "FOOTBALL",
                 str(season),
+                league_id=league_id,
             )
             return stats
         except Exception as e:
@@ -411,13 +416,18 @@ class FootballSeeder(BaseSeeder):
         self,
         team_id: int,
         season: int,
+        league_id: Optional[int] = None,
     ) -> Optional[dict[str, Any]]:
-        """Fetch team statistics from API-Sports."""
+        """Fetch team statistics from API-Sports.
+
+        Note: Football requires league_id for team statistics.
+        """
         try:
             stats = await self.api.get_team_statistics(
                 str(team_id),
                 "FOOTBALL",
                 str(season),
+                league_id=league_id,
             )
             return stats
         except Exception as e:
@@ -435,18 +445,28 @@ class FootballSeeder(BaseSeeder):
         season_id: int,
         team_id: Optional[int] = None,
     ) -> dict[str, Any]:
-        """Transform API stats to database schema."""
+        """Transform API stats to database schema.
+
+        Note: get_player_statistics() already unwraps the API response,
+        so raw_stats is {"player": {...}, "statistics": [...]} not the full
+        {"response": [...]} wrapper.
+        """
         stats = raw_stats if isinstance(raw_stats, dict) else {}
 
-        if "response" in stats and stats["response"]:
+        # Handle already-unwrapped format from get_player_statistics
+        # Format: {"player": {...}, "statistics": [{team, league, games, ...}]}
+        if "statistics" in stats and stats["statistics"]:
+            statistics = stats["statistics"]
+            if isinstance(statistics, list) and statistics:
+                stats = statistics[0]  # First league's stats
+        # Also handle full response format (for backwards compatibility)
+        elif "response" in stats and stats["response"]:
             response = stats["response"]
             if isinstance(response, list) and response:
-                # Get first response item
                 player_data = response[0]
-                # Stats are in statistics array
                 statistics = player_data.get("statistics", [])
                 if statistics:
-                    stats = statistics[0]  # First league's stats
+                    stats = statistics[0]
 
         # Get league ID from stats
         league = stats.get("league", {}) or {}

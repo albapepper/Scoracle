@@ -6,8 +6,9 @@ Usage:
     python -m backend.app.statsdb.cli init           # Initialize database
     python -m backend.app.statsdb.cli seed --sport NBA --season 2025
     python -m backend.app.statsdb.cli seed --all
-    python -m backend.app.statsdb.cli seed-2phase --sport FOOTBALL --season 2024
-    python -m backend.app.statsdb.cli diff --sport FOOTBALL --season 2024
+    python -m backend.app.statsdb.cli seed-debug --sport NBA --season 2025  # Debug: 5 teams, 5 players
+    python -m backend.app.statsdb.cli seed-2phase --sport FOOTBALL --season 2025
+    python -m backend.app.statsdb.cli diff --sport FOOTBALL --season 2025
     python -m backend.app.statsdb.cli percentiles --sport NBA --season 2025
     python -m backend.app.statsdb.cli status
     python -m backend.app.statsdb.cli export --format json
@@ -142,7 +143,7 @@ async def cmd_seed_async(args: argparse.Namespace) -> int:
         return 1
 
     # Determine seasons to seed
-    seasons = [args.season] if args.season else [2024, 2025]
+    seasons = [args.season] if args.season else [2025]
     current_season = args.current_season or seasons[-1]
 
     seeder_map = {
@@ -219,7 +220,7 @@ async def cmd_seed_2phase_async(args: argparse.Namespace) -> int:
         logger.error("Must specify --sport or --all")
         return 1
 
-    season = args.season or 2024
+    season = args.season or 2025
 
     seeder_map = {
         "NBA": NBASeeder,
@@ -296,6 +297,150 @@ def cmd_seed_2phase(args: argparse.Namespace) -> int:
     return asyncio.run(cmd_seed_2phase_async(args))
 
 
+async def cmd_seed_debug_async(args: argparse.Namespace) -> int:
+    """Seed limited data for debugging (5 teams, 5 players per sport)."""
+    from .seeders import NBASeeder, NFLSeeder, FootballSeeder
+    from .seeders.football_seeder import PRIORITY_LEAGUES
+
+    db = get_db()
+    api = await get_api_service()
+
+    # Initialize database if needed
+    if not db.is_initialized():
+        from .schema import init_database
+        logger.info("Database not initialized, running initialization...")
+        init_database(db)
+
+    sports_to_seed = []
+    if args.all:
+        sports_to_seed = ["NBA", "NFL", "FOOTBALL"]
+    elif args.sport:
+        sports_to_seed = [args.sport.upper()]
+    else:
+        logger.error("Must specify --sport or --all")
+        return 1
+
+    season = args.season or 2025
+    num_teams = args.teams or 5
+    num_players = args.players or 5
+
+    seeder_map = {
+        "NBA": NBASeeder,
+        "NFL": NFLSeeder,
+        "FOOTBALL": FootballSeeder,
+    }
+
+    for sport_id in sports_to_seed:
+        seeder_class = seeder_map.get(sport_id)
+        if not seeder_class:
+            logger.warning("Unknown sport: %s", sport_id)
+            continue
+
+        logger.info("Debug seeding %s: %d teams, %d players...", sport_id, num_teams, num_players)
+        seeder = seeder_class(db, api)
+
+        try:
+            # Get league_id for football
+            league_id = None
+            if sport_id == "FOOTBALL":
+                league_id = PRIORITY_LEAGUES[0]["id"]  # Premier League
+                logger.info("Using league: %s (ID: %d)", PRIORITY_LEAGUES[0]["name"], league_id)
+
+            # Fetch teams (limited)
+            all_teams = await seeder.fetch_teams(season, league_id)
+            teams = all_teams[:num_teams]
+            logger.info("Fetched %d/%d teams", len(teams), len(all_teams))
+
+            # Seed teams
+            season_id = seeder.ensure_season(season)
+            for team in teams:
+                seeder.upsert_team(team)
+
+            # Fetch players from first few teams only
+            all_players = []
+            for team in teams[:3]:  # Only fetch from first 3 teams
+                if sport_id == "NBA":
+                    players = await seeder.api.list_players("NBA", season=str(season), team_id=team["id"])
+                elif sport_id == "NFL":
+                    players = await seeder.api.list_players("NFL", season=str(season), team_id=team["id"])
+                else:
+                    players = await seeder.api.list_players("FOOTBALL", season=str(season), page=1, league=league_id)
+                all_players.extend(players[:5])  # Take 5 from each team
+
+            players = all_players[:num_players]
+            logger.info("Fetched %d players", len(players))
+
+            # Seed players
+            for player in players:
+                player_data = {
+                    "id": player.get("id"),
+                    "first_name": player.get("first_name") or player.get("firstname"),
+                    "last_name": player.get("last_name") or player.get("lastname"),
+                    "full_name": player.get("name") or f"{player.get('first_name', '')} {player.get('last_name', '')}".strip(),
+                    "position": player.get("position"),
+                    "current_team_id": teams[0]["id"] if teams else None,
+                }
+                seeder.upsert_player(player_data, season)
+
+            # Fetch and seed player stats
+            player_stats_count = 0
+            for player in players:
+                # Football requires league_id for player stats
+                if sport_id == "FOOTBALL":
+                    stats = await seeder.fetch_player_stats(player["id"], season, league_id=league_id)
+                else:
+                    stats = await seeder.fetch_player_stats(player["id"], season)
+                if stats:
+                    try:
+                        transformed = seeder.transform_player_stats(
+                            stats, player["id"], season_id, teams[0]["id"] if teams else None
+                        )
+                        seeder.upsert_player_stats(transformed)
+                        player_stats_count += 1
+                        logger.info("  Player %d: %s - stats seeded", player["id"], player.get("name", "Unknown"))
+                    except Exception as e:
+                        logger.warning("  Player %d: failed to transform stats: %s", player["id"], e)
+
+            # Fetch and seed team stats
+            team_stats_count = 0
+            for team in teams:
+                # Football requires league_id for team stats
+                # NFL also requires league_id=1 for standings endpoint
+                if sport_id == "FOOTBALL":
+                    stats = await seeder.fetch_team_stats(team["id"], season, league_id=league_id)
+                elif sport_id == "NFL":
+                    stats = await seeder.fetch_team_stats(team["id"], season, league_id=1)
+                else:
+                    stats = await seeder.fetch_team_stats(team["id"], season)
+                if stats:
+                    try:
+                        transformed = seeder.transform_team_stats(stats, team["id"], season_id)
+                        seeder.upsert_team_stats(transformed)
+                        team_stats_count += 1
+                        logger.info("  Team %d: %s - stats seeded", team["id"], team.get("name", "Unknown"))
+                    except Exception as e:
+                        logger.warning("  Team %d: failed to transform stats: %s", team["id"], e)
+
+            logger.info(
+                "%s debug complete: %d teams, %d players, %d player stats, %d team stats",
+                sport_id, len(teams), len(players), player_stats_count, team_stats_count
+            )
+
+        except Exception as e:
+            logger.error("Failed to seed %s: %s", sport_id, e)
+            import traceback
+            traceback.print_exc()
+
+    db.set_meta("last_debug_sync", datetime.utcnow().isoformat())
+    db.close()
+    return 0
+
+
+def cmd_seed_debug(args: argparse.Namespace) -> int:
+    """Wrapper to run async debug seed command."""
+    return asyncio.run(cmd_seed_debug_async(args))
+
+
 async def cmd_diff_async(args: argparse.Namespace) -> int:
     """Run roster diff to detect trades/transfers."""
     from .roster_diff import RosterDiffEngine
@@ -308,7 +453,7 @@ async def cmd_diff_async(args: argparse.Namespace) -> int:
         return 1
 
     engine = RosterDiffEngine(db, api)
-    season = args.season or 2024
+    season = args.season or 2025
 
     try:
         if args.all:
@@ -593,6 +738,17 @@ def main() -> int:
         help="Skip profile fetch phase (use if profiles already fetched)",
     )
 
+    # seed-debug command (for development)
+    seed_debug_parser = subparsers.add_parser(
+        "seed-debug",
+        help="Debug seeding with limited entities (5 teams, 5 players per sport)",
+    )
+    seed_debug_parser.add_argument("--sport", help="Sport to seed (NBA, NFL, FOOTBALL)")
+    seed_debug_parser.add_argument("--all", action="store_true", help="Seed all sports")
+    seed_debug_parser.add_argument("--season", type=int, help="Season year to seed")
+    seed_debug_parser.add_argument("--teams", type=int, default=5, help="Number of teams to seed (default: 5)")
+    seed_debug_parser.add_argument("--players", type=int, default=5, help="Number of players to seed (default: 5)")
+
     # diff command
     diff_parser = subparsers.add_parser("diff", help="Run roster diff (detect trades/transfers)")
     diff_parser.add_argument("--sport", help="Sport (NBA, NFL, FOOTBALL)")
@@ -635,6 +791,7 @@ def main() -> int:
         "status": cmd_status,
         "seed": cmd_seed,
         "seed-2phase": cmd_seed_2phase,
+        "seed-debug": cmd_seed_debug,
         "diff": cmd_diff,
         "percentiles": cmd_percentiles,
         "export": cmd_export,

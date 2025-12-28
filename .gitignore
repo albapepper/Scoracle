@@ -51,3 +51,6 @@ yarn-error.log*
 *.swp
 *.swo
 .vercel
+
+# Stats Database (local SQLite)
+/statsdb/

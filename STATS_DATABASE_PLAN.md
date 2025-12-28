@@ -10,9 +10,10 @@ This document outlines the comprehensive plan for building a **unified local dat
 - **Tiered football coverage**: Full data for Top 5 European leagues + MLS; minimal data for others
 - **NBA/NFL always full coverage**: Single league per sport, always complete data
 - **Two-phase seeding**: Discovery (roster changes) → Profile fetch (new entities only)
+- **League-based fetching**: Seed by league (not team) for efficient API usage
 - **Daily roster diffs**: Catch trades/transfers during season
 - **Yearly profile refresh**: Photos only change annually
-- **Percentiles from priority leagues only**: Meaningful comparisons against quality competition
+- **Percentiles from Top 5 European only**: Industry-standard comparison pool (MLS excluded)
 
 ---
 
@@ -138,20 +139,25 @@ This document outlines the comprehensive plan for building a **unified local dat
 
 #### Priority Leagues (Full Local Data)
 
-| League | API ID | Country | Why Priority |
-|--------|--------|---------|--------------|
-| Premier League | 39 | England | Top global viewership |
-| La Liga | 140 | Spain | Top European league |
-| Bundesliga | 78 | Germany | Top European league |
-| Serie A | 135 | Italy | Top European league |
-| Ligue 1 | 61 | France | Top European league |
-| MLS | 253 | USA | Primary US market |
+| League | API ID | Country | Full Data | In Percentiles | Notes |
+|--------|--------|---------|-----------|----------------|-------|
+| Premier League | 39 | England | ✓ | ✓ | Top 5 European |
+| La Liga | 140 | Spain | ✓ | ✓ | Top 5 European |
+| Bundesliga | 78 | Germany | ✓ | ✓ | Top 5 European |
+| Serie A | 135 | Italy | ✓ | ✓ | Top 5 European |
+| Ligue 1 | 61 | France | ✓ | ✓ | Top 5 European |
+| MLS | 253 | USA | ✓ | ✗ | Full data, excluded from percentiles |
 
 **Priority league entities receive:**
 - Full profile data (logo, photo, venue, bio, height, weight, etc.)
 - Complete season statistics
-- Percentile calculations (compared within priority pool)
+- Percentile calculations (Top 5 European leagues only - industry standard)
 - Immediate widget rendering
+
+**MLS Special Case:**
+- Full data coverage (profiles, stats, all features)
+- Excluded from percentile pool (not compared against Top 5 European)
+- MLS players/teams show stats but no percentile badges
 
 #### Non-Priority Leagues (Minimal + Fallback)
 
@@ -161,35 +167,44 @@ All other football leagues receive:
 - **No percentile badges**: Insufficient local data for comparison
 - **UI indicator**: "Building statistical profile" shown during render
 
-### API Call Budget (~100 calls/week)
+### API Call Budget (League-Based Fetching)
 
-| Operation | Priority Leagues | Estimated Calls | Frequency |
-|-----------|------------------|-----------------|-----------|
-| Team rosters (NFL) | 1 league | 1 | 2x/week |
-| Team rosters (NBA) | 1 league | 1 | 2x/week |
-| Team rosters (Football) | 6 leagues | 6 | 2x/week |
-| Player profiles (NEW only) | ~50 new/week | 50 | As discovered |
-| Player stats (paginated) | All priority | 25 | 2x/week |
-| Team stats | All priority | 10 | 2x/week |
-| Daily roster diff | Priority only | 8 | Daily |
-| **Total** | | **~100/week** | |
+| Operation | Details | Calls per Run | Frequency |
+|-----------|---------|---------------|-----------|
+| **Football Teams** | 6 priority leagues × 1 call | 6 | 2x/week |
+| **Football Players** | 6 leagues × ~40 pages (800 players/league) | ~240 | 2x/week |
+| **NBA Teams** | 1 league × 1 call | 1 | 2x/week |
+| **NBA Players** | 1 league × ~25 pages (500 players) | ~25 | 2x/week |
+| **NFL Teams** | 1 league × 1 call | 1 | 2x/week |
+| **NFL Players** | 1 league × ~90 pages (1800 players) | ~90 | 2x/week |
+| **Player profiles (NEW only)** | Only genuinely new players | ~20 | As discovered |
+| **Daily roster diff** | Priority leagues only | ~8 | Daily (in-season) |
+
+**Initial Seed**: ~360 calls (one-time to populate DB)
+**Weekly Maintenance**: ~50-100 calls (stats updates + roster diffs)
+
+**Key Insight**: League-based fetching is more efficient than team-based:
+- Old approach: `GET /players?team={id}` × 20 teams = 20 calls per league
+- New approach: `GET /players?league={id}&page=N` = ~40 calls for entire league (paginated)
 
 ### Percentile Calculation Scope
 
-Percentiles are ONLY calculated using priority league data:
+Percentiles are ONLY calculated using Top 5 European league data (industry standard):
 
 ```sql
--- Football percentile query filters to priority leagues
+-- Football percentile query filters to Top 5 European leagues only
 SELECT stat_value,
        PERCENT_RANK() OVER (ORDER BY stat_value) as percentile
 FROM football_player_stats fps
 JOIN players p ON fps.player_id = p.id
 JOIN leagues l ON p.current_league_id = l.id
-WHERE l.priority_tier = 1  -- Top 5 European + MLS only
+WHERE l.include_in_percentiles = 1  -- Top 5 European only (excludes MLS)
   AND fps.stat_category = ?;
 ```
 
-This ensures percentiles reflect meaningful comparisons against quality competition.
+This ensures percentiles reflect meaningful comparisons against industry-standard competition.
+
+**Note:** MLS entities have full data but no percentile badges since they're excluded from the comparison pool.
 
 ---
 
@@ -236,15 +251,22 @@ CREATE TABLE leagues (
     name TEXT NOT NULL,
     country TEXT,
     logo_url TEXT,
-    priority_tier INTEGER DEFAULT 0,  -- 1 = priority (full data), 0 = minimal
+    priority_tier INTEGER DEFAULT 0,         -- 1 = full data, 0 = minimal
+    include_in_percentiles INTEGER DEFAULT 0, -- 1 = used for percentile calculations
     is_active INTEGER DEFAULT 1
 );
 
 -- Priority tier values:
---   1 = Priority league (Top 5 European + MLS for Football)
---       Full profiles, stats, percentiles
---   0 = Non-priority league
---       Minimal data, live API fallback, no percentiles
+--   priority_tier = 1: Full local data (profiles, stats, all features)
+--   priority_tier = 0: Minimal data, live API fallback
+--
+-- Percentile inclusion (separate from priority):
+--   include_in_percentiles = 1: Top 5 European leagues (industry standard)
+--   include_in_percentiles = 0: Excluded from percentile pool (e.g., MLS)
+--
+-- Example configurations:
+--   Premier League: priority_tier=1, include_in_percentiles=1
+--   MLS:            priority_tier=1, include_in_percentiles=0
 
 -- Teams master table
 CREATE TABLE teams (
@@ -855,12 +877,16 @@ The seeding system minimizes API calls by:
 │                     TWO-PHASE SEEDING PIPELINE                           │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│  PHASE 1: DISCOVERY (Minimal API calls)                                 │
-│  ════════════════════════════════════════                               │
+│  PHASE 1: DISCOVERY (League-based fetching)                             │
+│  ═══════════════════════════════════════════                            │
 │                                                                          │
 │  ┌──────────────────┐                                                   │
-│  │ Fetch Rosters    │──▶ GET /teams?league={id} (1 call per league)    │
-│  │ (Teams + Players)│    GET /players?team={id} (paginated)            │
+│  │ Fetch by League  │──▶ GET /teams?league={id}&season={year}          │
+│  │ (More efficient) │    → Returns all teams (1 call per league)       │
+│  │                  │                                                   │
+│  │                  │──▶ GET /players?league={id}&season={year}&page=N │
+│  │                  │    → Returns 20 players per page (paginated)     │
+│  │                  │    → ~40 calls for 800 players                   │
 │  └────────┬─────────┘                                                   │
 │           │                                                              │
 │           ▼                                                              │
@@ -1634,30 +1660,82 @@ Scoracle/
 
 ## API-Sports Endpoints Reference
 
-### Endpoints to Use (URLs to be provided by user)
+### Base URLs
 
-The following API-Sports endpoints will be used for data collection:
+| Sport | Base URL |
+|-------|----------|
+| Football | `https://v3.football.api-sports.io` |
+| NBA | `https://v2.nba.api-sports.io` |
+| NFL | `https://v1.american-football.api-sports.io` |
 
-#### NBA
-- `/players` - List all players
-- `/players/statistics` - Player season statistics
-- `/teams` - List all teams
-- `/teams/statistics` - Team season statistics
-- `/standings` - League standings
+### Football Endpoints
 
-#### NFL
-- `/players` - List all players
-- `/players/{id}/statistics/{season}` - Player stats by season
-- `/teams` - List all teams
-- `/teams/statistics` - Team season statistics
-- `/standings` - League standings
+| Purpose | Endpoint | Example |
+|---------|----------|---------|
+| **Teams by League** | `/teams?league={id}&season={year}` | `/teams?league=39&season=2025` |
+| **Team Info** | `/teams?id={id}&league={id}&season={year}` | `/teams?id=49&league=39&season=2025` |
+| **Team Statistics** | `/teams/statistics?league={id}&season={year}&team={id}` | `/teams/statistics?league=39&season=2025&team=49` |
+| **Players by League** | `/players?league={id}&season={year}&page={n}` | `/players?league=39&season=2025&page=1` |
+| **Player Stats+Info** | `/players?id={id}&league={id}&season={year}` | `/players?id=152982&league=39&season=2025` |
+| **Standings** | `/standings?league={id}&season={year}` | `/standings?league=39&season=2025` |
 
-#### Football
-- `/players` - List all players
-- `/players/{id}/statistics/seasons` - Player stats by season
-- `/teams` - List all teams
-- `/teams/statistics` - Team statistics
-- `/standings` - League standings
+**Note:** Football `/players` endpoint includes full player info AND statistics in one call.
+
+### NBA Endpoints
+
+| Purpose | Endpoint | Example |
+|---------|----------|---------|
+| **All Teams** | `/teams` | `/teams` |
+| **Team Info** | `/teams?id={id}` | `/teams?id=10` |
+| **Team Statistics** | `/teams/statistics?id={id}&season={year}` | `/teams/statistics?id=10&season=2025` |
+| **Player Info** | `/players?id={id}` | `/players?id=2801` |
+| **Player Statistics** | `/players/statistics?id={id}&season={year}` | `/players/statistics?id=2801&season=2025` |
+| **Standings** | `/standings?league=standard&season={year}&team={id}` | `/standings?league=standard&season=2025&team=10` |
+
+**Note:** NBA standings require `league=standard` parameter.
+
+### NFL Endpoints
+
+| Purpose | Endpoint | Example |
+|---------|----------|---------|
+| **Teams by League** | `/teams?league=1&season={year}` | `/teams?league=1&season=2025` |
+| **Team Info** | `/teams?id={id}&league=1&season={year}` | `/teams?id=29&league=1&season=2025` |
+| **Player Info** | `/players?id={id}` | `/players?id=2076` |
+| **Player Statistics** | `/players/statistics?id={id}&season={year}` | `/players/statistics?id=2076&season=2025` |
+| **Standings** | `/standings?league=1&season={year}&team={id}` | `/standings?league=1&season=2025&team=29` |
+
+**Note:** NFL uses `league=1` for the NFL league.
+
+### League-Based Seeding Endpoints
+
+For initial seeding, these are the primary endpoints (per the tutorial):
+
+```
+# Football: Fetch all teams and players for a league
+GET /teams?league={league_id}&season={year}           # 1 call → all teams
+GET /players?league={league_id}&season={year}&page=N  # Paginated → 20 players/page
+
+# NBA: Fetch all teams and players
+GET /teams                                            # 1 call → all teams
+GET /players?team={team_id}&season={year}             # Per team (no league-wide endpoint)
+
+# NFL: Fetch all teams and players
+GET /teams?league=1&season={year}                     # 1 call → all teams
+GET /players?team={team_id}&season={year}             # Per team
+```
+
+### Priority League IDs
+
+| League | Sport | API ID | Base URL |
+|--------|-------|--------|----------|
+| Premier League | Football | 39 | v3.football.api-sports.io |
+| La Liga | Football | 140 | v3.football.api-sports.io |
+| Bundesliga | Football | 78 | v3.football.api-sports.io |
+| Serie A | Football | 135 | v3.football.api-sports.io |
+| Ligue 1 | Football | 61 | v3.football.api-sports.io |
+| MLS | Football | 253 | v3.football.api-sports.io |
+| NBA | NBA | standard | v2.nba.api-sports.io |
+| NFL | NFL | 1 | v1.american-football.api-sports.io |
 
 ---
 
@@ -1671,12 +1749,23 @@ The following API-Sports endpoints will be used for data collection:
 
 ---
 
-*Document Version: 2.0*
+*Document Version: 2.1*
 *Created: December 25, 2024*
-*Updated: December 26, 2024*
+*Updated: December 27, 2024*
 *Author: Claude (AI Assistant)*
 
 ## Changelog
+
+### v2.1 (December 27, 2024)
+- Separated `include_in_percentiles` from `priority_tier` in leagues table
+- MLS now gets full data (`priority_tier=1`) but excluded from percentiles (`include_in_percentiles=0`)
+- Percentiles now calculated from Top 5 European leagues only (industry standard)
+- Changed seeding approach from team-based to league-based fetching
+- Updated API endpoints: `GET /players?league={id}&season={year}&page=N` (paginated)
+- Updated API call budget to reflect league-based approach (~360 initial, ~50-100 weekly)
+- Added complete API-Sports endpoints reference with base URLs and examples
+- Documented Football `/players` endpoint includes both info AND stats (single call)
+- Added NBA `league=standard` and NFL `league=1` parameter notes
 
 ### v2.0 (December 26, 2024)
 - Added tiered data coverage (priority vs non-priority leagues)

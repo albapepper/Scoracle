@@ -219,13 +219,18 @@ class NBASeeder(BaseSeeder):
             team = player.get("team") or {}
             current_team_id = team.get("id") if isinstance(team, dict) else None
 
+            # NBA API returns position in leagues.standard.pos
+            leagues = player.get("leagues") or {}
+            standard = leagues.get("standard", {}) if isinstance(leagues, dict) else {}
+            position = standard.get("pos") if isinstance(standard, dict) else None
+
             return {
                 "id": player["id"],
                 "first_name": player.get("first_name") or player.get("firstname"),
                 "last_name": player.get("last_name") or player.get("lastname"),
                 "full_name": self._build_full_name(player),
-                "position": player.get("position"),
-                "position_group": self._get_position_group(player.get("position")),
+                "position": position,
+                "position_group": self._get_position_group(position),
                 "nationality": player.get("nationality") or player.get("country"),
                 "birth_date": player.get("birth_date") or player.get("birth", {}).get("date"),
                 "birth_place": player.get("birth", {}).get("place") if isinstance(player.get("birth"), dict) else None,
@@ -358,14 +363,29 @@ class NBASeeder(BaseSeeder):
         if "response" in stats and stats["response"]:
             stats = stats["response"][0] if isinstance(stats["response"], list) else stats["response"]
 
-        # Extract record
+        # Defensive helper for nested dict access
+        def safe_nested_get(d, *keys, default=0):
+            """Safely traverse nested dicts, returning default if any key fails."""
+            for key in keys:
+                if isinstance(d, dict):
+                    d = d.get(key, {})
+                else:
+                    return default
+            return d if d else default
+
+        # Extract record - handle both nested and flat structures
         games = stats.get("games", {}) if isinstance(stats.get("games"), dict) else {}
         wins = games.get("wins", {}) if isinstance(games.get("wins"), dict) else {}
         losses = games.get("losses", {}) if isinstance(games.get("losses"), dict) else {}
 
-        total_wins = wins.get("all", {}).get("total", 0) or stats.get("wins", 0) or 0
-        total_losses = losses.get("all", {}).get("total", 0) or stats.get("losses", 0) or 0
+        # Try nested structure first, fall back to flat
+        total_wins = safe_nested_get(wins, "all", "total") or stats.get("wins", 0) or 0
+        total_losses = safe_nested_get(losses, "all", "total") or stats.get("losses", 0) or 0
         games_played = total_wins + total_losses
+
+        # Points - safely handle different structures
+        points_for_ppg = safe_nested_get(stats, "points", "for", "average", "all")
+        points_against_ppg = safe_nested_get(stats, "points", "against", "average", "all")
 
         return {
             "team_id": team_id,
@@ -374,12 +394,12 @@ class NBASeeder(BaseSeeder):
             "wins": total_wins,
             "losses": total_losses,
             "win_pct": self._safe_pct(total_wins, games_played),
-            "home_wins": wins.get("home", {}).get("total", 0) or 0,
-            "home_losses": losses.get("home", {}).get("total", 0) or 0,
-            "away_wins": wins.get("away", {}).get("total", 0) or 0,
-            "away_losses": losses.get("away", {}).get("total", 0) or 0,
-            "points_per_game": stats.get("points", {}).get("for", {}).get("average", {}).get("all", 0) or 0,
-            "opponent_ppg": stats.get("points", {}).get("against", {}).get("average", {}).get("all", 0) or 0,
+            "home_wins": safe_nested_get(wins, "home", "total"),
+            "home_losses": safe_nested_get(losses, "home", "total"),
+            "away_wins": safe_nested_get(wins, "away", "total"),
+            "away_losses": safe_nested_get(losses, "away", "total"),
+            "points_per_game": points_for_ppg if isinstance(points_for_ppg, (int, float)) else 0,
+            "opponent_ppg": points_against_ppg if isinstance(points_against_ppg, (int, float)) else 0,
             "updated_at": int(time.time()),
         }
 
