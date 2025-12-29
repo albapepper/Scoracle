@@ -134,6 +134,72 @@ class FootballSeeder(BaseSeeder):
         # Call parent implementation
         return await super().seed_two_phase(season, league_id, skip_profiles)
 
+    async def seed_player_stats(self, season: int) -> int:
+        """
+        Seed player statistics for a season.
+
+        Override for Football to pass league_id to the API request.
+        The Football API requires league_id to return accurate stats.
+
+        Args:
+            season: Season year
+
+        Returns:
+            Number of stat records seeded
+        """
+        season_id = self.ensure_season(season)
+        sync_id = self._start_sync("full", "player_stats", season_id)
+
+        try:
+            # Query players with their current_league_id for API filtering
+            players = self.db.fetchall(
+                """
+                SELECT id, current_team_id, current_league_id
+                FROM players
+                WHERE sport_id = ?
+                """,
+                (self.sport_id,),
+            )
+
+            # Build set of known league IDs
+            known_league_ids = {lg["id"] for lg in self.leagues}
+
+            processed = 0
+            skipped = 0
+            for player in players:
+                player_id = player["id"]
+                team_id = player.get("current_team_id")
+                league_id = player.get("current_league_id")
+
+                # Skip if player's league is not in our configured leagues
+                if league_id not in known_league_ids:
+                    skipped += 1
+                    continue
+
+                # Fetch stats with league_id filter for accurate results
+                raw_stats = await self.fetch_player_stats(player_id, season, league_id)
+                if raw_stats:
+                    stats = self.transform_player_stats(
+                        raw_stats, player_id, season_id, team_id
+                    )
+                    if stats:
+                        self.upsert_player_stats(stats)
+                        processed += 1
+
+            self._complete_sync(sync_id, len(players), processed, 0)
+            logger.info(
+                "Seeded stats for %d players for %s %d (skipped %d without priority league)",
+                processed,
+                self.sport_id,
+                season,
+                skipped,
+            )
+            return processed
+
+        except Exception as e:
+            self._fail_sync(sync_id, str(e))
+            raise
+
     # =========================================================================
     # Data Fetching
     # =========================================================================
