@@ -8,11 +8,16 @@ from the API-Sports NBA API.
 from __future__ import annotations
 
 import logging
-import re
 import time
 from typing import Any, Optional
 
 from .base import BaseSeeder
+from .utils import DataParsers, NameBuilder, StatCalculators, PositionMappers
+from ..query_builder import (
+    query_cache,
+    NBA_PLAYER_STATS_COLUMNS,
+    NBA_TEAM_STATS_COLUMNS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -96,13 +101,13 @@ class NBASeeder(BaseSeeder):
                         "id": player_id,
                         "first_name": player.get("first_name") or player.get("firstname"),
                         "last_name": player.get("last_name") or player.get("lastname"),
-                        "full_name": player.get("name") or self._build_full_name(player),
+                        "full_name": player.get("name") or NameBuilder.build_full_name(player),
                         "position": player.get("position"),
-                        "position_group": self._get_position_group(player.get("position")),
+                        "position_group": PositionMappers.get_nba_position_group(player.get("position")),
                         "nationality": player.get("nationality") or player.get("birth_country"),
                         "birth_date": player.get("birth_date"),
-                        "height_inches": self._parse_height(player),
-                        "weight_lbs": self._parse_weight(player),
+                        "height_inches": DataParsers.parse_height_to_inches(player.get("height")),
+                        "weight_lbs": DataParsers.parse_weight_to_lbs(player.get("weight")),
                         "photo_url": player.get("photo_url"),
                         "current_team_id": tid,
                         "jersey_number": player.get("jersey"),
@@ -242,14 +247,14 @@ class NBASeeder(BaseSeeder):
                 "id": player["id"],
                 "first_name": player.get("first_name") or player.get("firstname"),
                 "last_name": player.get("last_name") or player.get("lastname"),
-                "full_name": self._build_full_name(player),
+                "full_name": NameBuilder.build_full_name(player),
                 "position": position,
-                "position_group": self._get_position_group(position),
+                "position_group": PositionMappers.get_nba_position_group(position),
                 "nationality": player.get("nationality") or birth.get("country"),
                 "birth_date": player.get("birth_date") or birth.get("date"),
                 "birth_place": birth.get("place") if isinstance(birth, dict) else None,
-                "height_inches": self._parse_height(player),
-                "weight_lbs": self._parse_weight(player),
+                "height_inches": DataParsers.parse_height_to_inches(player.get("height")),
+                "weight_lbs": DataParsers.parse_weight_to_lbs(player.get("weight")),
                 "photo_url": player.get("photo_url"),
                 "current_team_id": current_team_id,
                 "jersey_number": player.get("jersey") or (standard.get("jersey") if isinstance(standard, dict) else None),
@@ -292,19 +297,19 @@ class NBASeeder(BaseSeeder):
         fg = stats.get("fgm", {}) if isinstance(stats.get("fgm"), dict) else {}
         fgm = fg.get("made") or stats.get("fgm", 0) or 0
         fga = fg.get("attempted") or stats.get("fga", 0) or 0
-        fg_pct = self._safe_pct(fgm, fga) or stats.get("fgp", 0) or 0
+        fg_pct = DataParsers.safe_percentage(fgm, fga) or stats.get("fgp", 0) or 0
 
         # Three pointers
         tp = stats.get("tpm", {}) if isinstance(stats.get("tpm"), dict) else {}
         tpm = tp.get("made") or stats.get("tpm", 0) or 0
         tpa = tp.get("attempted") or stats.get("tpa", 0) or 0
-        tp_pct = self._safe_pct(tpm, tpa) or stats.get("tpp", 0) or 0
+        tp_pct = DataParsers.safe_percentage(tpm, tpa) or stats.get("tpp", 0) or 0
 
         # Free throws
         ft = stats.get("ftm", {}) if isinstance(stats.get("ftm"), dict) else {}
         ftm = ft.get("made") or stats.get("ftm", 0) or 0
         fta = ft.get("attempted") or stats.get("fta", 0) or 0
-        ft_pct = self._safe_pct(ftm, fta) or stats.get("ftp", 0) or 0
+        ft_pct = DataParsers.safe_percentage(ftm, fta) or stats.get("ftp", 0) or 0
 
         # Rebounds
         rebounds = stats.get("rebounds", {}) if isinstance(stats.get("rebounds"), dict) else {}
@@ -359,9 +364,11 @@ class NBASeeder(BaseSeeder):
             "fouls_per_game": round(fouls / gp, 1) if fouls else 0,
             "plus_minus": plus_minus,
             "plus_minus_per_game": round(plus_minus / gp, 1) if plus_minus else 0,
-            "efficiency": self._calculate_efficiency(stats, gp),
-            "true_shooting_pct": self._calculate_ts_pct(points_total, fga, fta),
-            "effective_fg_pct": self._calculate_efg_pct(fgm, tpm, fga),
+            "efficiency": StatCalculators.calculate_nba_efficiency(
+                points_total, tot_reb, assists, steals, blocks, fgm, fga, ftm, fta, turnovers, gp
+            ),
+            "true_shooting_pct": StatCalculators.calculate_true_shooting_pct(points_total, fga, fta),
+            "effective_fg_pct": StatCalculators.calculate_effective_fg_pct(fgm, tpm, fga),
             "assist_turnover_ratio": round(assists / max(turnovers, 1), 2) if assists else 0,
             "updated_at": int(time.time()),
         }
@@ -408,7 +415,7 @@ class NBASeeder(BaseSeeder):
             "games_played": games_played,
             "wins": total_wins,
             "losses": total_losses,
-            "win_pct": self._safe_pct(total_wins, games_played),
+            "win_pct": DataParsers.safe_percentage(total_wins, games_played),
             "home_wins": safe_nested_get(wins, "home", "total"),
             "home_losses": safe_nested_get(losses, "home", "total"),
             "away_wins": safe_nested_get(wins, "away", "total"),
@@ -424,278 +431,39 @@ class NBASeeder(BaseSeeder):
 
     def upsert_player_stats(self, stats: dict[str, Any]) -> None:
         """Insert or update NBA player statistics."""
-        self.db.execute(
-            """
-            INSERT INTO nba_player_stats (
-                player_id, season_id, team_id,
-                games_played, games_started, minutes_total, minutes_per_game,
-                points_total, points_per_game,
-                fgm, fga, fg_pct, tpm, tpa, tp_pct, ftm, fta, ft_pct,
-                offensive_rebounds, defensive_rebounds, total_rebounds, rebounds_per_game,
-                assists, assists_per_game, turnovers, turnovers_per_game,
-                steals, steals_per_game, blocks, blocks_per_game,
-                personal_fouls, fouls_per_game,
-                plus_minus, plus_minus_per_game, efficiency,
-                true_shooting_pct, effective_fg_pct, assist_turnover_ratio,
-                updated_at
-            )
-            VALUES (
-                :player_id, :season_id, :team_id,
-                :games_played, :games_started, :minutes_total, :minutes_per_game,
-                :points_total, :points_per_game,
-                :fgm, :fga, :fg_pct, :tpm, :tpa, :tp_pct, :ftm, :fta, :ft_pct,
-                :offensive_rebounds, :defensive_rebounds, :total_rebounds, :rebounds_per_game,
-                :assists, :assists_per_game, :turnovers, :turnovers_per_game,
-                :steals, :steals_per_game, :blocks, :blocks_per_game,
-                :personal_fouls, :fouls_per_game,
-                :plus_minus, :plus_minus_per_game, :efficiency,
-                :true_shooting_pct, :effective_fg_pct, :assist_turnover_ratio,
-                :updated_at
-            )
-            ON CONFLICT(player_id, season_id, team_id) DO UPDATE SET
-                games_played = excluded.games_played,
-                games_started = excluded.games_started,
-                minutes_total = excluded.minutes_total,
-                minutes_per_game = excluded.minutes_per_game,
-                points_total = excluded.points_total,
-                points_per_game = excluded.points_per_game,
-                fgm = excluded.fgm,
-                fga = excluded.fga,
-                fg_pct = excluded.fg_pct,
-                tpm = excluded.tpm,
-                tpa = excluded.tpa,
-                tp_pct = excluded.tp_pct,
-                ftm = excluded.ftm,
-                fta = excluded.fta,
-                ft_pct = excluded.ft_pct,
-                offensive_rebounds = excluded.offensive_rebounds,
-                defensive_rebounds = excluded.defensive_rebounds,
-                total_rebounds = excluded.total_rebounds,
-                rebounds_per_game = excluded.rebounds_per_game,
-                assists = excluded.assists,
-                assists_per_game = excluded.assists_per_game,
-                turnovers = excluded.turnovers,
-                turnovers_per_game = excluded.turnovers_per_game,
-                steals = excluded.steals,
-                steals_per_game = excluded.steals_per_game,
-                blocks = excluded.blocks,
-                blocks_per_game = excluded.blocks_per_game,
-                personal_fouls = excluded.personal_fouls,
-                fouls_per_game = excluded.fouls_per_game,
-                plus_minus = excluded.plus_minus,
-                plus_minus_per_game = excluded.plus_minus_per_game,
-                efficiency = excluded.efficiency,
-                true_shooting_pct = excluded.true_shooting_pct,
-                effective_fg_pct = excluded.effective_fg_pct,
-                assist_turnover_ratio = excluded.assist_turnover_ratio,
-                updated_at = excluded.updated_at
-            """,
-            stats,
+        query = query_cache.get_or_build_upsert(
+            table="nba_player_stats",
+            columns=NBA_PLAYER_STATS_COLUMNS,
+            conflict_keys=["player_id", "season_id", "team_id"],
         )
+        self.db.execute(query, stats)
 
     def upsert_team_stats(self, stats: dict[str, Any]) -> None:
         """Insert or update NBA team statistics."""
-        self.db.execute(
-            """
-            INSERT INTO nba_team_stats (
-                team_id, season_id,
-                games_played, wins, losses, win_pct,
-                home_wins, home_losses, away_wins, away_losses,
-                points_per_game, opponent_ppg,
-                updated_at
-            )
-            VALUES (
-                :team_id, :season_id,
-                :games_played, :wins, :losses, :win_pct,
-                :home_wins, :home_losses, :away_wins, :away_losses,
-                :points_per_game, :opponent_ppg,
-                :updated_at
-            )
-            ON CONFLICT(team_id, season_id) DO UPDATE SET
-                games_played = excluded.games_played,
-                wins = excluded.wins,
-                losses = excluded.losses,
-                win_pct = excluded.win_pct,
-                home_wins = excluded.home_wins,
-                home_losses = excluded.home_losses,
-                away_wins = excluded.away_wins,
-                away_losses = excluded.away_losses,
-                points_per_game = excluded.points_per_game,
-                opponent_ppg = excluded.opponent_ppg,
-                updated_at = excluded.updated_at
-            """,
-            stats,
+        query = query_cache.get_or_build_upsert(
+            table="nba_team_stats",
+            columns=NBA_TEAM_STATS_COLUMNS,
+            conflict_keys=["team_id", "season_id"],
         )
+        self.db.execute(query, stats)
 
     # =========================================================================
     # Helper Methods
     # =========================================================================
 
-    def _build_full_name(self, player: dict) -> str:
-        """Build full name from first and last name."""
-        first = player.get("first_name") or player.get("firstname") or ""
-        last = player.get("last_name") or player.get("lastname") or ""
-        return f"{first} {last}".strip() or "Unknown"
-
-    def _get_position_group(self, position: Optional[str]) -> Optional[str]:
-        """Map position to position group."""
-        if not position:
-            return None
-
-        position = position.upper()
-        guard_positions = {"PG", "SG", "G", "G-F"}
-        forward_positions = {"SF", "PF", "F", "F-C", "F-G"}
-        center_positions = {"C", "C-F"}
-
-        if position in guard_positions:
-            return "Guard"
-        elif position in forward_positions:
-            return "Forward"
-        elif position in center_positions:
-            return "Center"
-        return None
-
-    def _parse_height(self, player: dict) -> Optional[int]:
-        """Parse height to total inches.
-
-        NBA API may return height in various formats:
-        - dict with "feets" and "inches" keys
-        - dict with "meters" key
-        - string like "6-8" or "6' 8\""
-        - string like "2.03" (meters)
-
-        Returns total inches.
-        """
-        height = player.get("height")
-        if not height:
-            return None
-
-        if isinstance(height, dict):
-            # Nested structure with feets/inches or meters
-            if "feets" in height and height["feets"]:
-                try:
-                    feet = int(height["feets"])
-                    inches = int(height.get("inches") or 0)
-                    return feet * 12 + inches
-                except (ValueError, TypeError):
-                    pass
-            elif "meters" in height and height["meters"]:
-                try:
-                    # Convert meters to inches
-                    meters = float(height["meters"])
-                    return int(meters * 39.3701)
-                except (ValueError, TypeError):
-                    pass
-        elif isinstance(height, str):
-            # Try "6' 8\"" or "6-8" format
-            match = re.match(r"(\d+)['\-\s]+(\d+)", height)
-            if match:
-                try:
-                    feet, inches = int(match.group(1)), int(match.group(2))
-                    return feet * 12 + inches
-                except (ValueError, TypeError):
-                    pass
-            # Try meters format "2.03"
-            elif "." in height:
-                try:
-                    meters = float(height)
-                    return int(meters * 39.3701)
-                except (ValueError, TypeError):
-                    pass
-
-        return None
-
-    def _parse_weight(self, player: dict) -> Optional[int]:
-        """Parse weight to pounds.
-
-        NBA API may return weight in various formats:
-        - dict with "pounds" and/or "kilograms" keys
-        - int/float (assume pounds)
-        - string like "220" or "220 lbs"
-
-        Returns weight in pounds.
-        """
-        weight = player.get("weight")
-        if not weight:
-            return None
-
-        if isinstance(weight, dict):
-            # Prefer pounds if available
-            if "pounds" in weight and weight["pounds"]:
-                try:
-                    return int(float(weight["pounds"]))
-                except (ValueError, TypeError):
-                    pass
-            elif "kilograms" in weight and weight["kilograms"]:
-                try:
-                    # Convert kg to lbs
-                    return int(float(weight["kilograms"]) * 2.205)
-                except (ValueError, TypeError):
-                    pass
-        elif isinstance(weight, (int, float)):
-            return int(weight)
-        elif isinstance(weight, str):
-            # Extract numeric portion from strings like "220 lbs"
-            match = re.match(r"(\d+(?:\.\d+)?)", weight)
-            if match:
-                try:
-                    return int(float(match.group(1)))
-                except (ValueError, TypeError):
-                    pass
-
-        return None
-
     def _parse_minutes_total(self, minutes: Any) -> int:
-        """Parse minutes to integer total."""
+        """Parse minutes to integer total.
+
+        Note: This is NBA-specific for handling MM:SS format from game logs.
+        """
         if isinstance(minutes, (int, float)):
             return int(minutes)
         if isinstance(minutes, str):
             try:
                 return int(minutes)
             except ValueError:
-                # Try parsing "MM:SS" format
+                # Try parsing "MM:SS" format from game logs
                 if ":" in minutes:
                     parts = minutes.split(":")
                     return int(parts[0]) * 60 + int(parts[1])
         return 0
-
-    def _safe_pct(self, made: int, attempted: int) -> float:
-        """Calculate percentage safely."""
-        if not attempted:
-            return 0.0
-        return round((made / attempted) * 100, 1)
-
-    def _calculate_efficiency(self, stats: dict, games: int) -> float:
-        """Calculate NBA efficiency rating."""
-        if games == 0:
-            return 0.0
-
-        points = stats.get("points_total", 0) or 0
-        rebounds = stats.get("total_rebounds", 0) or 0
-        assists = stats.get("assists", 0) or 0
-        steals = stats.get("steals", 0) or 0
-        blocks = stats.get("blocks", 0) or 0
-        fga = stats.get("fga", 0) or 0
-        fgm = stats.get("fgm", 0) or 0
-        fta = stats.get("fta", 0) or 0
-        ftm = stats.get("ftm", 0) or 0
-        turnovers = stats.get("turnovers", 0) or 0
-
-        eff = (points + rebounds + assists + steals + blocks -
-               (fga - fgm) - (fta - ftm) - turnovers)
-        return round(eff / games, 1)
-
-    def _calculate_ts_pct(self, points: int, fga: int, fta: int) -> float:
-        """Calculate true shooting percentage."""
-        if not points or (not fga and not fta):
-            return 0.0
-        tsa = fga + (0.44 * fta)
-        if tsa == 0:
-            return 0.0
-        return round((points / (2 * tsa)) * 100, 1)
-
-    def _calculate_efg_pct(self, fgm: int, tpm: int, fga: int) -> float:
-        """Calculate effective field goal percentage."""
-        if not fga:
-            return 0.0
-        return round(((fgm + 0.5 * tpm) / fga) * 100, 1)

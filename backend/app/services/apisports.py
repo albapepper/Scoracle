@@ -10,6 +10,7 @@ from fastapi import HTTPException
 
 from app.config import settings
 from app.services.cache import basic_cache, stats_cache
+from app.statsdb.aggregators import NBAStatsAggregator
 
 logger = logging.getLogger(__name__)
 
@@ -81,149 +82,6 @@ class ApiSportsService:
             logger.error(f"API-Sports {sport_key} network error", extra={"endpoint": endpoint, "error": str(e)})
             raise HTTPException(status_code=502, detail="API-Sports network error")
 
-    def _aggregate_nba_player_stats(self, games: List[Dict[str, Any]], target_season: Optional[int] = None) -> Dict[str, Any]:
-        """Aggregate NBA game-by-game stats into season totals.
-
-        The NBA API returns individual game records. This method sums them
-        into season totals for storage in the stats database.
-
-        Args:
-            games: List of game records from the API
-            target_season: If provided, only aggregate games from this season
-        """
-        if not games:
-            return {}
-
-        # Filter games by season if target_season specified
-        if target_season:
-            filtered_games = []
-            for game in games:
-                # Game records have game.season or team.season
-                game_data = game.get("game", {}) or {}
-                game_season = game_data.get("season")
-
-                # Also check team structure for season
-                if not game_season:
-                    team_data = game.get("team", {}) or {}
-                    game_season = team_data.get("season")
-
-                # If we can extract a season, filter by it
-                if game_season:
-                    try:
-                        if int(game_season) == target_season:
-                            filtered_games.append(game)
-                    except (ValueError, TypeError):
-                        # Can't parse season, include the game
-                        filtered_games.append(game)
-                else:
-                    # No season info, include the game
-                    filtered_games.append(game)
-
-            games = filtered_games if filtered_games else games
-
-        # Use first game as template for player/team info
-        first_game = games[0]
-
-        # Initialize aggregates
-        games_played = len(games)
-        games_started = 0
-        total_minutes = 0
-        points = 0
-        fgm = 0
-        fga = 0
-        tpm = 0  # 3-pointers made
-        tpa = 0  # 3-pointers attempted
-        ftm = 0
-        fta = 0
-        off_reb = 0
-        def_reb = 0
-        tot_reb = 0
-        assists = 0
-        turnovers = 0
-        steals = 0
-        blocks = 0
-        fouls = 0
-        plus_minus = 0
-
-        for game in games:
-            # Check if started
-            if game.get("pos") or game.get("game", {}).get("start"):
-                games_started += 1
-
-            # Parse minutes (can be "MM:SS" or just minutes)
-            mins = game.get("min") or game.get("minutes") or "0"
-            if isinstance(mins, str) and ":" in mins:
-                parts = mins.split(":")
-                total_minutes += int(parts[0]) + (int(parts[1]) / 60 if len(parts) > 1 else 0)
-            else:
-                try:
-                    total_minutes += float(mins) if mins else 0
-                except (ValueError, TypeError):
-                    pass
-
-            # Sum counting stats
-            points += game.get("points") or 0
-            fgm += game.get("fgm") or 0
-            fga += game.get("fga") or 0
-            tpm += game.get("tpm") or 0
-            tpa += game.get("tpa") or 0
-            ftm += game.get("ftm") or 0
-            fta += game.get("fta") or 0
-            off_reb += game.get("offReb") or 0
-            def_reb += game.get("defReb") or 0
-            tot_reb += game.get("totReb") or 0
-            assists += game.get("assists") or 0
-            turnovers += game.get("turnovers") or 0
-            steals += game.get("steals") or 0
-            blocks += game.get("blocks") or 0
-            fouls += game.get("pFouls") or 0
-
-            # Plus/minus can be string like "+5" or "-3"
-            pm = game.get("plusMinus") or 0
-            if isinstance(pm, str):
-                try:
-                    plus_minus += int(pm)
-                except ValueError:
-                    pass
-            else:
-                plus_minus += pm or 0
-
-        # Build aggregated result matching the structure expected by transform_player_stats
-        # The transform expects specific key names and nested structures
-        return {
-            "player": first_game.get("player"),
-            "team": first_game.get("team"),
-            # Transform expects "games" with "played" and "started" keys
-            "games": {"played": games_played, "started": games_started},
-            # Transform checks for points dict with "total" or "points_total" key
-            "points_total": points,
-            # Minutes as integer
-            "min": int(total_minutes),
-            # Shooting stats as simple integers (transform handles this)
-            "fgm": fgm,
-            "fga": fga,
-            "fgp": round((fgm / fga * 100), 1) if fga > 0 else 0,
-            "tpm": tpm,
-            "tpa": tpa,
-            "tpp": round((tpm / tpa * 100), 1) if tpa > 0 else 0,
-            "ftm": ftm,
-            "fta": fta,
-            "ftp": round((ftm / fta * 100), 1) if fta > 0 else 0,
-            # Rebounds - transform looks for offReb, defReb, totReb
-            "offReb": off_reb,
-            "defReb": def_reb,
-            "totReb": tot_reb,
-            # Other counting stats
-            "assists": assists,
-            "turnovers": turnovers,
-            "steals": steals,
-            "blocks": blocks,
-            "pFouls": fouls,
-            "plusMinus": plus_minus,
-            # Mark as aggregated season totals
-            "_aggregated": True,
-            "_games_count": games_played,
-        }
 
     def _normalize_player(self, p: Dict[str, Any], sport_key: str) -> Dict[str, Any]:
         """Map API field names to consistent database column names.
@@ -673,7 +531,7 @@ class ApiSportsService:
                     target_season = int(season)
                 except (ValueError, TypeError):
                     pass
-            result = self._aggregate_nba_player_stats(rows, target_season=target_season)
+            result = NBAStatsAggregator.aggregate_player_stats(rows, target_season=target_season)
         else:
             result = rows[0] if isinstance(rows, list) else rows
         stats_cache.set(cache_key, result, ttl=300)
