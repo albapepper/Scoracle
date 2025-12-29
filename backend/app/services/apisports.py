@@ -81,6 +81,84 @@ class ApiSportsService:
             logger.error(f"API-Sports {sport_key} network error", extra={"endpoint": endpoint, "error": str(e)})
             raise HTTPException(status_code=502, detail="API-Sports network error")
 
+    def _extract_game_season(self, game: Dict[str, Any]) -> Optional[int]:
+        """Extract season from a game record.
+
+        Attempts to find season in game.game.season or game.team.season.
+        Returns None if season cannot be extracted or parsed.
+        """
+        # Try game.game.season first
+        game_data = game.get("game", {}) or {}
+        game_season = game_data.get("season")
+
+        # Fall back to team.season
+        if not game_season:
+            team_data = game.get("team", {}) or {}
+            game_season = team_data.get("season")
+
+        # Parse season as integer
+        if game_season:
+            try:
+                return int(game_season)
+            except (ValueError, TypeError):
+                return None
+        return None
+
+    def _filter_games_by_season(self, games: List[Dict[str, Any]], target_season: int) -> List[Dict[str, Any]]:
+        """Filter games to only include those from the target season.
+
+        If a game's season cannot be determined, it is included by default.
+        """
+        filtered_games = []
+        for game in games:
+            game_season = self._extract_game_season(game)
+            # Include game if: no season found, or season matches target
+            if game_season is None or game_season == target_season:
+                filtered_games.append(game)
+        return filtered_games
+
+    def _parse_minutes(self, minutes_value: Any) -> float:
+        """Parse minutes from various formats (MM:SS string, float, or int).
+
+        Returns total minutes as a float. Returns 0 if parsing fails.
+        """
+        if not minutes_value:
+            return 0.0
+
+        # Handle "MM:SS" format
+        if isinstance(minutes_value, str) and ":" in minutes_value:
+            parts = minutes_value.split(":")
+            minutes = int(parts[0])
+            seconds = int(parts[1]) if len(parts) > 1 else 0
+            return minutes + (seconds / 60.0)
+
+        # Handle numeric formats
+        try:
+            return float(minutes_value)
+        except (ValueError, TypeError):
+            return 0.0
+
+    def _parse_plus_minus(self, plus_minus_value: Any) -> int:
+        """Parse plus/minus value from string (e.g., '+5', '-3') or int.
+
+        Returns 0 if parsing fails.
+        """
+        if not plus_minus_value:
+            return 0
+
+        # Handle string format like "+5" or "-3"
+        if isinstance(plus_minus_value, str):
+            try:
+                return int(plus_minus_value)
+            except ValueError:
+                return 0
+
+        # Handle numeric format
+        try:
+            return int(plus_minus_value)
+        except (ValueError, TypeError):
+            return 0
+
     def _aggregate_nba_player_stats(self, games: List[Dict[str, Any]], target_season: Optional[int] = None) -> Dict[str, Any]:
         """Aggregate NBA game-by-game stats into season totals.
 
@@ -96,30 +174,7 @@ class ApiSportsService:
 
         # Filter games by season if target_season specified
         if target_season:
-            filtered_games = []
-            for game in games:
-                # Game records have game.season or team.season
-                game_data = game.get("game", {}) or {}
-                game_season = game_data.get("season")
-
-                # Also check team structure for season
-                if not game_season:
-                    team_data = game.get("team", {}) or {}
-                    game_season = team_data.get("season")
-
-                # If we can extract a season, filter by it
-                if game_season:
-                    try:
-                        if int(game_season) == target_season:
-                            filtered_games.append(game)
-                    except (ValueError, TypeError):
-                        # Can't parse season, include the game
-                        filtered_games.append(game)
-                else:
-                    # No season info, include the game
-                    filtered_games.append(game)
-
-            games = filtered_games if filtered_games else games
+            games = self._filter_games_by_season(games, target_season)
 
         # Use first game as template for player/team info
         first_game = games[0]
@@ -151,15 +206,8 @@ class ApiSportsService:
                 games_started += 1
 
             # Parse minutes (can be "MM:SS" or just minutes)
-            mins = game.get("min") or game.get("minutes") or "0"
-            if isinstance(mins, str) and ":" in mins:
-                parts = mins.split(":")
-                total_minutes += int(parts[0]) + (int(parts[1]) / 60 if len(parts) > 1 else 0)
-            else:
-                try:
-                    total_minutes += float(mins) if mins else 0
-                except (ValueError, TypeError):
-                    pass
+            mins = game.get("min") or game.get("minutes")
+            total_minutes += self._parse_minutes(mins)
 
             # Sum counting stats
             points += game.get("points") or 0
@@ -179,14 +227,7 @@ class ApiSportsService:
             fouls += game.get("pFouls") or 0
 
             # Plus/minus can be string like "+5" or "-3"
-            pm = game.get("plusMinus") or 0
-            if isinstance(pm, str):
-                try:
-                    plus_minus += int(pm)
-                except ValueError:
-                    pass
-            else:
-                plus_minus += pm or 0
+            plus_minus += self._parse_plus_minus(game.get("plusMinus"))
 
         # Build aggregated result matching the structure expected by transform_player_stats
         # The transform expects specific key names and nested structures
