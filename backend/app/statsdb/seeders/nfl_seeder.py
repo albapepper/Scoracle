@@ -22,6 +22,12 @@ import time
 from typing import Any, Optional
 
 from .base import BaseSeeder
+from .utils import DataParsers, NameBuilder, PositionMappers
+from ..query_builder import (
+    query_cache,
+    NFL_PLAYER_STATS_COLUMNS,
+    NFL_TEAM_STATS_COLUMNS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -105,19 +111,19 @@ class NFLSeeder(BaseSeeder):
 
                     # API returns "group" (Offense/Defense/Special Teams) - use if position_group not inferred
                     api_group = player.get("group")
-                    position_group = self._get_position_group(position) or api_group
+                    position_group = PositionMappers.get_nfl_position_group(position) or api_group
 
                     all_players.append({
                         "id": player_id,
                         "first_name": player.get("first_name") or player.get("firstname"),
                         "last_name": player.get("last_name") or player.get("lastname"),
-                        "full_name": self._build_full_name(player),
+                        "full_name": NameBuilder.build_full_name(player),
                         "position": position,
                         "position_group": position_group,
                         "nationality": player.get("nationality"),
                         "birth_date": player.get("birth_date"),
-                        "height_inches": self._parse_height(player),
-                        "weight_lbs": self._parse_weight(player),
+                        "height_inches": DataParsers.parse_height_to_inches(player.get("height")),
+                        "weight_lbs": DataParsers.parse_weight_to_lbs(player.get("weight")),
                         "photo_url": player.get("photo_url") or player.get("image"),
                         "current_team_id": tid,
                         "jersey_number": player.get("number"),
@@ -237,7 +243,7 @@ class NFLSeeder(BaseSeeder):
 
             # API returns "group" (Offense/Defense/Special Teams) - use if position_group not inferred
             api_group = player.get("group")
-            position_group = self._get_position_group(position) or api_group
+            position_group = PositionMappers.get_nfl_position_group(position) or api_group
 
             # Handle birth data (may be nested or flat depending on API version)
             birth = player.get("birth")
@@ -252,14 +258,14 @@ class NFLSeeder(BaseSeeder):
                 "id": player["id"],
                 "first_name": player.get("first_name") or player.get("firstname"),
                 "last_name": player.get("last_name") or player.get("lastname"),
-                "full_name": self._build_full_name(player),
+                "full_name": NameBuilder.build_full_name(player),
                 "position": position,
                 "position_group": position_group,
                 "nationality": player.get("nationality") or player.get("country"),
                 "birth_date": birth_date,
                 "birth_place": birth_place,
-                "height_inches": self._parse_height(player),
-                "weight_lbs": self._parse_weight(player),
+                "height_inches": DataParsers.parse_height_to_inches(player.get("height")),
+                "weight_lbs": DataParsers.parse_weight_to_lbs(player.get("weight")),
                 "photo_url": player.get("photo_url") or player.get("image"),
                 "current_team_id": current_team_id,
                 "jersey_number": player.get("number"),
@@ -531,7 +537,7 @@ class NFLSeeder(BaseSeeder):
             "wins": wins,
             "losses": losses,
             "ties": ties,
-            "win_pct": self._safe_pct(wins, games_played),
+            "win_pct": DataParsers.safe_percentage(wins, games_played),
             "points_for": points_for,
             "points_against": points_against,
             "point_differential": points_for - points_against,
@@ -553,255 +559,25 @@ class NFLSeeder(BaseSeeder):
 
     def upsert_player_stats(self, stats: dict[str, Any]) -> None:
         """Insert or update NFL player statistics into unified table."""
-        self.db.execute(
-            """
-            INSERT INTO nfl_player_stats (
-                player_id, season_id, team_id, games_played, games_started,
-                pass_attempts, pass_completions, pass_yards, pass_touchdowns,
-                interceptions_thrown, passer_rating, completion_pct, yards_per_attempt,
-                longest_pass, sacks_taken, sack_yards_lost,
-                rush_attempts, rush_yards, rush_touchdowns, yards_per_carry,
-                longest_rush, rush_fumbles, rush_fumbles_lost,
-                targets, receptions, receiving_yards, receiving_touchdowns,
-                yards_per_reception, longest_reception, yards_after_catch,
-                rec_fumbles, rec_fumbles_lost,
-                tackles_total, tackles_solo, tackles_assist, tackles_for_loss,
-                sacks, sack_yards, qb_hits, def_interceptions, int_yards,
-                int_touchdowns, passes_defended, forced_fumbles, fumble_recoveries,
-                fg_attempts, fg_made, fg_pct, fg_long, xp_attempts, xp_made, xp_pct,
-                kicking_points, punts, punt_yards, punt_avg, punt_long,
-                punts_inside_20, touchbacks,
-                kick_returns, kick_return_yards, kick_return_touchdowns,
-                punt_returns, punt_return_yards, punt_return_touchdowns,
-                updated_at
-            )
-            VALUES (
-                :player_id, :season_id, :team_id, :games_played, :games_started,
-                :pass_attempts, :pass_completions, :pass_yards, :pass_touchdowns,
-                :interceptions_thrown, :passer_rating, :completion_pct, :yards_per_attempt,
-                :longest_pass, :sacks_taken, :sack_yards_lost,
-                :rush_attempts, :rush_yards, :rush_touchdowns, :yards_per_carry,
-                :longest_rush, :rush_fumbles, :rush_fumbles_lost,
-                :targets, :receptions, :receiving_yards, :receiving_touchdowns,
-                :yards_per_reception, :longest_reception, :yards_after_catch,
-                :rec_fumbles, :rec_fumbles_lost,
-                :tackles_total, :tackles_solo, :tackles_assist, :tackles_for_loss,
-                :sacks, :sack_yards, :qb_hits, :def_interceptions, :int_yards,
-                :int_touchdowns, :passes_defended, :forced_fumbles, :fumble_recoveries,
-                :fg_attempts, :fg_made, :fg_pct, :fg_long, :xp_attempts, :xp_made, :xp_pct,
-                :kicking_points, :punts, :punt_yards, :punt_avg, :punt_long,
-                :punts_inside_20, :touchbacks,
-                :kick_returns, :kick_return_yards, :kick_return_touchdowns,
-                :punt_returns, :punt_return_yards, :punt_return_touchdowns,
-                :updated_at
-            )
-            ON CONFLICT(player_id, season_id) DO UPDATE SET
-                team_id = excluded.team_id,
-                games_played = excluded.games_played,
-                games_started = excluded.games_started,
-                pass_attempts = excluded.pass_attempts,
-                pass_completions = excluded.pass_completions,
-                pass_yards = excluded.pass_yards,
-                pass_touchdowns = excluded.pass_touchdowns,
-                interceptions_thrown = excluded.interceptions_thrown,
-                passer_rating = excluded.passer_rating,
-                completion_pct = excluded.completion_pct,
-                yards_per_attempt = excluded.yards_per_attempt,
-                longest_pass = excluded.longest_pass,
-                sacks_taken = excluded.sacks_taken,
-                sack_yards_lost = excluded.sack_yards_lost,
-                rush_attempts = excluded.rush_attempts,
-                rush_yards = excluded.rush_yards,
-                rush_touchdowns = excluded.rush_touchdowns,
-                yards_per_carry = excluded.yards_per_carry,
-                longest_rush = excluded.longest_rush,
-                rush_fumbles = excluded.rush_fumbles,
-                rush_fumbles_lost = excluded.rush_fumbles_lost,
-                targets = excluded.targets,
-                receptions = excluded.receptions,
-                receiving_yards = excluded.receiving_yards,
-                receiving_touchdowns = excluded.receiving_touchdowns,
-                yards_per_reception = excluded.yards_per_reception,
-                longest_reception = excluded.longest_reception,
-                yards_after_catch = excluded.yards_after_catch,
-                rec_fumbles = excluded.rec_fumbles,
-                rec_fumbles_lost = excluded.rec_fumbles_lost,
-                tackles_total = excluded.tackles_total,
-                tackles_solo = excluded.tackles_solo,
-                tackles_assist = excluded.tackles_assist,
-                tackles_for_loss = excluded.tackles_for_loss,
-                sacks = excluded.sacks,
-                sack_yards = excluded.sack_yards,
-                qb_hits = excluded.qb_hits,
-                def_interceptions = excluded.def_interceptions,
-                int_yards = excluded.int_yards,
-                int_touchdowns = excluded.int_touchdowns,
-                passes_defended = excluded.passes_defended,
-                forced_fumbles = excluded.forced_fumbles,
-                fumble_recoveries = excluded.fumble_recoveries,
-                fg_attempts = excluded.fg_attempts,
-                fg_made = excluded.fg_made,
-                fg_pct = excluded.fg_pct,
-                fg_long = excluded.fg_long,
-                xp_attempts = excluded.xp_attempts,
-                xp_made = excluded.xp_made,
-                xp_pct = excluded.xp_pct,
-                kicking_points = excluded.kicking_points,
-                punts = excluded.punts,
-                punt_yards = excluded.punt_yards,
-                punt_avg = excluded.punt_avg,
-                punt_long = excluded.punt_long,
-                punts_inside_20 = excluded.punts_inside_20,
-                touchbacks = excluded.touchbacks,
-                kick_returns = excluded.kick_returns,
-                kick_return_yards = excluded.kick_return_yards,
-                kick_return_touchdowns = excluded.kick_return_touchdowns,
-                punt_returns = excluded.punt_returns,
-                punt_return_yards = excluded.punt_return_yards,
-                punt_return_touchdowns = excluded.punt_return_touchdowns,
-                updated_at = excluded.updated_at
-            """,
-            stats,
+        query = query_cache.get_or_build_upsert(
+            table="nfl_player_stats",
+            columns=NFL_PLAYER_STATS_COLUMNS,
+            conflict_keys=["player_id", "season_id"],
         )
+        self.db.execute(query, stats)
 
     def upsert_team_stats(self, stats: dict[str, Any]) -> None:
         """Insert or update NFL team statistics."""
-        self.db.execute(
-            """
-            INSERT INTO nfl_team_stats (
-                team_id, season_id, games_played, wins, losses, ties, win_pct,
-                points_for, points_against, point_differential,
-                total_yards, yards_per_game, pass_yards, rush_yards, turnovers,
-                yards_allowed, pass_yards_allowed, rush_yards_allowed, takeaways,
-                updated_at
-            )
-            VALUES (
-                :team_id, :season_id, :games_played, :wins, :losses, :ties, :win_pct,
-                :points_for, :points_against, :point_differential,
-                :total_yards, :yards_per_game, :pass_yards, :rush_yards, :turnovers,
-                :yards_allowed, :pass_yards_allowed, :rush_yards_allowed, :takeaways,
-                :updated_at
-            )
-            ON CONFLICT(team_id, season_id) DO UPDATE SET
-                games_played = excluded.games_played,
-                wins = excluded.wins,
-                losses = excluded.losses,
-                ties = excluded.ties,
-                win_pct = excluded.win_pct,
-                points_for = excluded.points_for,
-                points_against = excluded.points_against,
-                point_differential = excluded.point_differential,
-                total_yards = excluded.total_yards,
-                yards_per_game = excluded.yards_per_game,
-                pass_yards = excluded.pass_yards,
-                rush_yards = excluded.rush_yards,
-                turnovers = excluded.turnovers,
-                yards_allowed = excluded.yards_allowed,
-                pass_yards_allowed = excluded.pass_yards_allowed,
-                rush_yards_allowed = excluded.rush_yards_allowed,
-                takeaways = excluded.takeaways,
-                updated_at = excluded.updated_at
-            """,
-            stats,
+        query = query_cache.get_or_build_upsert(
+            table="nfl_team_stats",
+            columns=NFL_TEAM_STATS_COLUMNS,
+            conflict_keys=["team_id", "season_id"],
         )
+        self.db.execute(query, stats)
 
     # =========================================================================
     # Helper Methods
     # =========================================================================
-
-    def _build_full_name(self, player: dict) -> str:
-        """Build full name from first and last name, or use name directly.
-
-        NFL API returns full name in 'name' field rather than separate first/last.
-        """
-        # NFL uses 'name' for full name
-        if player.get("name"):
-            return player["name"]
-        first = player.get("first_name") or player.get("firstname") or ""
-        last = player.get("last_name") or player.get("lastname") or ""
-        return f"{first} {last}".strip() or "Unknown"
-
-    def _get_position_group(self, position: Optional[str]) -> Optional[str]:
-        """Map position to position group."""
-        if not position:
-            return None
-
-        position = position.upper()
-
-        offense_skill = {"QB", "RB", "FB", "WR", "TE"}
-        offense_line = {"OL", "OT", "OG", "C", "T", "G"}
-        defense_line = {"DL", "DE", "DT", "NT"}
-        linebackers = {"LB", "ILB", "OLB", "MLB"}
-        secondary = {"DB", "CB", "S", "FS", "SS"}
-        special_teams = {"K", "P", "LS"}
-
-        if position in offense_skill:
-            return "Offense - Skill"
-        elif position in offense_line:
-            return "Offense - Line"
-        elif position in defense_line:
-            return "Defense - Line"
-        elif position in linebackers:
-            return "Defense - Linebacker"
-        elif position in secondary:
-            return "Defense - Secondary"
-        elif position in special_teams:
-            return "Special Teams"
-
-        return None
-
-    def _parse_height(self, player: dict) -> Optional[int]:
-        """Parse height to total inches.
-
-        NFL API returns height in format: "6' 2\"" or "6-2" or "6'2"
-        Returns total inches (e.g., 6'2" = 74 inches).
-        """
-        height = player.get("height")
-        if not height:
-            return None
-
-        if isinstance(height, str):
-            # Try "6' 2\"" format (API format)
-            match = re.match(r"(\d+)['\s]+(\d+)", height)
-            if match:
-                try:
-                    feet, inches = int(match.group(1)), int(match.group(2))
-                    return feet * 12 + inches
-                except (ValueError, TypeError):
-                    pass
-
-            # Try "6-2" format (legacy)
-            if "-" in height:
-                try:
-                    feet, inches = map(int, height.split("-"))
-                    return feet * 12 + inches
-                except (ValueError, TypeError):
-                    pass
-
-        return None
-
-    def _parse_weight(self, player: dict) -> Optional[int]:
-        """Parse weight to pounds.
-
-        NFL API returns weight in format: "238 lbs" or just "238"
-        Returns weight in pounds.
-        """
-        weight = player.get("weight")
-        if not weight:
-            return None
-
-        if isinstance(weight, (int, float)):
-            return int(weight)
-        elif isinstance(weight, str):
-            # Extract numeric portion from strings like "238 lbs"
-            match = re.match(r"(\d+(?:\.\d+)?)", weight)
-            if match:
-                try:
-                    return int(float(match.group(1)))
-                except (ValueError, TypeError):
-                    pass
-
-        return None
 
     def _parse_experience(self, experience: Any) -> Optional[int]:
         """Parse experience to years.
@@ -822,35 +598,3 @@ class NFLSeeder(BaseSeeder):
                     pass
 
         return None
-
-    def _safe_pct(self, made: int, total: int) -> float:
-        """Calculate percentage safely."""
-        if not total:
-            return 0.0
-        return round((made / total) * 100, 1)
-
-    def _safe_int(self, value: Any) -> int:
-        """Safely convert value to int."""
-        if value is None:
-            return 0
-        if isinstance(value, (int, float)):
-            return int(value)
-        if isinstance(value, str):
-            try:
-                return int(float(value.replace(",", "")))
-            except (ValueError, TypeError):
-                return 0
-        return 0
-
-    def _safe_float(self, value: Any) -> float:
-        """Safely convert value to float."""
-        if value is None:
-            return 0.0
-        if isinstance(value, (int, float)):
-            return float(value)
-        if isinstance(value, str):
-            try:
-                return float(value.replace(",", ""))
-            except (ValueError, TypeError):
-                return 0.0
-        return 0.0
