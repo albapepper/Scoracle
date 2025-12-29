@@ -20,6 +20,12 @@ import time
 from typing import Any, Optional
 
 from .base import BaseSeeder
+from .utils import DataParsers, NameBuilder, StatCalculators, PositionMappers
+from ..query_builder import (
+    query_cache,
+    FOOTBALL_PLAYER_STATS_COLUMNS,
+    FOOTBALL_TEAM_STATS_COLUMNS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -669,136 +675,21 @@ class FootballSeeder(BaseSeeder):
 
     def upsert_player_stats(self, stats: dict[str, Any]) -> None:
         """Insert or update Football player statistics."""
-        self.db.execute(
-            """
-            INSERT INTO football_player_stats (
-                player_id, season_id, team_id, league_id,
-                appearances, starts, bench_appearances, minutes_played,
-                goals, assists, goals_assists, goals_per_90, assists_per_90,
-                shots_total, shots_on_target, shot_accuracy,
-                passes_total, passes_accurate, pass_accuracy, key_passes,
-                dribbles_attempted, dribbles_successful, dribble_success_rate,
-                duels_total, duels_won, duel_success_rate,
-                tackles, interceptions, blocks,
-                fouls_committed, fouls_drawn, yellow_cards, red_cards,
-                penalties_won, penalties_scored, penalties_missed,
-                saves, goals_conceded,
-                updated_at
-            )
-            VALUES (
-                :player_id, :season_id, :team_id, :league_id,
-                :appearances, :starts, :bench_appearances, :minutes_played,
-                :goals, :assists, :goals_assists, :goals_per_90, :assists_per_90,
-                :shots_total, :shots_on_target, :shot_accuracy,
-                :passes_total, :passes_accurate, :pass_accuracy, :key_passes,
-                :dribbles_attempted, :dribbles_successful, :dribble_success_rate,
-                :duels_total, :duels_won, :duel_success_rate,
-                :tackles, :interceptions, :blocks,
-                :fouls_committed, :fouls_drawn, :yellow_cards, :red_cards,
-                :penalties_won, :penalties_scored, :penalties_missed,
-                :saves, :goals_conceded,
-                :updated_at
-            )
-            ON CONFLICT(player_id, season_id, league_id) DO UPDATE SET
-                team_id = excluded.team_id,
-                appearances = excluded.appearances,
-                starts = excluded.starts,
-                bench_appearances = excluded.bench_appearances,
-                minutes_played = excluded.minutes_played,
-                goals = excluded.goals,
-                assists = excluded.assists,
-                goals_assists = excluded.goals_assists,
-                goals_per_90 = excluded.goals_per_90,
-                assists_per_90 = excluded.assists_per_90,
-                shots_total = excluded.shots_total,
-                shots_on_target = excluded.shots_on_target,
-                shot_accuracy = excluded.shot_accuracy,
-                passes_total = excluded.passes_total,
-                passes_accurate = excluded.passes_accurate,
-                pass_accuracy = excluded.pass_accuracy,
-                key_passes = excluded.key_passes,
-                dribbles_attempted = excluded.dribbles_attempted,
-                dribbles_successful = excluded.dribbles_successful,
-                dribble_success_rate = excluded.dribble_success_rate,
-                duels_total = excluded.duels_total,
-                duels_won = excluded.duels_won,
-                duel_success_rate = excluded.duel_success_rate,
-                tackles = excluded.tackles,
-                interceptions = excluded.interceptions,
-                blocks = excluded.blocks,
-                fouls_committed = excluded.fouls_committed,
-                fouls_drawn = excluded.fouls_drawn,
-                yellow_cards = excluded.yellow_cards,
-                red_cards = excluded.red_cards,
-                penalties_won = excluded.penalties_won,
-                penalties_scored = excluded.penalties_scored,
-                penalties_missed = excluded.penalties_missed,
-                saves = excluded.saves,
-                goals_conceded = excluded.goals_conceded,
-                updated_at = excluded.updated_at
-            """,
-            stats,
+        query = query_cache.get_or_build_upsert(
+            table="football_player_stats",
+            columns=FOOTBALL_PLAYER_STATS_COLUMNS,
+            conflict_keys=["player_id", "season_id", "league_id"],
         )
+        self.db.execute(query, stats)
 
     def upsert_team_stats(self, stats: dict[str, Any]) -> None:
         """Insert or update Football team statistics."""
-        self.db.execute(
-            """
-            INSERT INTO football_team_stats (
-                team_id, season_id, league_id,
-                matches_played, wins, draws, losses, points,
-                home_played, home_wins, home_draws, home_losses,
-                home_goals_for, home_goals_against,
-                away_played, away_wins, away_draws, away_losses,
-                away_goals_for, away_goals_against,
-                goals_for, goals_against, goal_difference,
-                goals_per_game, goals_conceded_per_game,
-                clean_sheets, failed_to_score, form, avg_possession,
-                updated_at
-            )
-            VALUES (
-                :team_id, :season_id, :league_id,
-                :matches_played, :wins, :draws, :losses, :points,
-                :home_played, :home_wins, :home_draws, :home_losses,
-                :home_goals_for, :home_goals_against,
-                :away_played, :away_wins, :away_draws, :away_losses,
-                :away_goals_for, :away_goals_against,
-                :goals_for, :goals_against, :goal_difference,
-                :goals_per_game, :goals_conceded_per_game,
-                :clean_sheets, :failed_to_score, :form, :avg_possession,
-                :updated_at
-            )
-            ON CONFLICT(team_id, season_id, league_id) DO UPDATE SET
-                matches_played = excluded.matches_played,
-                wins = excluded.wins,
-                draws = excluded.draws,
-                losses = excluded.losses,
-                points = excluded.points,
-                home_played = excluded.home_played,
-                home_wins = excluded.home_wins,
-                home_draws = excluded.home_draws,
-                home_losses = excluded.home_losses,
-                home_goals_for = excluded.home_goals_for,
-                home_goals_against = excluded.home_goals_against,
-                away_played = excluded.away_played,
-                away_wins = excluded.away_wins,
-                away_draws = excluded.away_draws,
-                away_losses = excluded.away_losses,
-                away_goals_for = excluded.away_goals_for,
-                away_goals_against = excluded.away_goals_against,
-                goals_for = excluded.goals_for,
-                goals_against = excluded.goals_against,
-                goal_difference = excluded.goal_difference,
-                goals_per_game = excluded.goals_per_game,
-                goals_conceded_per_game = excluded.goals_conceded_per_game,
-                clean_sheets = excluded.clean_sheets,
-                failed_to_score = excluded.failed_to_score,
-                form = excluded.form,
-                avg_possession = excluded.avg_possession,
-                updated_at = excluded.updated_at
-            """,
-            stats,
+        query = query_cache.get_or_build_upsert(
+            table="football_team_stats",
+            columns=FOOTBALL_TEAM_STATS_COLUMNS,
+            conflict_keys=["team_id", "season_id", "league_id"],
         )
+        self.db.execute(query, stats)
 
     # =========================================================================
     # Helper Methods
