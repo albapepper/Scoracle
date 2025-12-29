@@ -19,7 +19,8 @@
       "Bash(popd)",
       "Bash(tree:*)",
       "Bash(dir \"c:\\\\Users\\\\albap\\\\OneDrive\\\\Documents\\\\GitHub\\\\Scoracle\\\\astro-frontend\\\\src\\\\lib\")",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(cmd /c \"cd /d c:\\\\Users\\\\albap\\\\OneDrive\\\\Documents\\\\GitHub\\\\Scoracle\\\\backend && python -m py_compile app/statsdb/seeders/football_seeder.py && python -m py_compile app/statsdb/seeders/base.py && echo Syntax OK\")"
     ]
   }
 }
