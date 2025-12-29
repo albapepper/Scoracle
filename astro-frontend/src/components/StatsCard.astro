@@ -1,61 +1,75 @@
 ---
 /**
- * Stats Card
- * 
- * Displays entity statistics in a clean table format.
- * Matches the aesthetic of EntityWidget and ContentCard.
- * 
+ * Stats Card with Pizza/Radar Chart
+ *
+ * Displays entity statistics grouped by category with a D3.js
+ * pizza/radar chart visualization of percentiles.
+ *
+ * Features:
+ * - Pizza chart showing all stats with percentile rankings
+ * - Stats grouped by category (Scoring, Defense, etc.)
+ * - Categories sorted by volume (most stats first)
+ * - Percentile badges color-coded by tier
+ * - Responsive design for mobile
+ *
  * Props:
  * - title: Card title (defaults to "Statistics")
+ * - showChart: Whether to show the pizza chart (defaults to true)
  */
 
 interface Props {
   title?: string;
+  showChart?: boolean;
 }
 
-const { title = "Statistics" } = Astro.props;
+const { title = 'Statistics', showChart = true } = Astro.props;
 const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 ---
 
-<div class="stats-card card" data-api-url={apiUrl}>
+<div class="stats-card card" data-api-url={apiUrl} data-show-chart={showChart.toString()}>
   <!-- Header -->
   <div class="stats-card-header">
     <h3 class="stats-card-title">{title}</h3>
     <span id="stats-season" class="stats-card-season"></span>
   </div>
 
-  <!-- Content -->
+  <!-- Pizza Chart Container -->
+  {
+    showChart && (
+      <div id="stats-chart-container" class="stats-chart-container">
+        <div id="stats-chart" class="stats-chart" />
+        <div id="stats-chart-loading" class="chart-skeleton">
+          <div class="chart-skeleton-circle" />
+        </div>
+      </div>
+    )
+  }
+
+  <!-- Stats Categories -->
   <div class="stats-card-body">
     <!-- Loading State -->
     <div id="stats-loading" class="stats-loading">
-      <div class="skeleton-row">
-        <div class="skeleton-cell label"></div>
-        <div class="skeleton-cell value"></div>
+      <div class="category-skeleton">
+        <div class="skeleton-header"></div>
+        <div class="skeleton-rows">
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+        </div>
       </div>
-      <div class="skeleton-row">
-        <div class="skeleton-cell label"></div>
-        <div class="skeleton-cell value"></div>
-      </div>
-      <div class="skeleton-row">
-        <div class="skeleton-cell label"></div>
-        <div class="skeleton-cell value"></div>
-      </div>
-      <div class="skeleton-row">
-        <div class="skeleton-cell label"></div>
-        <div class="skeleton-cell value"></div>
-      </div>
-      <div class="skeleton-row">
-        <div class="skeleton-cell label"></div>
-        <div class="skeleton-cell value"></div>
+      <div class="category-skeleton">
+        <div class="skeleton-header"></div>
+        <div class="skeleton-rows">
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+        </div>
       </div>
     </div>
 
-    <!-- Data Table -->
-    <table id="stats-table" class="stats-table hidden">
-      <tbody id="stats-tbody">
-        <!-- Rows populated by JavaScript -->
-      </tbody>
-    </table>
+    <!-- Categories Container -->
+    <div id="stats-categories" class="stats-categories hidden">
+      <!-- Categories populated by JavaScript -->
+    </div>
 
     <!-- Empty State -->
     <div id="stats-empty" class="stats-empty hidden">
@@ -113,96 +127,242 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     color: var(--text-secondary-dark);
   }
 
+  /* Chart Container */
+  .stats-chart-container {
+    padding: 1.5rem 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    min-height: 280px;
+  }
+
+  :global(.dark) .stats-chart-container {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .stats-chart {
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .stats-chart :global(.pizza-chart-svg) {
+    display: block;
+  }
+
+  .stats-chart :global(.chart-no-data) {
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+    text-align: center;
+    margin: 0;
+  }
+
+  :global(.dark) .stats-chart :global(.chart-no-data) {
+    color: var(--text-tertiary-dark);
+  }
+
+  /* Chart Skeleton */
+  .chart-skeleton {
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .chart-skeleton-circle {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: var(--border);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  :global(.dark) .chart-skeleton-circle {
+    background: var(--border-dark);
+  }
+
+  /* Stats Body */
   .stats-card-body {
-    padding: 1rem 1.5rem 1.25rem;
+    padding: 0 1.5rem 1.25rem;
   }
 
   /* Loading Skeleton */
   .stats-loading {
     display: flex;
     flex-direction: column;
+    gap: 1.25rem;
+    padding-top: 1rem;
+  }
+
+  .category-skeleton {
+    display: flex;
+    flex-direction: column;
     gap: 0.75rem;
   }
 
-  .skeleton-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem 0;
-  }
-
-  .skeleton-cell {
+  .skeleton-header {
+    width: 30%;
     height: 14px;
+    background: var(--border);
     border-radius: 3px;
-    background-color: var(--border);
     animation: pulse 1.5s ease-in-out infinite;
   }
 
-  .skeleton-cell.label {
-    width: 40%;
+  .skeleton-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
-  .skeleton-cell.value {
-    width: 20%;
+  .skeleton-row {
+    height: 28px;
+    background: var(--border);
+    border-radius: 3px;
+    animation: pulse 1.5s ease-in-out infinite;
   }
 
-  :global(.dark) .skeleton-cell {
-    background-color: var(--border-dark);
+  :global(.dark) .skeleton-header,
+  :global(.dark) .skeleton-row {
+    background: var(--border-dark);
   }
 
   @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
   }
 
-  /* Stats Table */
-  .stats-table {
-    width: 100%;
-    border-collapse: collapse;
+  /* Categories */
+  .stats-categories {
+    display: flex;
+    flex-direction: column;
   }
 
-  .stats-table tr {
+  .stats-categories :global(.stats-category) {
+    padding: 1rem 0;
     border-bottom: 1px solid var(--border);
   }
 
-  .stats-table tr:last-child {
-    border-bottom: none;
+  .stats-categories :global(.stats-category:first-child) {
+    padding-top: 1.25rem;
   }
 
-  :global(.dark) .stats-table tr {
+  .stats-categories :global(.stats-category:last-child) {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  :global(.dark) .stats-categories :global(.stats-category) {
     border-bottom-color: var(--border-dark);
   }
 
-  .stats-table td {
-    padding: 0.625rem 0;
-    font-size: 0.9rem;
-    line-height: 1.4;
+  .stats-categories :global(.category-header) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.625rem;
   }
 
-  .stats-table td:first-child {
-    color: var(--text-secondary);
-    font-weight: 400;
+  .stats-categories :global(.category-indicator) {
+    width: 3px;
+    height: 14px;
+    border-radius: 2px;
+    flex-shrink: 0;
   }
 
-  .stats-table td:last-child {
-    text-align: right;
+  .stats-categories :global(.category-title) {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
     color: var(--text);
-    font-weight: 500;
-    font-variant-numeric: tabular-nums;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
   }
 
-  :global(.dark) .stats-table td:first-child {
+  :global(.dark) .stats-categories :global(.category-title) {
+    color: var(--text-dark);
+  }
+
+  .stats-categories :global(.category-stats) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .stats-categories :global(.stat-row) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.375rem 0;
+  }
+
+  .stats-categories :global(.stat-label) {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    flex: 1;
+  }
+
+  :global(.dark) .stats-categories :global(.stat-label) {
     color: var(--text-secondary-dark);
   }
 
-  :global(.dark) .stats-table td:last-child {
+  .stats-categories :global(.stat-values) {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  .stats-categories :global(.stat-value) {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    min-width: 48px;
+    text-align: right;
+  }
+
+  :global(.dark) .stats-categories :global(.stat-value) {
     color: var(--text-dark);
+  }
+
+  .stats-categories :global(.stat-percentile) {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    min-width: 38px;
+    text-align: center;
+    color: #ffffff;
+  }
+
+  /* Percentile tier colors */
+  .stats-categories :global(.percentile-elite) {
+    background-color: var(--percentile-elite);
+  }
+  .stats-categories :global(.percentile-above) {
+    background-color: var(--percentile-above);
+  }
+  .stats-categories :global(.percentile-average) {
+    background-color: var(--percentile-average);
+  }
+  .stats-categories :global(.percentile-below) {
+    background-color: var(--percentile-below);
+  }
+  .stats-categories :global(.percentile-poor) {
+    background-color: var(--percentile-poor);
   }
 
   /* Empty & Error States */
   .stats-empty,
   .stats-error {
-    padding: 1.5rem 0;
+    padding: 2rem 0;
     text-align: center;
   }
 
@@ -240,13 +400,37 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       font-size: 0.75rem;
     }
 
-    .stats-card-body {
-      padding: 0.75rem 1rem 1rem;
+    .stats-chart-container {
+      padding: 1rem;
+      min-height: 240px;
     }
 
-    .stats-table td {
-      padding: 0.5rem 0;
-      font-size: 0.85rem;
+    .stats-chart {
+      max-width: 280px;
+    }
+
+    .stats-card-body {
+      padding: 0 1rem 1rem;
+    }
+
+    .stats-categories :global(.stat-row) {
+      flex-wrap: wrap;
+      gap: 0.25rem;
+    }
+
+    .stats-categories :global(.stat-values) {
+      gap: 0.5rem;
+    }
+
+    .stats-categories :global(.stat-value) {
+      font-size: 0.8rem;
+      min-width: 40px;
+    }
+
+    .stats-categories :global(.stat-percentile) {
+      font-size: 0.65rem;
+      min-width: 34px;
+      padding: 0.1rem 0.25rem;
     }
   }
 
@@ -257,11 +441,15 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     .stats-card-body {
-      padding: 0.5rem 0.75rem 0.75rem;
+      padding: 0 0.75rem 0.75rem;
     }
 
-    .stats-table td {
-      font-size: 0.8rem;
+    .stats-chart-container {
+      min-height: 200px;
+    }
+
+    .stats-chart {
+      max-width: 220px;
     }
   }
 </style>
@@ -269,26 +457,59 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 <script>
   import { escapeHtml } from '../lib/utils/dom';
   import { swrFetch, setPageData } from '../lib/utils/api-fetcher';
+  import { PizzaChart, type PizzaChartStat } from '../lib/charts/pizza-chart';
+
+  interface StatItem {
+    key: string;
+    label: string;
+    value: number | string | null;
+    percentile?: number | null;
+    rank?: number | null;
+    sample_size?: number | null;
+  }
+
+  interface Category {
+    id: string;
+    label: string;
+    volume: number;
+    stats: StatItem[];
+  }
+
+  interface EntityInfo {
+    id: string;
+    name: string;
+    type: string;
+    position?: string;
+    team?: string;
+  }
+
+  interface CategorizedStatsResponse {
+    season: string;
+    entity: EntityInfo;
+    categories: Category[];
+    source?: string;
+  }
 
   /**
    * StatsCard Manager
    *
-   * Handles loading statistics from the backend API
-   * and populating the table with data.
-   * Uses SWR pattern for faster repeat loads.
+   * Handles loading categorized statistics from the backend API,
+   * rendering the pizza chart, and populating category tables.
    */
   class StatsCardManager {
-    private card!: HTMLElement;
-    private apiUrl!: string;
+    private card: HTMLElement;
+    private apiUrl: string;
+    private showChart: boolean;
+    private pizzaChart: PizzaChart | null = null;
 
     constructor(card: HTMLElement) {
       this.card = card;
       this.apiUrl = card.dataset.apiUrl || '';
+      this.showChart = card.dataset.showChart === 'true';
       this.init();
     }
 
     private async init() {
-      // Get entity info from URL
       const params = new URLSearchParams(window.location.search);
       const sport = params.get('sport');
       const type = params.get('type');
@@ -310,27 +531,23 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private async loadStats(sport: string, type: string, id: string) {
-      // No category parameter - API returns all stats for the entity
-      const url = `${this.apiUrl}/stats/${type}/${id}?sport=${sport}`;
+      // Request categorized format for the new widget
+      const url = `${this.apiUrl}/stats/${type}/${id}?sport=${sport}&format=categorized`;
 
-      // Use SWR fetch for caching (stats update less frequently)
-      const { data } = await swrFetch<{
-        stats?: Array<{ label: string; value: string | number }>;
-        season?: string;
-      }>(url, {
-        staleTime: 5 * 60 * 1000,   // Consider stale after 5 minutes
-        cacheTime: 30 * 60 * 1000,  // Keep in cache for 30 minutes
+      const { data } = await swrFetch<CategorizedStatsResponse>(url, {
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        cacheTime: 30 * 60 * 1000, // 30 minutes
       });
 
-      if (!data || !data.stats || data.stats.length === 0) {
+      if (!data || !data.categories || data.categories.length === 0) {
         this.showEmpty();
         return;
       }
 
-      // Share stats data with other components
+      // Share data with other components
       setPageData('stats', data);
 
-      // Display season if available
+      // Update season display
       if (data.season) {
         const seasonEl = this.card.querySelector('#stats-season');
         if (seasonEl) {
@@ -338,50 +555,167 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         }
       }
 
-      this.renderTable(data.stats);
+      // Render pizza chart if enabled
+      if (this.showChart) {
+        this.renderChart(data.categories);
+      }
+
+      // Render category tables
+      this.renderCategories(data.categories);
     }
 
-    private renderTable(stats: Array<{ label: string; value: string | number }>) {
-      const tbody = this.card.querySelector('#stats-tbody');
-      if (!tbody) return;
+    private renderChart(categories: Category[]) {
+      const chartContainer = this.card.querySelector('#stats-chart') as HTMLElement;
+      const chartLoading = this.card.querySelector('#stats-chart-loading');
 
-      tbody.innerHTML = stats
-        .map(({ label, value }) => `
-          <tr>
-            <td>${escapeHtml(label)}</td>
-            <td>${escapeHtml(String(value))}</td>
-          </tr>
-        `)
+      if (!chartContainer) return;
+
+      // Collect all stats with percentiles for the chart
+      const chartStats: PizzaChartStat[] = [];
+
+      categories.forEach((category) => {
+        category.stats.forEach((stat) => {
+          if (stat.percentile !== undefined && stat.percentile !== null) {
+            chartStats.push({
+              key: stat.key,
+              label: stat.label,
+              value: stat.value ?? '-',
+              percentile: stat.percentile,
+              categoryId: category.id,
+            });
+          }
+        });
+      });
+
+      // Hide loading skeleton
+      chartLoading?.classList.add('hidden');
+
+      if (chartStats.length < 3) {
+        // Not enough data - hide chart section entirely
+        const chartSection = this.card.querySelector('#stats-chart-container');
+        chartSection?.classList.add('hidden');
+        return;
+      }
+
+      // Create and render chart
+      this.pizzaChart = new PizzaChart(chartContainer, {
+        width: 360,
+        height: 360,
+        innerRadius: 35,
+        outerRadius: 120,
+        labelOffset: 30,
+      });
+
+      this.pizzaChart.render(chartStats);
+    }
+
+    private renderCategories(categories: Category[]) {
+      const container = this.card.querySelector('#stats-categories');
+      if (!container) return;
+
+      // Categories are already sorted by volume from the API
+      container.innerHTML = categories
+        .map(
+          (category) => `
+        <div class="stats-category" data-category="${category.id}">
+          <div class="category-header">
+            <div class="category-indicator" style="background: var(--category-${category.id}, var(--accent))"></div>
+            <h4 class="category-title">${escapeHtml(category.label)}</h4>
+          </div>
+          <div class="category-stats">
+            ${category.stats.map((stat) => this.renderStatRow(stat)).join('')}
+          </div>
+        </div>
+      `
+        )
         .join('');
 
       this.showContent();
     }
 
+    private renderStatRow(stat: StatItem): string {
+      const percentileClass = this.getPercentileClass(stat.percentile);
+      const percentileDisplay =
+        stat.percentile !== undefined && stat.percentile !== null
+          ? `<span class="stat-percentile ${percentileClass}">${Math.round(stat.percentile)}%</span>`
+          : '';
+
+      const displayValue = stat.value !== null ? String(stat.value) : '-';
+
+      return `
+        <div class="stat-row">
+          <span class="stat-label">${escapeHtml(stat.label)}</span>
+          <div class="stat-values">
+            <span class="stat-value">${escapeHtml(displayValue)}</span>
+            ${percentileDisplay}
+          </div>
+        </div>
+      `;
+    }
+
+    private getPercentileClass(percentile?: number | null): string {
+      if (percentile === undefined || percentile === null) return '';
+      if (percentile >= 90) return 'percentile-elite';
+      if (percentile >= 75) return 'percentile-above';
+      if (percentile >= 50) return 'percentile-average';
+      if (percentile >= 25) return 'percentile-below';
+      return 'percentile-poor';
+    }
+
     private showContent() {
       this.card.querySelector('#stats-loading')?.classList.add('hidden');
-      this.card.querySelector('#stats-table')?.classList.remove('hidden');
+      this.card.querySelector('#stats-categories')?.classList.remove('hidden');
       this.card.querySelector('#stats-empty')?.classList.add('hidden');
       this.card.querySelector('#stats-error')?.classList.add('hidden');
     }
 
     private showEmpty() {
       this.card.querySelector('#stats-loading')?.classList.add('hidden');
-      this.card.querySelector('#stats-table')?.classList.add('hidden');
+      this.card.querySelector('#stats-categories')?.classList.add('hidden');
       this.card.querySelector('#stats-empty')?.classList.remove('hidden');
       this.card.querySelector('#stats-error')?.classList.add('hidden');
+
+      // Hide chart if no data
+      const chartContainer = this.card.querySelector('#stats-chart-container');
+      chartContainer?.classList.add('hidden');
     }
 
     private showError() {
       this.card.querySelector('#stats-loading')?.classList.add('hidden');
-      this.card.querySelector('#stats-table')?.classList.add('hidden');
+      this.card.querySelector('#stats-categories')?.classList.add('hidden');
       this.card.querySelector('#stats-empty')?.classList.add('hidden');
       this.card.querySelector('#stats-error')?.classList.remove('hidden');
+
+      // Hide chart on error
+      const chartContainer = this.card.querySelector('#stats-chart-container');
+      chartContainer?.classList.add('hidden');
+    }
+
+    /**
+     * Refresh the chart (e.g., on theme change).
+     */
+    public refreshChart(): void {
+      this.pizzaChart?.refresh();
     }
   }
 
   // Initialize stats card on page load
   const statsCard = document.querySelector<HTMLElement>('.stats-card');
+  let manager: StatsCardManager | null = null;
+
   if (statsCard) {
-    new StatsCardManager(statsCard);
+    manager = new StatsCardManager(statsCard);
   }
+
+  // Listen for theme changes to refresh chart colors
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.attributeName === 'class') {
+        // Theme changed - refresh chart to pick up new CSS variables
+        manager?.refreshChart();
+      }
+    });
+  });
+
+  observer.observe(document.documentElement, { attributes: true });
 </script>

@@ -1,17 +1,21 @@
 """
 Stats Router - Statistics endpoints for entity pages.
 
-GET /api/v1/stats/{entity_type}/{entity_id}?sport=FOOTBALL|NBA|NFL[&season=2024]
+GET /api/v1/stats/{entity_type}/{entity_id}?sport=FOOTBALL|NBA|NFL[&season=2024][&format=flat|categorized]
 
 Returns formatted statistics for StatsCard component.
 Season defaults to most recent if not specified.
+
+Format options:
+- flat (default): Returns simple label/value pairs for basic display
+- categorized: Returns stats grouped by category with percentiles for pizza chart widget
 """
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
 
 from fastapi import APIRouter, Query, Response, Request, HTTPException
 
-from app.services.stats_service import get_team_stats, get_player_stats
+from app.services.stats_service import get_team_stats, get_player_stats, get_categorized_stats
 from app.utils.http_cache import build_cache_control, compute_etag, if_none_match_matches
 
 logger = logging.getLogger(__name__)
@@ -38,19 +42,40 @@ async def get_stats(
     sport: str = Query(..., description="Sport: FOOTBALL, NBA, or NFL"),
     season: Optional[str] = Query(None, description="Season year (e.g., 2024). Defaults to most recent."),
     league_id: Optional[int] = Query(None, description="League ID (required for Football teams if not in DB)"),
+    format: Literal["flat", "categorized"] = Query("flat", description="Response format: 'flat' for simple stats, 'categorized' for grouped stats with percentiles"),
 ) -> Optional[Dict[str, Any]]:
     """
-    Fetch entity statistics from API-Sports.
-    
-    Returns formatted data for StatsCard table display:
+    Fetch entity statistics.
+
+    **format=flat** (default): Returns simple label/value pairs:
+    ```json
     {
         "season": "2024",
         "stats": [
             {"label": "Goals Scored", "value": "45"},
-            {"label": "Goals per Game", "value": "2.1"},
-            ...
+            {"label": "Goals per Game", "value": "2.1"}
         ]
     }
+    ```
+
+    **format=categorized**: Returns stats grouped by category with percentiles:
+    ```json
+    {
+        "season": "2024",
+        "entity": {"id": "123", "name": "Player Name", "type": "player"},
+        "categories": [
+            {
+                "id": "scoring",
+                "label": "Scoring",
+                "volume": 4,
+                "stats": [
+                    {"key": "goals", "label": "Goals", "value": 25, "percentile": 94.2}
+                ]
+            }
+        ],
+        "source": "local"
+    }
+    ```
     """
     entity_type_lower = entity_type.lower()
     sport_upper = sport.upper()
@@ -58,26 +83,38 @@ async def get_stats(
     if sport_upper not in ("FOOTBALL", "NBA", "NFL"):
         raise HTTPException(status_code=400, detail="sport must be FOOTBALL, NBA, or NFL")
 
+    if entity_type_lower not in ("team", "player"):
+        raise HTTPException(status_code=400, detail="entity_type must be 'team' or 'player'")
+
     client = getattr(request.app.state, "http_client", None)
-    
-    if entity_type_lower == "team":
-        data = await get_team_stats(
-            entity_id, 
-            sport_upper, 
-            season=season, 
-            league_id=league_id,
-            client=client
-        )
-    elif entity_type_lower == "player":
-        data = await get_player_stats(
-            entity_id, 
-            sport_upper, 
-            season=season, 
-            client=client
+
+    # Use categorized stats for the new format
+    if format == "categorized":
+        data = await get_categorized_stats(
+            entity_type_lower,
+            entity_id,
+            sport_upper,
+            season=season,
+            client=client,
         )
     else:
-        raise HTTPException(status_code=400, detail="entity_type must be 'team' or 'player'")
-    
+        # Legacy flat format
+        if entity_type_lower == "team":
+            data = await get_team_stats(
+                entity_id,
+                sport_upper,
+                season=season,
+                league_id=league_id,
+                client=client
+            )
+        else:  # player
+            data = await get_player_stats(
+                entity_id,
+                sport_upper,
+                season=season,
+                client=client
+            )
+
     if data is None:
         raise HTTPException(status_code=404, detail="Statistics not found")
 

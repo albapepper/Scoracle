@@ -282,10 +282,10 @@ class BaseSeeder(ABC):
             INSERT INTO players (
                 id, sport_id, first_name, last_name, full_name,
                 position, position_group, nationality, birth_date, birth_place,
-                height_cm, weight_kg, photo_url, current_team_id, current_league_id,
-                jersey_number, profile_fetched_at, updated_at
+                height_inches, weight_lbs, photo_url, current_team_id, current_league_id,
+                jersey_number, college, experience_years, profile_fetched_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 first_name = COALESCE(excluded.first_name, players.first_name),
                 last_name = COALESCE(excluded.last_name, players.last_name),
@@ -295,12 +295,14 @@ class BaseSeeder(ABC):
                 nationality = COALESCE(excluded.nationality, players.nationality),
                 birth_date = COALESCE(excluded.birth_date, players.birth_date),
                 birth_place = COALESCE(excluded.birth_place, players.birth_place),
-                height_cm = COALESCE(excluded.height_cm, players.height_cm),
-                weight_kg = COALESCE(excluded.weight_kg, players.weight_kg),
+                height_inches = COALESCE(excluded.height_inches, players.height_inches),
+                weight_lbs = COALESCE(excluded.weight_lbs, players.weight_lbs),
                 photo_url = COALESCE(excluded.photo_url, players.photo_url),
                 current_team_id = COALESCE(excluded.current_team_id, players.current_team_id),
                 current_league_id = COALESCE(excluded.current_league_id, players.current_league_id),
                 jersey_number = COALESCE(excluded.jersey_number, players.jersey_number),
+                college = COALESCE(excluded.college, players.college),
+                experience_years = COALESCE(excluded.experience_years, players.experience_years),
                 profile_fetched_at = COALESCE(excluded.profile_fetched_at, players.profile_fetched_at),
                 updated_at = excluded.updated_at
             """,
@@ -315,12 +317,14 @@ class BaseSeeder(ABC):
                 player_data.get("nationality"),
                 player_data.get("birth_date"),
                 player_data.get("birth_place"),
-                player_data.get("height_cm"),
-                player_data.get("weight_kg"),
+                player_data.get("height_inches"),
+                player_data.get("weight_lbs"),
                 player_data.get("photo_url"),
                 player_data.get("current_team_id"),
                 player_data.get("current_league_id"),
                 player_data.get("jersey_number"),
+                player_data.get("college"),
+                player_data.get("experience_years"),
                 profile_fetched_at,
                 int(time.time()),
             ),
@@ -914,8 +918,9 @@ class BaseSeeder(ABC):
                     stats = self.transform_player_stats(
                         raw_stats, player_id, season_id, team_id
                     )
-                    self.upsert_player_stats(stats)
-                    processed += 1
+                    if stats:  # May be None if no valid league stats found
+                        self.upsert_player_stats(stats)
+                        processed += 1
 
             self._complete_sync(sync_id, len(players), processed, 0)
             logger.info(

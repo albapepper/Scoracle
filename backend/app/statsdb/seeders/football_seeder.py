@@ -15,6 +15,7 @@ Non-Priority Leagues:
 from __future__ import annotations
 
 import logging
+import re
 import time
 from typing import Any, Optional
 
@@ -272,8 +273,8 @@ class FootballSeeder(BaseSeeder):
                             "nationality": player.get("nationality"),
                             "birth_date": player.get("birth_date") or birth.get("date"),
                             "birth_place": birth.get("place"),
-                            "height_cm": self._parse_height(player),
-                            "weight_kg": self._parse_weight(player),
+                            "height_inches": self._parse_height(player),
+                            "weight_lbs": self._parse_weight(player),
                             "photo_url": player.get("photo_url") or player.get("photo"),
                             "current_team_id": team_data.get("id") if isinstance(team_data, dict) else None,
                             "current_league_id": lid,  # Track which league this player is in
@@ -377,8 +378,8 @@ class FootballSeeder(BaseSeeder):
                     "nationality": player_data.get("nationality"),
                     "birth_date": player_data.get("birth_date") or birth.get("date"),
                     "birth_place": birth.get("place"),
-                    "height_cm": self._parse_height(player_data),
-                    "weight_kg": self._parse_weight(player_data),
+                    "height_inches": self._parse_height(player_data),
+                    "weight_lbs": self._parse_weight(player_data),
                     "photo_url": player_data.get("photo_url") or player_data.get("photo"),
                     "current_team_id": team_data.get("id") if isinstance(team_data, dict) else None,
                     "current_league_id": league_data.get("id"),
@@ -444,29 +445,43 @@ class FootballSeeder(BaseSeeder):
         player_id: int,
         season_id: int,
         team_id: Optional[int] = None,
-    ) -> dict[str, Any]:
+    ) -> Optional[dict[str, Any]]:
         """Transform API stats to database schema.
 
         Note: get_player_statistics() already unwraps the API response,
         so raw_stats is {"player": {...}, "statistics": [...]} not the full
         {"response": [...]} wrapper.
+
+        Returns None if no stats from a known league are found.
         """
         stats = raw_stats if isinstance(raw_stats, dict) else {}
 
+        # Build set of known league IDs from our configured leagues
+        known_league_ids = {lg["id"] for lg in self.leagues}
+
         # Handle already-unwrapped format from get_player_statistics
         # Format: {"player": {...}, "statistics": [{team, league, games, ...}]}
+        statistics_list = []
         if "statistics" in stats and stats["statistics"]:
-            statistics = stats["statistics"]
-            if isinstance(statistics, list) and statistics:
-                stats = statistics[0]  # First league's stats
+            statistics_list = stats["statistics"] if isinstance(stats["statistics"], list) else []
         # Also handle full response format (for backwards compatibility)
         elif "response" in stats and stats["response"]:
             response = stats["response"]
             if isinstance(response, list) and response:
                 player_data = response[0]
-                statistics = player_data.get("statistics", [])
-                if statistics:
-                    stats = statistics[0]
+                statistics_list = player_data.get("statistics", [])
+
+        # Find stats from a known league (prioritize our configured leagues)
+        stats = None
+        for stat_entry in statistics_list:
+            league = stat_entry.get("league", {}) or {}
+            if league.get("id") in known_league_ids:
+                stats = stat_entry
+                break
+
+        # If no known league stats found, skip this player
+        if not stats:
+            return None
 
         # Get league ID from stats
         league = stats.get("league", {}) or {}
@@ -815,34 +830,54 @@ class FootballSeeder(BaseSeeder):
         return None
 
     def _parse_height(self, player: dict) -> Optional[int]:
-        """Parse height to centimeters."""
+        """Parse height to inches.
+
+        Football API returns height in cm (e.g., "180 cm" or "180").
+        Convert to inches for consistent imperial storage.
+        """
         height = player.get("height")
         if not height:
             return None
 
         if isinstance(height, str):
-            # Remove "cm" suffix if present
-            height = height.replace("cm", "").replace(" ", "")
-            try:
-                return int(height)
-            except ValueError:
-                pass
+            # Extract numeric portion from strings like "180 cm"
+            match = re.match(r"(\d+)", height)
+            if match:
+                try:
+                    cm = int(match.group(1))
+                    # Convert cm to inches
+                    return int(cm / 2.54)
+                except (ValueError, TypeError):
+                    pass
+        elif isinstance(height, (int, float)):
+            # Assume cm if numeric
+            return int(height / 2.54)
 
         return None
 
     def _parse_weight(self, player: dict) -> Optional[int]:
-        """Parse weight to kilograms."""
+        """Parse weight to pounds.
+
+        Football API returns weight in kg (e.g., "75 kg" or "75").
+        Convert to pounds for consistent imperial storage.
+        """
         weight = player.get("weight")
         if not weight:
             return None
 
         if isinstance(weight, str):
-            # Remove "kg" suffix if present
-            weight = weight.replace("kg", "").replace(" ", "")
-            try:
-                return int(weight)
-            except ValueError:
-                pass
+            # Extract numeric portion from strings like "75 kg"
+            match = re.match(r"(\d+)", weight)
+            if match:
+                try:
+                    kg = int(match.group(1))
+                    # Convert kg to lbs
+                    return int(kg * 2.205)
+                except (ValueError, TypeError):
+                    pass
+        elif isinstance(weight, (int, float)):
+            # Assume kg if numeric
+            return int(weight * 2.205)
 
         return None
 

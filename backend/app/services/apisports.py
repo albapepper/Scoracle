@@ -235,47 +235,89 @@ class ApiSportsService:
 
         if sport_key_up == "FOOTBALL":
             # Football nests player data under "player" key
+            # Profile data: id, name, firstname, lastname, age, birth, nationality,
+            # height, weight, number, position, photo
             player = p.get("player", p)
             stats_list = p.get("statistics", [])
             team = stats_list[0].get("team", {}) if stats_list else {}
+            birth = player.get("birth", {}) or {}
             return {
                 "id": player.get("id"),
                 "first_name": player.get("firstname"),
                 "last_name": player.get("lastname"),
+                "name": player.get("name"),  # Full name like "C. Palmer"
                 "position": player.get("position"),
                 "nationality": player.get("nationality"),
                 "photo_url": player.get("photo"),
                 "team_id": team.get("id"),
+                # Additional profile fields
+                "age": player.get("age"),
+                "birth_date": birth.get("date"),
+                "birth_place": birth.get("place"),
+                "birth_country": birth.get("country"),
+                "height": player.get("height"),  # e.g., "189" (cm)
+                "weight": player.get("weight"),  # e.g., "76" (kg)
+                "number": player.get("number"),  # jersey number
+                "injured": player.get("injured"),
             }
 
         elif sport_key_up == "NBA":
-            # NBA: firstname/lastName, position in leagues.standard.pos
+            # NBA player data structure:
+            # - firstname, lastname, birth: {date, country}
+            # - nba: {start, pro}, height: {feets, inches, meters}
+            # - weight: {pounds, kilograms}, college, affiliation
+            # - leagues: {standard: {jersey, active, pos}}
             teams = p.get("teams") or []
             team = teams[-1].get("team", {}) if teams else {}
             leagues = p.get("leagues") or {}
             standard = leagues.get("standard", {}) if isinstance(leagues, dict) else {}
+            birth = p.get("birth", {}) or {}
+            height = p.get("height", {}) or {}
+            weight = p.get("weight", {}) or {}
+            nba = p.get("nba", {}) or {}
             return {
                 "id": p.get("id"),
                 "first_name": p.get("firstname") or p.get("firstName"),
                 "last_name": p.get("lastname") or p.get("lastName"),
                 "position": standard.get("pos") if isinstance(standard, dict) else None,
-                "nationality": p.get("country"),
+                "nationality": p.get("country") or birth.get("country"),
                 "photo_url": None,
                 "team_id": team.get("id"),
+                # Additional profile fields
+                "birth_date": birth.get("date"),
+                "birth_country": birth.get("country"),
+                "height": height,  # dict with feets, inches, meters
+                "weight": weight,  # dict with pounds, kilograms
+                "college": p.get("college"),
+                "affiliation": p.get("affiliation"),
+                "nba_start": nba.get("start"),  # Year started in NBA
+                "jersey": standard.get("jersey") if isinstance(standard, dict) else None,
+                "active": standard.get("active") if isinstance(standard, dict) else None,
             }
 
         else:  # NFL
-            # NFL: name is full name, position at top level
+            # NFL /players endpoint returns rich profile data:
+            # id, name, age, height, weight, college, group, position,
+            # number, salary, experience, image
             team = p.get("team") or {}
             return {
                 "id": p.get("id"),
                 "first_name": p.get("firstname"),
                 "last_name": p.get("lastname"),
-                "name": p.get("name"),  # Full name - split at output if needed
+                "name": p.get("name"),  # Full name
                 "position": p.get("position"),
+                "group": p.get("group"),  # Offense/Defense/Special Teams
                 "nationality": None,
                 "photo_url": p.get("image"),
                 "team_id": team.get("id"),
+                # Additional profile fields
+                "age": p.get("age"),
+                "height": p.get("height"),  # e.g., "6' 2\""
+                "weight": p.get("weight"),  # e.g., "238 lbs"
+                "college": p.get("college"),
+                "experience": p.get("experience"),  # years
+                "number": p.get("number"),  # jersey number
+                "salary": p.get("salary"),
             }
 
     def _normalize_team(self, t: Dict[str, Any], sport_key: str) -> Dict[str, Any]:

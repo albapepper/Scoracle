@@ -40,6 +40,46 @@
   --compare-primary-bg-dark: #1e3a5f;
   --compare-secondary-dark: #f87171;
   --compare-secondary-bg-dark: #5f1e1e;
+
+  /* Percentile tier colors (light mode) */
+  --percentile-elite: #16a34a;      /* 90-100% - Green */
+  --percentile-above: #2563eb;      /* 75-89% - Blue */
+  --percentile-average: #d97706;    /* 50-74% - Amber */
+  --percentile-below: #ea580c;      /* 25-49% - Orange */
+  --percentile-poor: #dc2626;       /* 0-24% - Red */
+
+  /* Category indicator colors (light mode) */
+  --category-scoring: #ef4444;
+  --category-possession: #3b82f6;
+  --category-defense: #22c55e;
+  --category-discipline: #f59e0b;
+  --category-passing: #8b5cf6;
+  --category-rushing: #06b6d4;
+  --category-receiving: #ec4899;
+  --category-kicking: #84cc16;
+  --category-goalkeeping: #14b8a6;
+  --category-record: #6366f1;
+  --category-offense: #f97316;
+
+  /* Chart colors (light mode) */
+  --chart-ring: #e5e5e5;
+  --chart-ring-major: #d1d5db;
+  --chart-label: #1a1a1a;
+  --chart-sublabel: #666666;
+}
+
+/* Dark mode percentile and chart colors */
+.dark {
+  --percentile-elite: #22c55e;
+  --percentile-above: #60a5fa;
+  --percentile-average: #fbbf24;
+  --percentile-below: #f97316;
+  --percentile-poor: #ef4444;
+
+  --chart-ring: #2e2e2e;
+  --chart-ring-major: #404040;
+  --chart-label: #e8e8e8;
+  --chart-sublabel: #a0a0a0;
 }
 
 * {

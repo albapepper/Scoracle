@@ -111,12 +111,14 @@ class PlayerModel(BaseModel):
     nationality: Optional[str] = None
     birth_date: Optional[str] = None
     birth_place: Optional[str] = None
-    height_cm: Optional[int] = None
-    weight_kg: Optional[int] = None
+    height_inches: Optional[int] = None  # Height in inches
+    weight_lbs: Optional[int] = None  # Weight in pounds
     photo_url: Optional[str] = None
     current_team_id: Optional[int] = None
     current_league_id: Optional[int] = None  # For Football players (percentile filtering)
     jersey_number: Optional[int] = None
+    college: Optional[str] = None  # College attended (NFL/NBA)
+    experience_years: Optional[int] = None  # Years of professional experience (NFL)
     profile_fetched_at: Optional[int] = None  # NULL = needs fetch, timestamp = fetched
     is_active: bool = True
 
@@ -125,6 +127,24 @@ class PlayerModel(BaseModel):
     def needs_profile_fetch(self) -> bool:
         """Whether this player needs its profile fetched."""
         return self.profile_fetched_at is None
+
+    @computed_field
+    @property
+    def height_display(self) -> Optional[str]:
+        """Height formatted as feet-inches (e.g., 6'2\")."""
+        if self.height_inches is None:
+            return None
+        feet = self.height_inches // 12
+        inches = self.height_inches % 12
+        return f"{feet}'{inches}\""
+
+    @computed_field
+    @property
+    def weight_display(self) -> Optional[str]:
+        """Weight formatted with units (e.g., 238 lbs)."""
+        if self.weight_lbs is None:
+            return None
+        return f"{self.weight_lbs} lbs"
 
 
 # =============================================================================
@@ -345,3 +365,50 @@ class StatRankings(BaseModel):
     league_filter: Optional[int] = None
     total_count: int
     rankings: list[RankingEntry]
+
+
+# =============================================================================
+# Categorized Stats Response Models (for Stats Widget)
+# =============================================================================
+
+
+class StatItem(BaseModel):
+    """Individual stat with optional percentile data."""
+
+    key: str
+    label: str
+    value: float | int | str | None
+    percentile: Optional[float] = None
+    rank: Optional[int] = None
+    sample_size: Optional[int] = None
+
+
+class StatCategory(BaseModel):
+    """Group of related stats with category metadata."""
+
+    id: str
+    label: str
+    volume: int  # Number of non-null stats in this category
+    stats: list[StatItem]
+
+
+class EntityInfo(BaseModel):
+    """Basic entity identification for stats response."""
+
+    id: str
+    name: str
+    type: str  # 'player' or 'team'
+    position: Optional[str] = None
+    team: Optional[str] = None
+    photo_url: Optional[str] = None
+    logo_url: Optional[str] = None
+
+
+class CategorizedStatsResponse(BaseModel):
+    """Stats response with category grouping and percentiles for widgets."""
+
+    season: str
+    entity: EntityInfo
+    categories: list[StatCategory]
+    comparison_group: Optional[str] = None
+    source: str = "local"  # 'local' or 'api'

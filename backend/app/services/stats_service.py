@@ -693,3 +693,184 @@ async def get_player_stats(
     except Exception as e:
         logger.error(f"Failed to fetch player stats: {e}")
         return None
+
+
+# =============================================================================
+# Categorized Stats (for Stats Widget with Pizza Chart)
+# =============================================================================
+
+async def get_categorized_stats(
+    entity_type: str,
+    entity_id: str,
+    sport: str,
+    season: Optional[str] = None,
+    *,
+    client: httpx.AsyncClient | None = None
+) -> Optional[Dict[str, Any]]:
+    """
+    Get stats grouped by category with percentile data for the Stats Widget.
+
+    This function returns stats organized by category (Scoring, Defense, etc.)
+    with percentile rankings for each stat. Used by the frontend pizza chart
+    and categorized stats display.
+
+    Args:
+        entity_type: 'player' or 'team'
+        entity_id: Entity ID
+        sport: Sport code (FOOTBALL, NBA, NFL)
+        season: Season year (defaults to most recent)
+        client: Optional HTTP client for connection reuse
+
+    Returns:
+        Dict with categorized stats:
+        {
+            "season": "2024",
+            "entity": {"id": "123", "name": "...", "type": "player", ...},
+            "categories": [
+                {
+                    "id": "scoring",
+                    "label": "Scoring",
+                    "volume": 4,
+                    "stats": [
+                        {"key": "points_per_game", "label": "Points/Game",
+                         "value": 25.7, "percentile": 94, "rank": 8}
+                    ]
+                }
+            ],
+            "source": "local"
+        }
+    """
+    from app.statsdb.percentiles.config import get_category_mappings, get_stat_label
+    from app.statsdb.models import (
+        StatItem,
+        StatCategory,
+        EntityInfo,
+        CategorizedStatsResponse,
+    )
+
+    sport_upper = sport.upper()
+    season = season or _get_default_season(sport_upper)
+    season_year = int(season)
+
+    cache_key = f"stats:categorized:{entity_type}:{sport_upper}:{entity_id}:{season}"
+
+    cached = widget_cache.get(cache_key)
+    if cached is not None:
+        logger.debug(f"Cache HIT: {cache_key}")
+        return cached
+
+    try:
+        from app.statsdb import get_stats_db, EntityRepository
+
+        db = get_stats_db(read_only=True)
+        if not db.is_initialized():
+            logger.warning("Local stats DB not initialized for categorized stats")
+            return None
+
+        repo = EntityRepository(db)
+
+        # Get entity profile with stats and percentiles
+        entity_info = None
+        raw_stats = {}
+        percentiles_map = {}
+        position_group = None
+
+        if entity_type == "player":
+            profile = repo.get_player_profile(int(entity_id), sport_upper, season_year)
+            if profile and profile.player:
+                entity_info = EntityInfo(
+                    id=str(profile.player.id),
+                    name=profile.player.full_name,
+                    type="player",
+                    position=profile.player.position,
+                    team=profile.team.name if profile.team else None,
+                    photo_url=profile.player.photo_url,
+                )
+                position_group = profile.player.position_group or profile.player.position
+                raw_stats = profile.stats or {}
+                if profile.percentiles:
+                    percentiles_map = profile.percentiles.percentile_map
+        elif entity_type == "team":
+            profile = repo.get_team_profile(int(entity_id), sport_upper, season_year)
+            if profile and profile.team:
+                entity_info = EntityInfo(
+                    id=str(profile.team.id),
+                    name=profile.team.name,
+                    type="team",
+                    logo_url=profile.team.logo_url,
+                )
+                raw_stats = profile.stats or {}
+                if profile.percentiles:
+                    percentiles_map = profile.percentiles.percentile_map
+
+        if not entity_info:
+            logger.warning(f"Entity not found: {entity_type} {entity_id}")
+            return None
+
+        # Get category mappings for this sport/entity type
+        category_mappings = get_category_mappings(sport_upper, entity_type, position_group)
+
+        # Build categorized stats
+        categories = []
+        for cat_id, cat_config in category_mappings.items():
+            stats_list = []
+            for stat_def in cat_config.get("stats", []):
+                stat_key = stat_def["key"]
+                stat_label = stat_def["label"]
+
+                # Get raw value from stats
+                value = raw_stats.get(stat_key)
+                if value is None:
+                    continue  # Skip stats we don't have data for
+
+                # Get percentile if available
+                percentile = percentiles_map.get(stat_key)
+
+                # Format the value for display
+                if isinstance(value, float):
+                    # Round to 1 decimal for most stats
+                    if "pct" in stat_key or "percentage" in stat_key:
+                        display_value = round(value, 1)
+                    else:
+                        display_value = round(value, 1) if value != int(value) else int(value)
+                else:
+                    display_value = value
+
+                stats_list.append(StatItem(
+                    key=stat_key,
+                    label=stat_label,
+                    value=display_value,
+                    percentile=round(percentile, 1) if percentile is not None else None,
+                ))
+
+            # Only include categories that have at least one stat
+            if stats_list:
+                categories.append(StatCategory(
+                    id=cat_id,
+                    label=cat_config["label"],
+                    volume=len(stats_list),
+                    stats=stats_list,
+                ))
+
+        # Sort categories by volume (most stats first)
+        categories.sort(key=lambda c: c.volume, reverse=True)
+
+        # Build response
+        response = CategorizedStatsResponse(
+            season=season,
+            entity=entity_info,
+            categories=categories,
+            source="local",
+        )
+
+        # Convert to dict for caching and return
+        result = response.model_dump()
+
+        widget_cache.set(cache_key, result, ttl=STATS_CACHE_TTL)
+        logger.info(f"Cache SET (categorized): {cache_key}")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Failed to get categorized stats for {entity_type} {entity_id}: {e}")
+        return None

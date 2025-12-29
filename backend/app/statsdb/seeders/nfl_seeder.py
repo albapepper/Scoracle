@@ -6,11 +6,18 @@ from the API-Sports American Football API.
 
 Uses a unified nfl_player_stats table - position-based display is
 handled by widgets at query time, not at ingestion.
+
+NFL API Endpoints Used:
+- /players?id={id}&season={year}&team={team_id} - Player profile (requires team_id)
+- /players/statistics?id={id}&season={year} - Player stats (no team_id needed)
+- /teams?id={id} - Team profile
+- /standings?league=1&season={year}&team={id} - Team stats
 """
 
 from __future__ import annotations
 
 import logging
+import re
 import time
 from typing import Any, Optional
 
@@ -60,45 +67,70 @@ class NFLSeeder(BaseSeeder):
         team_id: Optional[int] = None,
         league_id: Optional[int] = None,
     ) -> list[dict[str, Any]]:
-        """Fetch NFL players from API-Sports (paginated)."""
+        """Fetch NFL players from API-Sports.
+
+        NFL API requires fetching players per team, not globally.
+        Iterates through all teams and fetches players for each.
+
+        The /players endpoint returns rich profile data including:
+        - id, name, age, height, weight
+        - college, group (Offense/Defense/Special Teams), position
+        - number, salary, experience, image
+        """
         all_players = []
-        page = 1
+        seen_ids = set()
 
-        while True:
-            players = await self.api.list_players(
-                "NFL",
-                season=str(season),
-                page=page,
-            )
+        # Get all teams first
+        teams = await self.fetch_teams(season)
+        logger.info("Fetching players for %d NFL teams...", len(teams))
 
-            if not players:
-                break
+        for team_data in teams:
+            tid = team_data["id"]
 
-            for player in players:
-                position = player.get("position")
+            try:
+                # Fetch players for this team
+                players = await self.api.list_players(
+                    "NFL",
+                    season=str(season),
+                    team_id=tid,
+                )
 
-                all_players.append({
-                    "id": player["id"],
-                    "first_name": player.get("first_name"),
-                    "last_name": player.get("last_name"),
-                    "full_name": self._build_full_name(player),
-                    "position": position,
-                    "position_group": self._get_position_group(position),
-                    "nationality": player.get("nationality"),
-                    "birth_date": player.get("birth_date"),
-                    "height_cm": self._parse_height(player),
-                    "weight_kg": self._parse_weight(player),
-                    "photo_url": player.get("photo_url"),
-                    "current_team_id": player.get("team_id"),
-                    "jersey_number": player.get("number"),
-                })
+                for player in players:
+                    player_id = player.get("id")
+                    if not player_id or player_id in seen_ids:
+                        continue
 
-            page += 1
+                    seen_ids.add(player_id)
+                    position = player.get("position")
 
-            if page > 100:
-                logger.warning("Reached page limit for NFL players")
-                break
+                    # API returns "group" (Offense/Defense/Special Teams) - use if position_group not inferred
+                    api_group = player.get("group")
+                    position_group = self._get_position_group(position) or api_group
 
+                    all_players.append({
+                        "id": player_id,
+                        "first_name": player.get("first_name") or player.get("firstname"),
+                        "last_name": player.get("last_name") or player.get("lastname"),
+                        "full_name": self._build_full_name(player),
+                        "position": position,
+                        "position_group": position_group,
+                        "nationality": player.get("nationality"),
+                        "birth_date": player.get("birth_date"),
+                        "height_inches": self._parse_height(player),
+                        "weight_lbs": self._parse_weight(player),
+                        "photo_url": player.get("photo_url") or player.get("image"),
+                        "current_team_id": tid,
+                        "jersey_number": player.get("number"),
+                        "college": player.get("college"),
+                        "experience_years": self._parse_experience(player.get("experience")),
+                    })
+
+                logger.debug("Fetched %d players from team %d", len(players), tid)
+
+            except Exception as e:
+                logger.warning("Failed to fetch players for team %d: %s", tid, e)
+
+        logger.info("Total NFL players fetched: %d", len(all_players))
         return all_players
 
     async def fetch_player_stats(
@@ -185,7 +217,14 @@ class NFLSeeder(BaseSeeder):
             return None
 
     async def fetch_player_profile(self, player_id: int) -> Optional[dict[str, Any]]:
-        """Fetch detailed player profile from API-Sports."""
+        """Fetch detailed player profile from API-Sports.
+
+        NFL /players endpoint returns:
+        - id, name, age
+        - height (e.g., "6' 2\""), weight (e.g., "238 lbs")
+        - college, group (Offense/Defense/Special Teams), position
+        - number, salary, experience (years), image
+        """
         try:
             response = await self.api.get_player_profile(str(player_id), "NFL")
             if not response:
@@ -196,21 +235,36 @@ class NFLSeeder(BaseSeeder):
             current_team_id = team.get("id") if isinstance(team, dict) else None
             position = player.get("position")
 
+            # API returns "group" (Offense/Defense/Special Teams) - use if position_group not inferred
+            api_group = player.get("group")
+            position_group = self._get_position_group(position) or api_group
+
+            # Handle birth data (may be nested or flat depending on API version)
+            birth = player.get("birth")
+            if isinstance(birth, dict):
+                birth_date = birth.get("date")
+                birth_place = birth.get("place")
+            else:
+                birth_date = player.get("birth_date")
+                birth_place = None
+
             return {
                 "id": player["id"],
                 "first_name": player.get("first_name") or player.get("firstname"),
                 "last_name": player.get("last_name") or player.get("lastname"),
                 "full_name": self._build_full_name(player),
                 "position": position,
-                "position_group": self._get_position_group(position),
+                "position_group": position_group,
                 "nationality": player.get("nationality") or player.get("country"),
-                "birth_date": player.get("birth_date") or player.get("birth", {}).get("date") if isinstance(player.get("birth"), dict) else player.get("birth_date"),
-                "birth_place": player.get("birth", {}).get("place") if isinstance(player.get("birth"), dict) else None,
-                "height_cm": self._parse_height(player),
-                "weight_kg": self._parse_weight(player),
+                "birth_date": birth_date,
+                "birth_place": birth_place,
+                "height_inches": self._parse_height(player),
+                "weight_lbs": self._parse_weight(player),
                 "photo_url": player.get("photo_url") or player.get("image"),
                 "current_team_id": current_team_id,
                 "jersey_number": player.get("number"),
+                "college": player.get("college"),
+                "experience_years": self._parse_experience(player.get("experience")),
             }
         except Exception as e:
             logger.warning("Failed to fetch profile for player %d: %s", player_id, e)
@@ -697,33 +751,75 @@ class NFLSeeder(BaseSeeder):
         return None
 
     def _parse_height(self, player: dict) -> Optional[int]:
-        """Parse height to centimeters."""
+        """Parse height to total inches.
+
+        NFL API returns height in format: "6' 2\"" or "6-2" or "6'2"
+        Returns total inches (e.g., 6'2" = 74 inches).
+        """
         height = player.get("height")
         if not height:
             return None
 
-        if isinstance(height, str) and "-" in height:
-            try:
-                feet, inches = map(int, height.split("-"))
-                return int((feet * 12 + inches) * 2.54)
-            except (ValueError, TypeError):
-                pass
+        if isinstance(height, str):
+            # Try "6' 2\"" format (API format)
+            match = re.match(r"(\d+)['\s]+(\d+)", height)
+            if match:
+                try:
+                    feet, inches = int(match.group(1)), int(match.group(2))
+                    return feet * 12 + inches
+                except (ValueError, TypeError):
+                    pass
+
+            # Try "6-2" format (legacy)
+            if "-" in height:
+                try:
+                    feet, inches = map(int, height.split("-"))
+                    return feet * 12 + inches
+                except (ValueError, TypeError):
+                    pass
 
         return None
 
     def _parse_weight(self, player: dict) -> Optional[int]:
-        """Parse weight to kilograms."""
+        """Parse weight to pounds.
+
+        NFL API returns weight in format: "238 lbs" or just "238"
+        Returns weight in pounds.
+        """
         weight = player.get("weight")
         if not weight:
             return None
 
         if isinstance(weight, (int, float)):
-            return int(weight * 0.453592)
+            return int(weight)
         elif isinstance(weight, str):
-            try:
-                return int(float(weight) * 0.453592)
-            except (ValueError, TypeError):
-                pass
+            # Extract numeric portion from strings like "238 lbs"
+            match = re.match(r"(\d+(?:\.\d+)?)", weight)
+            if match:
+                try:
+                    return int(float(match.group(1)))
+                except (ValueError, TypeError):
+                    pass
+
+        return None
+
+    def _parse_experience(self, experience: Any) -> Optional[int]:
+        """Parse experience to years.
+
+        NFL API returns experience as integer years or string.
+        """
+        if experience is None:
+            return None
+
+        if isinstance(experience, int):
+            return experience
+        elif isinstance(experience, str):
+            match = re.match(r"(\d+)", experience)
+            if match:
+                try:
+                    return int(match.group(1))
+                except (ValueError, TypeError):
+                    pass
 
         return None
 

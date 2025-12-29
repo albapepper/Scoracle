@@ -8,6 +8,7 @@ from the API-Sports NBA API.
 from __future__ import annotations
 
 import logging
+import re
 import time
 from typing import Any, Optional
 
@@ -98,13 +99,14 @@ class NBASeeder(BaseSeeder):
                         "full_name": player.get("name") or self._build_full_name(player),
                         "position": player.get("position"),
                         "position_group": self._get_position_group(player.get("position")),
-                        "nationality": player.get("nationality") or player.get("country"),
+                        "nationality": player.get("nationality") or player.get("birth_country"),
                         "birth_date": player.get("birth_date"),
-                        "height_cm": self._parse_height(player),
-                        "weight_kg": self._parse_weight(player),
+                        "height_inches": self._parse_height(player),
+                        "weight_lbs": self._parse_weight(player),
                         "photo_url": player.get("photo_url"),
                         "current_team_id": tid,
                         "jersey_number": player.get("jersey"),
+                        "college": player.get("college"),
                     })
 
                 logger.debug("Fetched %d players from team %d", len(players), tid)
@@ -206,6 +208,15 @@ class NBASeeder(BaseSeeder):
 
         Returns extended player info including full biographical data.
         API: GET /players?id={player_id}
+
+        NBA player response structure:
+        - id, firstname, lastname
+        - birth: {date, country}
+        - nba: {start, pro}
+        - height: {feets, inches, meters}
+        - weight: {pounds, kilograms}
+        - college, affiliation
+        - leagues: {standard: {jersey, active, pos}}
         """
         try:
             response = await self.api.get_player_profile(str(player_id), "NBA")
@@ -224,6 +235,9 @@ class NBASeeder(BaseSeeder):
             standard = leagues.get("standard", {}) if isinstance(leagues, dict) else {}
             position = standard.get("pos") if isinstance(standard, dict) else None
 
+            # Birth info
+            birth = player.get("birth", {}) or {}
+
             return {
                 "id": player["id"],
                 "first_name": player.get("first_name") or player.get("firstname"),
@@ -231,14 +245,15 @@ class NBASeeder(BaseSeeder):
                 "full_name": self._build_full_name(player),
                 "position": position,
                 "position_group": self._get_position_group(position),
-                "nationality": player.get("nationality") or player.get("country"),
-                "birth_date": player.get("birth_date") or player.get("birth", {}).get("date"),
-                "birth_place": player.get("birth", {}).get("place") if isinstance(player.get("birth"), dict) else None,
-                "height_cm": self._parse_height(player),
-                "weight_kg": self._parse_weight(player),
+                "nationality": player.get("nationality") or birth.get("country"),
+                "birth_date": player.get("birth_date") or birth.get("date"),
+                "birth_place": birth.get("place") if isinstance(birth, dict) else None,
+                "height_inches": self._parse_height(player),
+                "weight_lbs": self._parse_weight(player),
                 "photo_url": player.get("photo_url"),
                 "current_team_id": current_team_id,
-                "jersey_number": player.get("jersey"),
+                "jersey_number": player.get("jersey") or (standard.get("jersey") if isinstance(standard, dict) else None),
+                "college": player.get("college"),
             }
         except Exception as e:
             logger.warning("Failed to fetch profile for player %d: %s", player_id, e)
@@ -541,54 +556,92 @@ class NBASeeder(BaseSeeder):
         return None
 
     def _parse_height(self, player: dict) -> Optional[int]:
-        """Parse height to centimeters."""
+        """Parse height to total inches.
+
+        NBA API may return height in various formats:
+        - dict with "feets" and "inches" keys
+        - dict with "meters" key
+        - string like "6-8" or "6' 8\""
+        - string like "2.03" (meters)
+
+        Returns total inches.
+        """
         height = player.get("height")
         if not height:
             return None
 
         if isinstance(height, dict):
-            # Nested structure with meters/feets
-            if "meters" in height and height["meters"]:
+            # Nested structure with feets/inches or meters
+            if "feets" in height and height["feets"]:
                 try:
-                    return int(float(height["meters"]) * 100)
+                    feet = int(height["feets"])
+                    inches = int(height.get("inches") or 0)
+                    return feet * 12 + inches
+                except (ValueError, TypeError):
+                    pass
+            elif "meters" in height and height["meters"]:
+                try:
+                    # Convert meters to inches
+                    meters = float(height["meters"])
+                    return int(meters * 39.3701)
                 except (ValueError, TypeError):
                     pass
         elif isinstance(height, str):
-            # String format like "6-8" or "2.03"
-            if "-" in height:
+            # Try "6' 8\"" or "6-8" format
+            match = re.match(r"(\d+)['\-\s]+(\d+)", height)
+            if match:
                 try:
-                    feet, inches = map(int, height.split("-"))
-                    return int((feet * 12 + inches) * 2.54)
+                    feet, inches = int(match.group(1)), int(match.group(2))
+                    return feet * 12 + inches
                 except (ValueError, TypeError):
                     pass
+            # Try meters format "2.03"
             elif "." in height:
                 try:
-                    return int(float(height) * 100)
+                    meters = float(height)
+                    return int(meters * 39.3701)
                 except (ValueError, TypeError):
                     pass
 
         return None
 
     def _parse_weight(self, player: dict) -> Optional[int]:
-        """Parse weight to kilograms."""
+        """Parse weight to pounds.
+
+        NBA API may return weight in various formats:
+        - dict with "pounds" and/or "kilograms" keys
+        - int/float (assume pounds)
+        - string like "220" or "220 lbs"
+
+        Returns weight in pounds.
+        """
         weight = player.get("weight")
         if not weight:
             return None
 
         if isinstance(weight, dict):
-            if "kilograms" in weight and weight["kilograms"]:
+            # Prefer pounds if available
+            if "pounds" in weight and weight["pounds"]:
                 try:
-                    return int(float(weight["kilograms"]))
+                    return int(float(weight["pounds"]))
+                except (ValueError, TypeError):
+                    pass
+            elif "kilograms" in weight and weight["kilograms"]:
+                try:
+                    # Convert kg to lbs
+                    return int(float(weight["kilograms"]) * 2.205)
                 except (ValueError, TypeError):
                     pass
         elif isinstance(weight, (int, float)):
             return int(weight)
         elif isinstance(weight, str):
-            try:
-                # Assume pounds if just a number
-                return int(float(weight) * 0.453592)
-            except (ValueError, TypeError):
-                pass
+            # Extract numeric portion from strings like "220 lbs"
+            match = re.match(r"(\d+(?:\.\d+)?)", weight)
+            if match:
+                try:
+                    return int(float(match.group(1)))
+                except (ValueError, TypeError):
+                    pass
 
         return None
 

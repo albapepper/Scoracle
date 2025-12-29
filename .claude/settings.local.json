@@ -12,7 +12,14 @@
       "Bash(set PYTHONPATH=.)",
       "Bash(set PYTHONPATH=%CD%)",
       "Bash(del \"c:\\\\Users\\\\albap\\\\OneDrive\\\\Documents\\\\GitHub\\\\Scoracle\\\\statsdb\\\\stats.sqlite\")",
-      "Bash(if exist statsdbstats.sqlite del statsdbstats.sqlite)"
+      "Bash(if exist statsdbstats.sqlite del statsdbstats.sqlite)",
+      "Bash(set PYTHONPATH=c:UsersalbapOneDriveDocumentsGitHubScoraclebackend)",
+      "Bash(cmd /c \"cd /d c:\\\\Users\\\\albap\\\\OneDrive\\\\Documents\\\\GitHub\\\\Scoracle\\\\backend && python -m app.statsdb.cli seed-2phase --sport NFL --season 2025\")",
+      "Bash(pushd:*)",
+      "Bash(popd)",
+      "Bash(tree:*)",
+      "Bash(dir \"c:\\\\Users\\\\albap\\\\OneDrive\\\\Documents\\\\GitHub\\\\Scoracle\\\\astro-frontend\\\\src\\\\lib\")",
+      "Bash(npm install:*)"
     ]
   }
 }
