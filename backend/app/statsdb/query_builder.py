@@ -74,15 +74,20 @@ class UpsertQueryBuilder:
                 update_assignments.append(f"{col} = excluded.{col}")
 
         # Build complete query
+        columns_str = ', '.join(columns)
+        placeholders_str = ', '.join(placeholders)
+        conflict_keys_str = ', '.join(conflict_keys)
+        update_str = ',\n                '.join(update_assignments)
+
         query = f"""
             INSERT INTO {table} (
-                {', '.join(columns)}
+                {columns_str}
             )
             VALUES (
-                {', '.join(placeholders)}
+                {placeholders_str}
             )
-            ON CONFLICT({', '.join(conflict_keys)}) DO UPDATE SET
-                {',\n                '.join(update_assignments)}
+            ON CONFLICT({conflict_keys_str}) DO UPDATE SET
+                {update_str}
         """
 
         return query.strip()
@@ -136,14 +141,19 @@ class UpsertQueryBuilder:
             else:
                 update_assignments.append(f"{col} = excluded.{col}")
 
+        columns_str = ', '.join(columns)
+        value_sets_str = ',\n                '.join(value_sets)
+        conflict_keys_str = ', '.join(conflict_keys)
+        update_str = ',\n                '.join(update_assignments)
+
         query = f"""
             INSERT INTO {table} (
-                {', '.join(columns)}
+                {columns_str}
             )
             VALUES
-                {',\n                '.join(value_sets)}
-            ON CONFLICT({', '.join(conflict_keys)}) DO UPDATE SET
-                {',\n                '.join(update_assignments)}
+                {value_sets_str}
+            ON CONFLICT({conflict_keys_str}) DO UPDATE SET
+                {update_str}
         """
 
         return query.strip()
