@@ -29,6 +29,12 @@ Usage:
 from .connection import StatsDB, get_stats_db
 from .schema import init_database, run_migrations
 from .entity_repository import EntityRepository, get_entity_repository
+from .api_client import (
+    ApiClientProtocol,
+    StandaloneApiClient,
+    get_api_client,
+    set_api_client,
+)
 from .models import (
     PlayerProfile,
     TeamProfile,
@@ -48,6 +54,11 @@ __all__ = [
     # Repository
     "EntityRepository",
     "get_entity_repository",
+    # API Client
+    "ApiClientProtocol",
+    "StandaloneApiClient",
+    "get_api_client",
+    "set_api_client",
     # Models
     "PlayerProfile",
     "TeamProfile",

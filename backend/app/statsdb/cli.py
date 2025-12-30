@@ -42,10 +42,15 @@ def get_db():
 
 
 async def get_api_service():
-    """Get API-Sports service instance."""
-    from ..services.apisports import apisports_service
+    """Get API-Sports service instance.
 
-    return apisports_service
+    Uses the api_client abstraction which:
+    - In Scoracle: Uses app.services.apisports
+    - Standalone: Uses built-in httpx client
+    """
+    from .api_client import get_api_client
+
+    return get_api_client()
 
 
 def cmd_init(args: argparse.Namespace) -> int:
