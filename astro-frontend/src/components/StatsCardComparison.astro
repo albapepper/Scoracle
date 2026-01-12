@@ -471,12 +471,13 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       type: string,
       id: string
     ): Promise<{ stats: Array<{ label: string; value: string | number }>; season?: string } | null> {
-      const url = `${this.apiUrl}/stats/${type}/${id}?sport=${sport}`;
+      // Use new profile endpoint
+      const url = `${this.apiUrl}/widget/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
 
       try {
         const { data } = await swrFetch<{
-          stats?: Array<{ label: string; value: string | number }>;
-          season?: string;
+          info?: Record<string, unknown>;
+          stats?: Record<string, unknown>;
         }>(url, {
           staleTime: 5 * 60 * 1000,
           cacheTime: 30 * 60 * 1000,
@@ -486,7 +487,27 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
           return null;
         }
 
-        return { stats: data.stats, season: data.season };
+        // Transform flat stats to label/value format
+        const statLabels: Record<string, string> = {
+          points: 'Points', games: 'Games', assists: 'Assists',
+          totReb: 'Rebounds', steals: 'Steals', blocks: 'Blocks',
+          fgp: 'FG %', ftp: 'FT %', tpp: '3PT %', plusMinus: '+/-',
+          goals: 'Goals', shots: 'Shots', passes: 'Passes',
+          tackles: 'Tackles', passing_yards: 'Pass Yards',
+          rushing_yards: 'Rush Yards', receiving_yards: 'Rec Yards',
+        };
+
+        const stats: Array<{ label: string; value: string | number }> = [];
+        for (const [key, value] of Object.entries(data.stats)) {
+          if (value !== null && value !== undefined && key !== 'season' && key !== 'player_id' && key !== 'team_id') {
+            stats.push({
+              label: statLabels[key] || key,
+              value: value as string | number,
+            });
+          }
+        }
+
+        return { stats, season: String(data.stats.season || '') };
       } catch {
         return null;
       }

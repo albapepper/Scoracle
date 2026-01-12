@@ -456,24 +456,9 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 <script>
   import { escapeHtml } from '../lib/utils/dom';
-  import { swrFetch, setPageData } from '../lib/utils/api-fetcher';
+  import { swrFetch, setPageData, CACHE_PRESETS } from '../lib/utils/api-fetcher';
   import { PizzaChart, type PizzaChartStat } from '../lib/charts/pizza-chart';
-
-  interface StatItem {
-    key: string;
-    label: string;
-    value: number | string | null;
-    percentile?: number | null;
-    rank?: number | null;
-    sample_size?: number | null;
-  }
-
-  interface Category {
-    id: string;
-    label: string;
-    volume: number;
-    stats: StatItem[];
-  }
+  import { categorizeStats, type StatItem, type Category } from '../lib/utils/stats-categorizer';
 
   interface EntityInfo {
     id: string;
@@ -531,37 +516,55 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private async loadStats(sport: string, type: string, id: string) {
-      // Request categorized format for the new widget
-      const url = `${this.apiUrl}/stats/${type}/${id}?sport=${sport}&format=categorized`;
+      // Use the new profile endpoint which returns stats + percentiles
+      const url = `${this.apiUrl}/widget/profile/${type}/${id}?sport=${sport.toUpperCase()}&include_percentiles=true`;
 
-      const { data } = await swrFetch<CategorizedStatsResponse>(url, {
-        staleTime: 5 * 60 * 1000, // 5 minutes
-        cacheTime: 30 * 60 * 1000, // 30 minutes
-      });
+      const { data } = await swrFetch<{
+        info?: Record<string, unknown>;
+        stats?: Record<string, unknown>;
+        percentiles?: Record<string, number>;
+      }>(url, CACHE_PRESETS.stats);
 
-      if (!data || !data.categories || data.categories.length === 0) {
+      if (!data || !data.stats) {
         this.showEmpty();
         return;
       }
 
+      // Transform flat stats into categorized format using shared utility
+      const categories = categorizeStats(data.stats, data.percentiles || {}, sport);
+
+      if (categories.length === 0) {
+        this.showEmpty();
+        return;
+      }
+
+      // Build response in expected format for sharing
+      const categorizedData: CategorizedStatsResponse = {
+        season: String(data.stats.season || new Date().getFullYear()),
+        entity: {
+          id: String(data.info?.id || id),
+          name: String(data.info?.name || ''),
+          type: type,
+        },
+        categories: categories,
+      };
+
       // Share data with other components
-      setPageData('stats', data);
+      setPageData('stats', categorizedData);
 
       // Update season display
-      if (data.season) {
-        const seasonEl = this.card.querySelector('#stats-season');
-        if (seasonEl) {
-          seasonEl.textContent = `${data.season} Season`;
-        }
+      const seasonEl = this.card.querySelector('#stats-season');
+      if (seasonEl) {
+        seasonEl.textContent = `${categorizedData.season} Season`;
       }
 
       // Render pizza chart if enabled
       if (this.showChart) {
-        this.renderChart(data.categories);
+        this.renderChart(categories);
       }
 
       // Render category tables
-      this.renderCategories(data.categories);
+      this.renderCategories(categories);
     }
 
     private renderChart(categories: Category[]) {

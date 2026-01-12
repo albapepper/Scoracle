@@ -223,16 +223,23 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       try {
         const newsParams = new URLSearchParams();
         if (this.params.sport) newsParams.set('sport', this.params.sport.toUpperCase());
+        newsParams.set('limit', '20'); // New API uses limit instead of hours
 
         const newsUrl = `${this.apiUrl}/news/${encodeURIComponent(primaryName)}?${newsParams.toString()}`;
 
         // Use SWR fetch for news
-        const { data } = await swrFetch<{ articles?: Article[] }>(newsUrl, {
+        const { data } = await swrFetch<{ articles?: Array<{ title?: string; url?: string; published_at?: string; source?: string }> }>(newsUrl, {
           staleTime: 30 * 1000,      // Consider stale after 30 seconds
           cacheTime: 5 * 60 * 1000,  // Keep in cache for 5 minutes
         });
 
-        const articles: Article[] = data.articles || [];
+        // Transform new API response to Article format (url → link, published_at → pub_date)
+        const articles: Article[] = (data.articles || []).map(a => ({
+          title: a.title || '',
+          link: a.url || '',
+          pub_date: a.published_at,
+          source: a.source,
+        }));
 
         // Build search terms for the secondary entity
         // Include full name and last name (for players)
@@ -284,7 +291,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
     private async getEntityName(type: string, id: string): Promise<string | null> {
       try {
-        const url = `${this.apiUrl}/widget/${type}/${id}?sport=${this.params.sport!.toUpperCase()}`;
+        // Use new widget/info endpoint
+        const url = `${this.apiUrl}/widget/info/${type}/${id}?sport=${this.params.sport!.toUpperCase()}`;
 
         // Use SWR fetch for widget data
         const { data } = await swrFetch<Record<string, unknown>>(url, {
@@ -292,11 +300,11 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
           cacheTime: 30 * 60 * 1000,
         });
 
+        // New API returns flat data
         if (type === 'team') {
-          return (data.team as Record<string, unknown>)?.name as string || null;
+          return (data.name as string) || null;
         } else {
-          const player = (data.player || {}) as Record<string, unknown>;
-          return `${player.firstname || ''} ${player.lastname || ''}`.trim() || (player.name as string) || null;
+          return `${data.firstname || ''} ${data.lastname || ''}`.trim() || (data.name as string) || null;
         }
       } catch {
         return null;

@@ -4,6 +4,7 @@
  * Features:
  * - Request deduplication (prevents duplicate in-flight requests)
  * - SWR caching (serves stale data instantly, revalidates in background)
+ * - ETag support for bandwidth optimization
  * - Parallel fetching support
  * - TTL-based cache expiration
  */
@@ -12,6 +13,7 @@ interface CacheEntry<T> {
   data: T;
   timestamp: number;
   expiresAt: number;
+  etag?: string;
 }
 
 interface FetcherOptions {
@@ -21,6 +23,8 @@ interface FetcherOptions {
   cacheTime?: number;
   /** Skip cache and force fresh fetch */
   forceRefresh?: boolean;
+  /** Enable ETag-based conditional requests (default: true for widget endpoints) */
+  useEtag?: boolean;
 }
 
 // In-memory cache store
@@ -29,15 +33,76 @@ const cache = new Map<string, CacheEntry<unknown>>();
 // In-flight request tracking for deduplication
 const inFlight = new Map<string, Promise<unknown>>();
 
-// Default timings
+// ETag storage (persisted to localStorage for cross-session caching)
+const ETAG_STORAGE_KEY = 'scoracle_etags';
+
+/**
+ * Default cache times aligned with backend TTLs:
+ * - Widget info: 24 hours on backend -> 30 min stale locally
+ * - Stats: 1 hour on backend -> 5 min stale locally
+ * - News: 10 min on backend -> 2 min stale locally
+ */
 const DEFAULT_STALE_TIME = 60 * 1000; // 1 minute
-const DEFAULT_CACHE_TIME = 5 * 60 * 1000; // 5 minutes
+const DEFAULT_CACHE_TIME = 30 * 60 * 1000; // 30 minutes
+
+// Preset cache configurations aligned with backend
+export const CACHE_PRESETS = {
+  /** Widget/profile info - backend caches 24h */
+  widget: { staleTime: 30 * 60 * 1000, cacheTime: 60 * 60 * 1000 }, // 30min stale, 1h cache
+  /** Stats data - backend caches 1h */
+  stats: { staleTime: 5 * 60 * 1000, cacheTime: 30 * 60 * 1000 }, // 5min stale, 30min cache
+  /** News articles - backend caches 10min */
+  news: { staleTime: 2 * 60 * 1000, cacheTime: 10 * 60 * 1000 }, // 2min stale, 10min cache
+  /** Intel (Twitter/Reddit) - backend caches 5min */
+  intel: { staleTime: 60 * 1000, cacheTime: 5 * 60 * 1000 }, // 1min stale, 5min cache
+} as const;
+
+/**
+ * Load ETags from localStorage
+ */
+function loadEtags(): Record<string, string> {
+  if (typeof localStorage === 'undefined') return {};
+  try {
+    const stored = localStorage.getItem(ETAG_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Save ETag to localStorage
+ */
+function saveEtag(url: string, etag: string): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const etags = loadEtags();
+    etags[url] = etag;
+    // Limit storage to 100 entries to prevent unbounded growth
+    const keys = Object.keys(etags);
+    if (keys.length > 100) {
+      delete etags[keys[0]];
+    }
+    localStorage.setItem(ETAG_STORAGE_KEY, JSON.stringify(etags));
+  } catch {
+    // localStorage might be full or disabled
+  }
+}
+
+/**
+ * Get stored ETag for URL
+ */
+function getStoredEtag(url: string): string | undefined {
+  const etags = loadEtags();
+  return etags[url];
+}
 
 /**
  * Fetch with SWR pattern
  * - Returns cached data immediately if available (even if stale)
  * - Revalidates in background if data is stale
  * - Deduplicates concurrent requests for the same URL
+ * - Supports ETag-based conditional requests
  */
 export async function swrFetch<T>(
   url: string,
@@ -47,6 +112,7 @@ export async function swrFetch<T>(
     staleTime = DEFAULT_STALE_TIME,
     cacheTime = DEFAULT_CACHE_TIME,
     forceRefresh = false,
+    useEtag = url.includes('/widget/'),
   } = options;
 
   const now = Date.now();
@@ -63,21 +129,26 @@ export async function swrFetch<T>(
     if (!isExpired) {
       // If stale, trigger background revalidation
       if (isStale) {
-        revalidate<T>(url, cacheTime);
+        revalidate<T>(url, cacheTime, useEtag, cached.etag);
       }
       return { data: cached.data, isStale, fromCache: true };
     }
   }
 
   // No valid cache, fetch fresh data
-  const data = await dedupedFetch<T>(url, cacheTime);
+  const data = await dedupedFetch<T>(url, cacheTime, useEtag, cached?.etag);
   return { data, isStale: false, fromCache: false };
 }
 
 /**
- * Fetch that deduplicates concurrent requests
+ * Fetch that deduplicates concurrent requests and supports ETags
  */
-async function dedupedFetch<T>(url: string, cacheTime: number): Promise<T> {
+async function dedupedFetch<T>(
+  url: string,
+  cacheTime: number,
+  useEtag: boolean = false,
+  existingEtag?: string
+): Promise<T> {
   // Check if request is already in-flight
   const existing = inFlight.get(url);
   if (existing) {
@@ -87,11 +158,41 @@ async function dedupedFetch<T>(url: string, cacheTime: number): Promise<T> {
   // Create new fetch promise
   const fetchPromise = (async () => {
     try {
-      const response = await fetch(url);
+      // Build headers with conditional request if ETag exists
+      const headers: Record<string, string> = {};
+      const storedEtag = existingEtag || getStoredEtag(url);
+      if (useEtag && storedEtag) {
+        headers['If-None-Match'] = storedEtag;
+      }
+
+      const response = await fetch(url, { headers });
+
+      // Handle 304 Not Modified - return cached data
+      if (response.status === 304) {
+        const cached = cache.get(url) as CacheEntry<T> | undefined;
+        if (cached) {
+          // Update cache timestamp but keep data
+          const now = Date.now();
+          cache.set(url, {
+            ...cached,
+            timestamp: now,
+            expiresAt: now + cacheTime,
+          });
+          return cached.data;
+        }
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
+
       const data = await response.json();
+
+      // Store ETag if present
+      const etag = response.headers.get('ETag');
+      if (useEtag && etag) {
+        saveEtag(url, etag);
+      }
 
       // Store in cache
       const now = Date.now();
@@ -99,6 +200,7 @@ async function dedupedFetch<T>(url: string, cacheTime: number): Promise<T> {
         data,
         timestamp: now,
         expiresAt: now + cacheTime,
+        etag: etag || undefined,
       });
 
       return data as T;
@@ -117,11 +219,16 @@ async function dedupedFetch<T>(url: string, cacheTime: number): Promise<T> {
 /**
  * Background revalidation (fire and forget)
  */
-function revalidate<T>(url: string, cacheTime: number): void {
+function revalidate<T>(
+  url: string,
+  cacheTime: number,
+  useEtag: boolean = false,
+  existingEtag?: string
+): void {
   // Don't revalidate if already in-flight
   if (inFlight.has(url)) return;
 
-  dedupedFetch<T>(url, cacheTime).catch(() => {
+  dedupedFetch<T>(url, cacheTime, useEtag, existingEtag).catch(() => {
     // Silently fail background revalidation
   });
 }
@@ -167,7 +274,7 @@ export function prefetch(url: string, cacheTime = DEFAULT_CACHE_TIME): void {
   // Don't prefetch if already cached or in-flight
   if (cache.has(url) || inFlight.has(url)) return;
 
-  dedupedFetch(url, cacheTime).catch(() => {
+  dedupedFetch(url, cacheTime, url.includes('/widget/')).catch(() => {
     // Silently fail prefetch
   });
 }
@@ -195,6 +302,13 @@ interface PageData {
   news?: unknown;
   stats?: unknown;
   comparisonWidget?: unknown;
+  intelStatus?: IntelStatus;
+}
+
+export interface IntelStatus {
+  twitter: boolean;
+  news: boolean;
+  reddit: boolean;
 }
 
 const pageDataStore: PageData = {};
@@ -264,4 +378,27 @@ export function clearPageData(): void {
     delete pageDataStore[key as keyof PageData];
   });
   pageDataCallbacks.clear();
+}
+
+/**
+ * Fetch Intel API status (which external APIs are configured)
+ * Results are cached for the page session
+ */
+export async function fetchIntelStatus(apiUrl: string): Promise<IntelStatus> {
+  // Check if already fetched
+  const cached = getPageData('intelStatus');
+  if (cached) return cached;
+
+  try {
+    const { data } = await swrFetch<IntelStatus>(`${apiUrl}/intel/status`, {
+      ...CACHE_PRESETS.intel,
+    });
+    setPageData('intelStatus', data);
+    return data;
+  } catch {
+    // Default to all disabled if status check fails
+    const defaultStatus: IntelStatus = { twitter: false, news: false, reddit: false };
+    setPageData('intelStatus', defaultStatus);
+    return defaultStatus;
+  }
 }

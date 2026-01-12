@@ -339,7 +339,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     type Article,
     type CoMention,
   } from '../lib/utils/co-mentions';
-  import { swrFetch, waitForPageData, getPageData, setPageData } from '../lib/utils/api-fetcher';
+  import { swrFetch, waitForPageData, getPageData, setPageData, fetchIntelStatus, CACHE_PRESETS } from '../lib/utils/api-fetcher';
 
   // Extended article interface for rendering
   interface ArticleDisplay {
@@ -376,6 +376,14 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     private coMentionsEmptyEl: HTMLElement | null = null;
     private coMentionsLoaded = false;
 
+    // Lazy loading flags for tweets and reddit
+    private tweetsLoaded = false;
+    private redditLoaded = false;
+
+    // Intel API availability
+    private twitterEnabled = false;
+    private redditEnabled = false;
+
     constructor() {
       const card = document.getElementById('content-card');
       if (!card) return;
@@ -402,7 +410,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.init();
     }
 
-    private init() {
+    private async init() {
       this.bindTabEvents();
 
       if (!this.sport || !this.type || !this.id) {
@@ -410,7 +418,39 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         return;
       }
 
+      // Check Intel API availability and update tabs accordingly
+      await this.checkIntelStatus();
+
       this.fetchData();
+    }
+
+    private async checkIntelStatus() {
+      try {
+        const status = await fetchIntelStatus(this.apiUrl);
+        this.twitterEnabled = status.twitter;
+        this.redditEnabled = status.reddit;
+
+        // Update tab visibility based on API availability
+        this.updateTabVisibility();
+      } catch {
+        // On error, hide both intel tabs
+        this.updateTabVisibility();
+      }
+    }
+
+    private updateTabVisibility() {
+      if (!this.card) return;
+
+      const tweetsTab = this.card.querySelector('[data-tab="tweets"]') as HTMLElement;
+      const redditTab = this.card.querySelector('[data-tab="reddit"]') as HTMLElement;
+
+      // Hide tabs if their APIs are not available
+      if (tweetsTab && !this.twitterEnabled) {
+        tweetsTab.style.display = 'none';
+      }
+      if (redditTab && !this.redditEnabled) {
+        redditTab.style.display = 'none';
+      }
     }
 
     private bindTabEvents() {
@@ -427,9 +467,15 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
           const panel = document.getElementById(`${tab}-tab`);
           if (panel) panel.classList.add('active');
 
-          // Lazy-load co-mentions when tab is clicked
+          // Lazy-load content when tabs are clicked
           if (tab === 'co-mentions' && !this.coMentionsLoaded) {
             this.fetchCoMentions();
+          }
+          if (tab === 'tweets' && !this.tweetsLoaded) {
+            this.fetchTweets();
+          }
+          if (tab === 'reddit' && !this.redditLoaded) {
+            this.fetchReddit();
           }
         });
       });
@@ -442,65 +488,59 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         let widgetData = getPageData('widget') as Record<string, unknown> | undefined;
 
         if (!widgetData) {
-          // Wait for EntityWidget to fetch it (with timeout), or fetch ourselves
+          // Wait briefly for EntityWidget to populate data, then fetch if not available
           try {
-            widgetData = await Promise.race([
-              waitForPageData('widget', 2000),
-              // Fallback: fetch ourselves after short delay if EntityWidget hasn't started
-              new Promise<Record<string, unknown>>((resolve) => {
-                setTimeout(async () => {
-                  const url = `${this.apiUrl}/widget/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
-                  const { data } = await swrFetch<Record<string, unknown>>(url, {
-                    staleTime: 60 * 1000,
-                    cacheTime: 30 * 60 * 1000,
-                  });
-                  setPageData('widget', data);
-                  resolve(data);
-                }, 100);
-              }),
-            ]) as Record<string, unknown>;
+            widgetData = await waitForPageData('widget', 500) as Record<string, unknown>;
           } catch {
-            // Timeout or error - fetch ourselves
-            const url = `${this.apiUrl}/widget/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
-            const { data } = await swrFetch<Record<string, unknown>>(url, {
-              staleTime: 60 * 1000,
-              cacheTime: 30 * 60 * 1000,
-            });
+            // EntityWidget hasn't loaded data yet - fetch ourselves using SWR
+            // SWR will deduplicate if EntityWidget also requests the same URL
+            const url = `${this.apiUrl}/widget/info/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
+            const { data } = await swrFetch<Record<string, unknown>>(url, CACHE_PRESETS.widget);
             widgetData = data;
             setPageData('widget', data);
           }
         }
 
-        const team = widgetData.team as Record<string, unknown> | undefined;
-        const player = widgetData.player as Record<string, unknown> | undefined;
-        const entityName = team?.name || player?.name || widgetData.name;
+        // New API returns flat data - extract entity name
+        let entityName: string | undefined;
+        if (this.type === 'team') {
+          entityName = widgetData.name as string;
+        } else {
+          entityName = `${widgetData.firstname || ''} ${widgetData.lastname || ''}`.trim() || (widgetData.name as string);
+        }
+
         if (!entityName) {
           this.showEmpty();
           return;
         }
 
         // Store entity info for later use
-        this.entityName = entityName as string;
+        this.entityName = entityName;
 
         // Extract team name for players (improves news search relevance)
         if (this.type === 'player') {
-          this.entityTeam = (player?.currentTeam || widgetData.currentTeam || null) as string | null;
+          this.entityTeam = (widgetData.team_name || null) as string | null;
         }
 
         // Build news URL with sport and team context for better search results
         const newsParams = new URLSearchParams();
         if (this.sport) newsParams.set('sport', this.sport.toUpperCase());
         if (this.entityTeam) newsParams.set('team', this.entityTeam);
+        newsParams.set('limit', '10'); // New API uses limit
 
-        const newsUrl = `${this.apiUrl}/news/${encodeURIComponent(entityName as string)}?${newsParams.toString()}`;
+        const newsUrl = `${this.apiUrl}/news/${encodeURIComponent(entityName)}?${newsParams.toString()}`;
 
-        // Use SWR fetch for news (with shorter stale time since news updates frequently)
-        const { data: newsData } = await swrFetch<{ articles?: ArticleDisplay[] }>(newsUrl, {
-          staleTime: 30 * 1000,      // Consider stale after 30 seconds
-          cacheTime: 5 * 60 * 1000,  // Keep in cache for 5 minutes
-        });
+        // Use SWR fetch for news with preset cache times
+        const { data: newsData } = await swrFetch<{ articles?: Array<{ title?: string; url?: string; published_at?: string; source?: string; description?: string }> }>(newsUrl, CACHE_PRESETS.news);
 
-        const articles: ArticleDisplay[] = newsData.articles || [];
+        // Transform new API response (url → link, published_at → pub_date)
+        const rawArticles = newsData.articles || [];
+        const articles: ArticleDisplay[] = rawArticles.map(a => ({
+          title: a.title,
+          link: a.url,
+          pub_date: a.published_at,
+          source: a.source,
+        }));
 
         // Store articles for co-mentions (with required Article shape)
         this.articles = articles.map(a => ({
@@ -631,6 +671,158 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.coMentionsLoadingEl?.classList.add('hidden');
       this.coMentionsContentEl?.classList.add('hidden');
       this.coMentionsEmptyEl?.classList.remove('hidden');
+    }
+
+    // Twitter/Tweets lazy loading
+    private async fetchTweets() {
+      if (!this.entityName || !this.twitterEnabled) {
+        this.showTweetsEmpty();
+        return;
+      }
+
+      this.tweetsLoaded = true;
+
+      try {
+        // Use intel/twitter endpoint
+        const params = new URLSearchParams();
+        params.set('query', this.entityName);
+        if (this.sport) params.set('sport', this.sport.toUpperCase());
+        params.set('limit', '10');
+
+        const url = `${this.apiUrl}/intel/twitter?${params.toString()}`;
+        const { data } = await swrFetch<{
+          tweets?: Array<{
+            id: string;
+            text: string;
+            author: string;
+            author_username: string;
+            created_at: string;
+            metrics?: { like_count?: number; retweet_count?: number };
+          }>;
+        }>(url, CACHE_PRESETS.intel);
+
+        const tweets = data.tweets || [];
+        if (tweets.length === 0) {
+          this.showTweetsEmpty();
+          return;
+        }
+
+        this.renderTweets(tweets);
+      } catch {
+        this.showTweetsEmpty();
+      }
+    }
+
+    private renderTweets(tweets: Array<{ id: string; text: string; author: string; author_username: string; created_at: string; metrics?: { like_count?: number; retweet_count?: number } }>) {
+      const listEl = document.getElementById('tweets-list');
+      if (!listEl) return;
+
+      const html = tweets.map(tweet => {
+        const text = escapeHtml(tweet.text);
+        const author = escapeHtml(tweet.author);
+        const username = escapeHtml(tweet.author_username);
+        const date = formatDate(tweet.created_at);
+        const likes = tweet.metrics?.like_count || 0;
+        const retweets = tweet.metrics?.retweet_count || 0;
+
+        return `<div class="content-item">
+          <p class="content-excerpt">${text}</p>
+          <div class="content-meta">@${username} · ${date} · ${likes} likes · ${retweets} retweets</div>
+        </div>`;
+      }).join('');
+
+      listEl.innerHTML = html;
+      this.showTweetsContent();
+    }
+
+    private showTweetsContent() {
+      document.getElementById('tweets-loading')?.classList.add('hidden');
+      document.getElementById('tweets-content')?.classList.remove('hidden');
+      document.getElementById('tweets-empty')?.classList.add('hidden');
+    }
+
+    private showTweetsEmpty() {
+      document.getElementById('tweets-loading')?.classList.add('hidden');
+      document.getElementById('tweets-content')?.classList.add('hidden');
+      document.getElementById('tweets-empty')?.classList.remove('hidden');
+    }
+
+    // Reddit lazy loading
+    private async fetchReddit() {
+      if (!this.entityName || !this.redditEnabled) {
+        this.showRedditEmpty();
+        return;
+      }
+
+      this.redditLoaded = true;
+
+      try {
+        // Use intel/reddit endpoint
+        const params = new URLSearchParams();
+        params.set('query', this.entityName);
+        if (this.sport) params.set('sport', this.sport.toUpperCase());
+        params.set('sort', 'hot');
+        params.set('limit', '10');
+
+        const url = `${this.apiUrl}/intel/reddit?${params.toString()}`;
+        const { data } = await swrFetch<{
+          posts?: Array<{
+            id: string;
+            title: string;
+            selftext?: string;
+            author: string;
+            subreddit: string;
+            created_utc: number;
+            score: number;
+            num_comments: number;
+            url: string;
+          }>;
+        }>(url, CACHE_PRESETS.intel);
+
+        const posts = data.posts || [];
+        if (posts.length === 0) {
+          this.showRedditEmpty();
+          return;
+        }
+
+        this.renderRedditPosts(posts);
+      } catch {
+        this.showRedditEmpty();
+      }
+    }
+
+    private renderRedditPosts(posts: Array<{ id: string; title: string; selftext?: string; author: string; subreddit: string; created_utc: number; score: number; num_comments: number; url: string }>) {
+      const listEl = document.getElementById('reddit-list');
+      if (!listEl) return;
+
+      const html = posts.map(post => {
+        const title = escapeHtml(post.title);
+        const subreddit = escapeHtml(post.subreddit);
+        const author = escapeHtml(post.author);
+        const date = formatDate(new Date(post.created_utc * 1000).toISOString());
+
+        return `<div class="content-item">
+          <h3 class="content-title">
+            <a href="${post.url}" target="_blank" rel="noopener">${title}</a>
+          </h3>
+          <div class="content-meta">r/${subreddit} · u/${author} · ${date} · ${post.score} points · ${post.num_comments} comments</div>
+        </div>`;
+      }).join('');
+
+      listEl.innerHTML = html;
+      this.showRedditContent();
+    }
+
+    private showRedditContent() {
+      document.getElementById('reddit-loading')?.classList.add('hidden');
+      document.getElementById('reddit-content')?.classList.remove('hidden');
+      document.getElementById('reddit-empty')?.classList.add('hidden');
+    }
+
+    private showRedditEmpty() {
+      document.getElementById('reddit-loading')?.classList.add('hidden');
+      document.getElementById('reddit-content')?.classList.add('hidden');
+      document.getElementById('reddit-empty')?.classList.remove('hidden');
     }
   }
 
