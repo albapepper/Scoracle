@@ -430,8 +430,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       id: string,
       sport: string
     ): Promise<any> {
-      // Use new widget/info endpoint
-      const url = `${this.apiUrl}/widget/info/${type}/${id}?sport=${sport.toUpperCase()}`;
+      // Use widget/profile endpoint
+      const url = `${this.apiUrl}/widget/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
 
       try {
         const { data } = await swrFetch<Record<string, unknown>>(url, {

@@ -516,8 +516,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private async loadStats(sport: string, type: string, id: string) {
-      // Use the new profile endpoint which returns stats + percentiles
-      const url = `${this.apiUrl}/widget/profile/${type}/${id}?sport=${sport.toUpperCase()}&include_percentiles=true`;
+      // Use the stats endpoint which returns stats + percentiles
+      const url = `${this.apiUrl}/widget/stats/${type}/${id}?sport=${sport.toUpperCase()}&include_percentiles=true`;
 
       const { data } = await swrFetch<{
         info?: Record<string, unknown>;

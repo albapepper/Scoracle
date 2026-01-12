@@ -264,8 +264,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private async fetchEntity(prefix: string, type: string, id: string): Promise<void> {
-      // Use new widget/info endpoint
-      const url = `${this.apiUrl}/widget/info/${type}/${id}?sport=${this.params.sport!.toUpperCase()}`;
+      // Use widget/profile endpoint
+      const url = `${this.apiUrl}/widget/profile/${type}/${id}?sport=${this.params.sport!.toUpperCase()}`;
 
       try {
         // Use SWR fetch for caching and deduplication
