@@ -339,7 +339,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     type Article,
     type CoMention,
   } from '../lib/utils/co-mentions';
-  import { swrFetch, waitForPageData, getPageData, setPageData } from '../lib/utils/api-fetcher';
+  import { swrFetch, waitForPageData, getPageData, setPageData, fetchIntelStatus, CACHE_PRESETS } from '../lib/utils/api-fetcher';
 
   // Extended article interface for rendering
   interface ArticleDisplay {
@@ -380,6 +380,10 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     private tweetsLoaded = false;
     private redditLoaded = false;
 
+    // Intel API availability
+    private twitterEnabled = false;
+    private redditEnabled = false;
+
     constructor() {
       const card = document.getElementById('content-card');
       if (!card) return;
@@ -406,7 +410,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.init();
     }
 
-    private init() {
+    private async init() {
       this.bindTabEvents();
 
       if (!this.sport || !this.type || !this.id) {
@@ -414,7 +418,39 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         return;
       }
 
+      // Check Intel API availability and update tabs accordingly
+      await this.checkIntelStatus();
+
       this.fetchData();
+    }
+
+    private async checkIntelStatus() {
+      try {
+        const status = await fetchIntelStatus(this.apiUrl);
+        this.twitterEnabled = status.twitter;
+        this.redditEnabled = status.reddit;
+
+        // Update tab visibility based on API availability
+        this.updateTabVisibility();
+      } catch {
+        // On error, hide both intel tabs
+        this.updateTabVisibility();
+      }
+    }
+
+    private updateTabVisibility() {
+      if (!this.card) return;
+
+      const tweetsTab = this.card.querySelector('[data-tab="tweets"]') as HTMLElement;
+      const redditTab = this.card.querySelector('[data-tab="reddit"]') as HTMLElement;
+
+      // Hide tabs if their APIs are not available
+      if (tweetsTab && !this.twitterEnabled) {
+        tweetsTab.style.display = 'none';
+      }
+      if (redditTab && !this.redditEnabled) {
+        redditTab.style.display = 'none';
+      }
     }
 
     private bindTabEvents() {
@@ -452,31 +488,14 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         let widgetData = getPageData('widget') as Record<string, unknown> | undefined;
 
         if (!widgetData) {
-          // Wait for EntityWidget to fetch it (with timeout), or fetch ourselves
+          // Wait briefly for EntityWidget to populate data, then fetch if not available
           try {
-            widgetData = await Promise.race([
-              waitForPageData('widget', 2000),
-              // Fallback: fetch ourselves after short delay if EntityWidget hasn't started
-              new Promise<Record<string, unknown>>((resolve) => {
-                setTimeout(async () => {
-                  // Use new widget/info endpoint
-                  const url = `${this.apiUrl}/widget/info/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
-                  const { data } = await swrFetch<Record<string, unknown>>(url, {
-                    staleTime: 60 * 1000,
-                    cacheTime: 30 * 60 * 1000,
-                  });
-                  setPageData('widget', data);
-                  resolve(data);
-                }, 100);
-              }),
-            ]) as Record<string, unknown>;
+            widgetData = await waitForPageData('widget', 500) as Record<string, unknown>;
           } catch {
-            // Timeout or error - fetch ourselves
+            // EntityWidget hasn't loaded data yet - fetch ourselves using SWR
+            // SWR will deduplicate if EntityWidget also requests the same URL
             const url = `${this.apiUrl}/widget/info/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
-            const { data } = await swrFetch<Record<string, unknown>>(url, {
-              staleTime: 60 * 1000,
-              cacheTime: 30 * 60 * 1000,
-            });
+            const { data } = await swrFetch<Record<string, unknown>>(url, CACHE_PRESETS.widget);
             widgetData = data;
             setPageData('widget', data);
           }
@@ -511,11 +530,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
         const newsUrl = `${this.apiUrl}/news/${encodeURIComponent(entityName)}?${newsParams.toString()}`;
 
-        // Use SWR fetch for news (with shorter stale time since news updates frequently)
-        const { data: newsData } = await swrFetch<{ articles?: Array<{ title?: string; url?: string; published_at?: string; source?: string; description?: string }> }>(newsUrl, {
-          staleTime: 30 * 1000,      // Consider stale after 30 seconds
-          cacheTime: 5 * 60 * 1000,  // Keep in cache for 5 minutes
-        });
+        // Use SWR fetch for news with preset cache times
+        const { data: newsData } = await swrFetch<{ articles?: Array<{ title?: string; url?: string; published_at?: string; source?: string; description?: string }> }>(newsUrl, CACHE_PRESETS.news);
 
         // Transform new API response (url → link, published_at → pub_date)
         const rawArticles = newsData.articles || [];
@@ -659,7 +675,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
     // Twitter/Tweets lazy loading
     private async fetchTweets() {
-      if (!this.entityName) {
+      if (!this.entityName || !this.twitterEnabled) {
         this.showTweetsEmpty();
         return;
       }
@@ -667,7 +683,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.tweetsLoaded = true;
 
       try {
-        // Use new intel/twitter endpoint
+        // Use intel/twitter endpoint
         const params = new URLSearchParams();
         params.set('query', this.entityName);
         if (this.sport) params.set('sport', this.sport.toUpperCase());
@@ -683,10 +699,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
             created_at: string;
             metrics?: { like_count?: number; retweet_count?: number };
           }>;
-        }>(url, {
-          staleTime: 60 * 1000,
-          cacheTime: 5 * 60 * 1000,
-        });
+        }>(url, CACHE_PRESETS.intel);
 
         const tweets = data.tweets || [];
         if (tweets.length === 0) {
@@ -736,7 +749,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
     // Reddit lazy loading
     private async fetchReddit() {
-      if (!this.entityName) {
+      if (!this.entityName || !this.redditEnabled) {
         this.showRedditEmpty();
         return;
       }
@@ -744,7 +757,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.redditLoaded = true;
 
       try {
-        // Use new intel/reddit endpoint
+        // Use intel/reddit endpoint
         const params = new URLSearchParams();
         params.set('query', this.entityName);
         if (this.sport) params.set('sport', this.sport.toUpperCase());
@@ -764,10 +777,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
             num_comments: number;
             url: string;
           }>;
-        }>(url, {
-          staleTime: 60 * 1000,
-          cacheTime: 5 * 60 * 1000,
-        });
+        }>(url, CACHE_PRESETS.intel);
 
         const posts = data.posts || [];
         if (posts.length === 0) {
