@@ -471,8 +471,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       type: string,
       id: string
     ): Promise<{ stats: Array<{ label: string; value: string | number }>; season?: string } | null> {
-      // Use new profile endpoint
-      const url = `${this.apiUrl}/widget/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
+      // Use widget/stats endpoint
+      const url = `${this.apiUrl}/widget/stats/${type}/${id}?sport=${sport.toUpperCase()}`;
 
       try {
         const { data } = await swrFetch<{

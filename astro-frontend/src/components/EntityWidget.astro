@@ -3,7 +3,7 @@
  * Entity Widget Island
  *
  * Lightweight component hydrated by backend JSON.
- * Fetches: GET /api/v1/entity/{type}/{id}?sport={sport}&include=widget
+ * Fetches: GET /api/v1/widget/profile/{type}/{id}?sport={sport}
  */
 
 interface Props {
@@ -417,7 +417,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private async fetchData() {
-      const url = `${this.apiUrl}/widget/info/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
+      const url = `${this.apiUrl}/widget/profile/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
 
       try {
         // Use SWR fetch for caching and deduplication
@@ -447,7 +447,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       let details: { label: string; value: string }[] = [];
 
       if (this.type === 'team') {
-        // New API returns flat team data from /widget/info/team/{id}
+        // New API returns flat team data from /widget/profile/team/{id}
         name = data.name || 'Unknown';
         logo = data.logo || '';
         subtitle = data.venue_name || data.city || '';
@@ -466,7 +466,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
           details.push({ label: 'Coach', value: data.coach });
         }
       } else {
-        // New API returns flat player data from /widget/info/player/{id}
+        // New API returns flat player data from /widget/profile/player/{id}
         name = `${data.firstname || ''} ${data.lastname || ''}`.trim() || data.name || 'Unknown';
         logo = data.photo || '';
         subtitle = data.team_name || '';

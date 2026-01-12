@@ -494,7 +494,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
           } catch {
             // EntityWidget hasn't loaded data yet - fetch ourselves using SWR
             // SWR will deduplicate if EntityWidget also requests the same URL
-            const url = `${this.apiUrl}/widget/info/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
+            const url = `${this.apiUrl}/widget/profile/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
             const { data } = await swrFetch<Record<string, unknown>>(url, CACHE_PRESETS.widget);
             widgetData = data;
             setPageData('widget', data);
