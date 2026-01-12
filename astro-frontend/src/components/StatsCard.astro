@@ -531,37 +531,138 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private async loadStats(sport: string, type: string, id: string) {
-      // Request categorized format for the new widget
-      const url = `${this.apiUrl}/stats/${type}/${id}?sport=${sport}&format=categorized`;
+      // Use the new profile endpoint which returns stats + percentiles
+      const url = `${this.apiUrl}/widget/profile/${type}/${id}?sport=${sport.toUpperCase()}&include_percentiles=true`;
 
-      const { data } = await swrFetch<CategorizedStatsResponse>(url, {
+      const { data } = await swrFetch<{
+        info?: Record<string, unknown>;
+        stats?: Record<string, unknown>;
+        percentiles?: Record<string, number>;
+      }>(url, {
         staleTime: 5 * 60 * 1000, // 5 minutes
         cacheTime: 30 * 60 * 1000, // 30 minutes
       });
 
-      if (!data || !data.categories || data.categories.length === 0) {
+      if (!data || !data.stats) {
         this.showEmpty();
         return;
       }
 
+      // Transform flat stats into categorized format for display
+      const categories = this.transformToCategories(data.stats, data.percentiles || {}, sport);
+
+      if (categories.length === 0) {
+        this.showEmpty();
+        return;
+      }
+
+      // Build response in expected format for sharing
+      const categorizedData: CategorizedStatsResponse = {
+        season: String(data.stats.season || new Date().getFullYear()),
+        entity: {
+          id: String(data.info?.id || id),
+          name: String(data.info?.name || ''),
+          type: type,
+        },
+        categories: categories,
+      };
+
       // Share data with other components
-      setPageData('stats', data);
+      setPageData('stats', categorizedData);
 
       // Update season display
-      if (data.season) {
-        const seasonEl = this.card.querySelector('#stats-season');
-        if (seasonEl) {
-          seasonEl.textContent = `${data.season} Season`;
-        }
+      const seasonEl = this.card.querySelector('#stats-season');
+      if (seasonEl) {
+        seasonEl.textContent = `${categorizedData.season} Season`;
       }
 
       // Render pizza chart if enabled
       if (this.showChart) {
-        this.renderChart(data.categories);
+        this.renderChart(categories);
       }
 
       // Render category tables
-      this.renderCategories(data.categories);
+      this.renderCategories(categories);
+    }
+
+    /**
+     * Transform flat stats from new API into categorized format
+     */
+    private transformToCategories(
+      stats: Record<string, unknown>,
+      percentiles: Record<string, number>,
+      sport: string
+    ): Category[] {
+      // Define stat categories based on sport
+      const categoryConfig: Record<string, { id: string; label: string; keys: string[] }[]> = {
+        NBA: [
+          { id: 'scoring', label: 'Scoring', keys: ['points', 'fgm', 'fga', 'fgp', 'ftm', 'fta', 'ftp', 'tpm', 'tpa', 'tpp'] },
+          { id: 'rebounds', label: 'Rebounds', keys: ['totReb', 'offReb', 'defReb'] },
+          { id: 'playmaking', label: 'Playmaking', keys: ['assists', 'turnovers'] },
+          { id: 'defense', label: 'Defense', keys: ['steals', 'blocks', 'pFouls'] },
+          { id: 'general', label: 'General', keys: ['games', 'plusMinus'] },
+        ],
+        NFL: [
+          { id: 'passing', label: 'Passing', keys: ['passing_yards', 'passing_tds', 'interceptions', 'passer_rating'] },
+          { id: 'rushing', label: 'Rushing', keys: ['rushing_yards', 'rushing_tds', 'rushing_attempts'] },
+          { id: 'receiving', label: 'Receiving', keys: ['receiving_yards', 'receiving_tds', 'receptions', 'targets'] },
+          { id: 'defense', label: 'Defense', keys: ['tackles', 'sacks', 'interceptions_def'] },
+        ],
+        FOOTBALL: [
+          { id: 'goals', label: 'Goals & Assists', keys: ['goals', 'assists', 'shots', 'shots_on'] },
+          { id: 'passing', label: 'Passing', keys: ['passes', 'passes_accuracy', 'key_passes'] },
+          { id: 'defense', label: 'Defense', keys: ['tackles', 'blocks', 'interceptions'] },
+          { id: 'discipline', label: 'Discipline', keys: ['yellow_cards', 'red_cards', 'fouls'] },
+        ],
+      };
+
+      const config = categoryConfig[sport.toUpperCase()] || categoryConfig.NBA;
+      const categories: Category[] = [];
+
+      // Stat label mapping for display
+      const labelMap: Record<string, string> = {
+        points: 'Points', fgm: 'FG Made', fga: 'FG Attempted', fgp: 'FG %',
+        ftm: 'FT Made', fta: 'FT Attempted', ftp: 'FT %',
+        tpm: '3PT Made', tpa: '3PT Attempted', tpp: '3PT %',
+        totReb: 'Rebounds', offReb: 'Off Rebounds', defReb: 'Def Rebounds',
+        assists: 'Assists', turnovers: 'Turnovers', steals: 'Steals', blocks: 'Blocks',
+        pFouls: 'Fouls', games: 'Games', plusMinus: '+/-',
+        goals: 'Goals', shots: 'Shots', shots_on: 'Shots on Target',
+        passes: 'Passes', passes_accuracy: 'Pass Accuracy', key_passes: 'Key Passes',
+        tackles: 'Tackles', yellow_cards: 'Yellow Cards', red_cards: 'Red Cards', fouls: 'Fouls',
+        passing_yards: 'Pass Yards', passing_tds: 'Pass TDs', interceptions: 'Interceptions',
+        passer_rating: 'Passer Rating', rushing_yards: 'Rush Yards', rushing_tds: 'Rush TDs',
+        rushing_attempts: 'Rush Attempts', receiving_yards: 'Rec Yards', receiving_tds: 'Rec TDs',
+        receptions: 'Receptions', targets: 'Targets', sacks: 'Sacks',
+      };
+
+      for (const cat of config) {
+        const catStats: StatItem[] = [];
+
+        for (const key of cat.keys) {
+          const value = stats[key];
+          if (value !== undefined && value !== null) {
+            catStats.push({
+              key: key,
+              label: labelMap[key] || key,
+              value: value as number | string,
+              percentile: percentiles[key] ?? null,
+            });
+          }
+        }
+
+        if (catStats.length > 0) {
+          categories.push({
+            id: cat.id,
+            label: cat.label,
+            volume: catStats.length,
+            stats: catStats,
+          });
+        }
+      }
+
+      // Sort by volume (most stats first)
+      return categories.sort((a, b) => b.volume - a.volume);
     }
 
     private renderChart(categories: Category[]) {

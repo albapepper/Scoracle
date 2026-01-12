@@ -430,7 +430,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       id: string,
       sport: string
     ): Promise<any> {
-      const url = `${this.apiUrl}/widget/${type}/${id}?sport=${sport.toUpperCase()}`;
+      // Use new widget/info endpoint
+      const url = `${this.apiUrl}/widget/info/${type}/${id}?sport=${sport.toUpperCase()}`;
 
       try {
         const { data } = await swrFetch<Record<string, unknown>>(url, {
@@ -456,19 +457,15 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       let logo = '';
       let subtitle = '';
 
+      // New API returns flat data
       if (type === 'team') {
-        const teamData = data.team || {};
-        const venueData = data.venue || {};
-        name = teamData.name || 'Unknown';
-        logo = teamData.logo || '';
-        subtitle = venueData.name || teamData.city || teamData.country || '';
+        name = data.name || 'Unknown';
+        logo = data.logo || '';
+        subtitle = data.venue_name || data.city || data.country || '';
       } else {
-        const playerData = data.player || {};
-        const stats = data.statistics || [];
-        const teamInfo = stats[0]?.team;
-        name = `${playerData.firstname || ''} ${playerData.lastname || ''}`.trim() || playerData.name || 'Unknown';
-        logo = playerData.photo || '';
-        subtitle = teamInfo?.name || playerData.position || '';
+        name = `${data.firstname || ''} ${data.lastname || ''}`.trim() || data.name || 'Unknown';
+        logo = data.photo || '';
+        subtitle = data.team_name || data.position || '';
       }
 
       const nameEl = document.getElementById(`${prefix}-name`);
@@ -491,16 +488,17 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       const primaryNameEl = document.getElementById('legend-primary-name');
       const secondaryNameEl = document.getElementById('legend-secondary-name');
 
+      // New API returns flat data
       if (primaryNameEl && this.primaryData) {
-        const name = this.primaryData.team?.name ||
-          `${this.primaryData.player?.firstname || ''} ${this.primaryData.player?.lastname || ''}`.trim() ||
+        const name = this.primaryData.name ||
+          `${this.primaryData.firstname || ''} ${this.primaryData.lastname || ''}`.trim() ||
           'Primary';
         primaryNameEl.textContent = name;
       }
 
       if (secondaryNameEl && this.secondaryData) {
-        const name = this.secondaryData.team?.name ||
-          `${this.secondaryData.player?.firstname || ''} ${this.secondaryData.player?.lastname || ''}`.trim() ||
+        const name = this.secondaryData.name ||
+          `${this.secondaryData.firstname || ''} ${this.secondaryData.lastname || ''}`.trim() ||
           'Comparison';
         secondaryNameEl.textContent = name;
       }

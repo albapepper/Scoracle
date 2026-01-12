@@ -417,7 +417,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private async fetchData() {
-      const url = `${this.apiUrl}/widget/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
+      const url = `${this.apiUrl}/widget/info/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
 
       try {
         // Use SWR fetch for caching and deduplication
@@ -447,51 +447,56 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       let details: { label: string; value: string }[] = [];
 
       if (this.type === 'team') {
-        const teamData = data.team || {};
-        const venueData = data.venue || {};
-        name = teamData.name || 'Unknown';
-        logo = teamData.logo || '';
-        subtitle = venueData.name || teamData.city || '';
+        // New API returns flat team data from /widget/info/team/{id}
+        name = data.name || 'Unknown';
+        logo = data.logo || '';
+        subtitle = data.venue_name || data.city || '';
 
         // Add team details
-        if (teamData.country) {
-          details.push({ label: 'Country', value: teamData.country });
+        if (data.country) {
+          details.push({ label: 'Country', value: data.country });
         }
-        if (teamData.founded) {
-          details.push({ label: 'Founded', value: String(teamData.founded) });
+        if (data.founded) {
+          details.push({ label: 'Founded', value: String(data.founded) });
         }
-        if (venueData.capacity) {
-          details.push({ label: 'Capacity', value: venueData.capacity.toLocaleString() });
+        if (data.venue_capacity) {
+          details.push({ label: 'Capacity', value: data.venue_capacity.toLocaleString() });
         }
-        if (teamData.coach) {
-          details.push({ label: 'Coach', value: teamData.coach });
+        if (data.coach) {
+          details.push({ label: 'Coach', value: data.coach });
         }
       } else {
-        const playerData = data.player || {};
-        const stats = data.statistics || [];
-        const teamInfo = stats[0]?.team;
-        name = `${playerData.firstname || ''} ${playerData.lastname || ''}`.trim() || playerData.name || 'Unknown';
-        logo = playerData.photo || '';
-        subtitle = teamInfo?.name || '';
+        // New API returns flat player data from /widget/info/player/{id}
+        name = `${data.firstname || ''} ${data.lastname || ''}`.trim() || data.name || 'Unknown';
+        logo = data.photo || '';
+        subtitle = data.team_name || '';
 
-        // Add player details
-        if (playerData.position) {
-          details.push({ label: 'Position', value: playerData.position });
+        // Add player details - handle different field names from new API
+        if (data.position) {
+          details.push({ label: 'Position', value: data.position });
         }
-        if (playerData.number) {
-          details.push({ label: 'Number', value: `#${playerData.number}` });
+        if (data.jersey_number) {
+          details.push({ label: 'Number', value: `#${data.jersey_number}` });
         }
-        if (playerData.age) {
-          details.push({ label: 'Age', value: String(playerData.age) });
+        if (data.age) {
+          details.push({ label: 'Age', value: String(data.age) });
         }
-        if (playerData.height) {
-          details.push({ label: 'Height', value: playerData.height });
+        // Handle NBA-style height (height_feet + height_inches)
+        if (data.height_feet && data.height_inches) {
+          details.push({ label: 'Height', value: `${data.height_feet}'${data.height_inches}"` });
+        } else if (data.height) {
+          details.push({ label: 'Height', value: data.height });
         }
-        if (playerData.weight) {
-          details.push({ label: 'Weight', value: playerData.weight });
+        // Handle NBA-style weight (weight_pounds)
+        if (data.weight_pounds) {
+          details.push({ label: 'Weight', value: `${data.weight_pounds} lbs` });
+        } else if (data.weight) {
+          details.push({ label: 'Weight', value: data.weight });
         }
-        if (playerData.nationality) {
-          details.push({ label: 'Nationality', value: playerData.nationality });
+        if (data.birth_country) {
+          details.push({ label: 'Country', value: data.birth_country });
+        } else if (data.nationality) {
+          details.push({ label: 'Nationality', value: data.nationality });
         }
       }
 
