@@ -1,6 +1,10 @@
 {
-  "extends": "astro/tsconfigs/strict",
+  // Removed "extends": "astro/tsconfigs/strict" to avoid editor errors
+  // when the package config isn't resolvable. Explicit compiler options
+  // are provided below instead.
   "compilerOptions": {
+    "module": "es2020",
+    "target": "es2020",
     "jsx": "react-jsx",
     "jsxImportSource": "react",
     "baseUrl": ".",
