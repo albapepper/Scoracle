@@ -1,10 +1,10 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import EntityWidget from '../components/EntityWidget.astro';
-import StatsCard from '../components/StatsCard.astro';
+import ProfileWidget from '../components/ProfileWidget.astro';
+import StatsWidget from '../components/StatsWidget.astro';
 import ComparisonSearchModal from '../components/ComparisonSearchModal.astro';
-import EntityWidgetComparison from '../components/EntityWidgetComparison.astro';
-import StatsCardComparison from '../components/StatsCardComparison.astro';
+import ProfileWidgetComparison from '../components/ProfileWidgetComparison.astro';
+import StatsWidgetComparison from '../components/StatsWidgetComparison.astro';
 ---
 
 <Layout
@@ -14,14 +14,14 @@ import StatsCardComparison from '../components/StatsCardComparison.astro';
   <main class="entity-main">
     <!-- Single Entity View (default) -->
     <div id="single-entity-view">
-      <EntityWidget page="entity" showCompareButton={true} />
-      <StatsCard title="Statistics" />
+      <ProfileWidget page="entity" showCompareButton={true} />
+      <StatsWidget title="Statistics" />
     </div>
 
     <!-- Comparison View (hidden by default) -->
     <div id="comparison-view" class="comparison-view hidden">
-      <EntityWidgetComparison />
-      <StatsCardComparison title="Statistics Comparison" />
+      <ProfileWidgetComparison />
+      <StatsWidgetComparison title="Statistics Comparison" />
     </div>
 
     <!-- Comparison Search Modal -->
@@ -99,7 +99,7 @@ import StatsCardComparison from '../components/StatsCardComparison.astro';
     }
 
     private bindEvents() {
-      // Listen for comparison add request (from EntityWidget + button)
+      // Listen for comparison add request (from ProfileWidget + button)
       window.addEventListener('comparison:add', ((event: CustomEvent) => {
         const { sport, type, id, name } = event.detail;
         this.primarySport = sport;
@@ -147,7 +147,7 @@ import StatsCardComparison from '../components/StatsCardComparison.astro';
       this.comparisonView?.classList.remove('hidden');
 
       // Initialize comparison widgets
-      const widgetComparison = (window as any).entityWidgetComparison;
+      const widgetComparison = (window as any).profileWidgetComparison;
       if (widgetComparison) {
         widgetComparison.show(
           this.primarySport,
@@ -158,8 +158,8 @@ import StatsCardComparison from '../components/StatsCardComparison.astro';
         );
       }
 
-      // Initialize comparison stats card
-      const statsComparison = (window as any).statsCardComparison;
+      // Initialize comparison stats widget
+      const statsComparison = (window as any).statsWidgetComparison;
       if (statsComparison) {
         statsComparison.show(
           this.primarySport,
@@ -184,10 +184,10 @@ import StatsCardComparison from '../components/StatsCardComparison.astro';
       this.comparisonView?.classList.add('hidden');
 
       // Hide comparison components
-      const widgetComparison = (window as any).entityWidgetComparison;
+      const widgetComparison = (window as any).profileWidgetComparison;
       if (widgetComparison) widgetComparison.hide();
 
-      const statsComparison = (window as any).statsCardComparison;
+      const statsComparison = (window as any).statsWidgetComparison;
       if (statsComparison) statsComparison.hide();
 
       // Reset secondary entity
@@ -222,9 +222,9 @@ import StatsCardComparison from '../components/StatsCardComparison.astro';
       const compareId = params.get('compareId');
 
       if (compareType && compareId) {
-        // Wait for entity widget to load and provide primary entity info
+        // Wait for profile widget to load and provide primary entity info
         const checkWidget = () => {
-          const widget = (window as any).entityWidget;
+          const widget = (window as any).profileWidget;
           if (widget && widget.getSport()) {
             this.primarySport = widget.getSport();
             this.primaryType = widget.getType();

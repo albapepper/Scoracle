@@ -1,0 +1,556 @@
+---
+/**
+ * Profile Widget Comparison
+ *
+ * Displays two profile widgets side-by-side for comparison.
+ * Used on the entity page when a comparison entity is selected.
+ * Fetches: GET /api/v1/widget/profile/{entity_type}/{entity_id}?sport={sport}
+ */
+
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+---
+
+<div id="profile-widget-comparison" class="profile-comparison-container hidden">
+  <!-- Legend -->
+  <div class="comparison-legend">
+    <div class="legend-item">
+      <span class="legend-dot primary"></span>
+      <span id="legend-primary-name" class="legend-name">Primary</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-dot secondary"></span>
+      <span id="legend-secondary-name" class="legend-name">Comparison</span>
+    </div>
+  </div>
+
+  <!-- Profile Widgets Container -->
+  <div class="profile-pair-wrapper">
+    <!-- Primary Entity -->
+    <div
+      id="compare-primary-widget"
+      class="profile-widget-half card"
+      data-api={apiUrl}
+      data-entity="primary"
+    >
+      <div class="color-indicator primary"></div>
+      <div class="pw-body">
+        <div id="compare-primary-loading" class="pw-loading">
+          <div class="skeleton-circle"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line short"></div>
+        </div>
+        <div id="compare-primary-content" class="pw-content">
+          <img id="compare-primary-logo" class="pw-logo" src="" alt="" style="display: none;" />
+          <h2 id="compare-primary-name" class="pw-name"></h2>
+          <p id="compare-primary-subtitle" class="pw-subtitle"></p>
+        </div>
+        <div id="compare-primary-error" class="pw-error">
+          <p>Unable to load profile</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Secondary (Comparison) Entity -->
+    <div
+      id="compare-secondary-widget"
+      class="profile-widget-half card"
+      data-api={apiUrl}
+      data-entity="secondary"
+    >
+      <div class="color-indicator secondary"></div>
+      <div class="pw-body">
+        <div id="compare-secondary-loading" class="pw-loading">
+          <div class="skeleton-circle"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line short"></div>
+        </div>
+        <div id="compare-secondary-content" class="pw-content">
+          <img id="compare-secondary-logo" class="pw-logo" src="" alt="" style="display: none;" />
+          <h2 id="compare-secondary-name" class="pw-name"></h2>
+          <p id="compare-secondary-subtitle" class="pw-subtitle"></p>
+        </div>
+        <div id="compare-secondary-error" class="pw-error">
+          <p>Unable to load profile</p>
+        </div>
+      </div>
+      <!-- Remove comparison button -->
+      <button id="remove-comparison-btn" class="remove-comparison-btn" title="Remove comparison">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .profile-comparison-container {
+    width: 100%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .profile-comparison-container.hidden {
+    display: none;
+  }
+
+  .comparison-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 0.5rem 0;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .legend-dot.primary {
+    background-color: var(--compare-primary);
+  }
+
+  .legend-dot.secondary {
+    background-color: var(--compare-secondary);
+  }
+
+  :global(.dark) .legend-dot.primary {
+    background-color: var(--compare-primary-dark);
+  }
+
+  :global(.dark) .legend-dot.secondary {
+    background-color: var(--compare-secondary-dark);
+  }
+
+  .legend-name {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.dark) .legend-name {
+    color: var(--text-secondary-dark);
+  }
+
+  .profile-pair-wrapper {
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .profile-widget-half {
+    flex: 1;
+    text-align: center;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-radius: 0.375rem;
+    overflow: hidden;
+    min-width: 0;
+    position: relative;
+  }
+
+  .color-indicator {
+    width: 100%;
+    height: 4px;
+  }
+
+  .color-indicator.primary {
+    background-color: var(--compare-primary);
+  }
+
+  .color-indicator.secondary {
+    background-color: var(--compare-secondary);
+  }
+
+  :global(.dark) .color-indicator.primary {
+    background-color: var(--compare-primary-dark);
+  }
+
+  :global(.dark) .color-indicator.secondary {
+    background-color: var(--compare-secondary-dark);
+  }
+
+  .pw-body {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    flex: 1;
+    min-height: 120px;
+  }
+
+  .pw-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .pw-content, .pw-error {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .skeleton-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--border);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .skeleton-line {
+    height: 12px;
+    width: 100px;
+    border-radius: 4px;
+    background: var(--border);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .skeleton-line.short {
+    width: 70px;
+  }
+
+  :global(.dark) .skeleton-circle,
+  :global(.dark) .skeleton-line {
+    background: var(--border-dark);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .pw-logo {
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+    margin-bottom: 0.25rem;
+  }
+
+  .pw-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  :global(.dark) .pw-name {
+    color: var(--text-dark);
+  }
+
+  .pw-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.dark) .pw-subtitle {
+    color: var(--text-secondary-dark);
+  }
+
+  .pw-error p {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    margin: 0;
+  }
+
+  :global(.dark) .pw-error p {
+    color: var(--text-secondary-dark);
+  }
+
+  .remove-comparison-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background-color: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--text-tertiary);
+    opacity: 0.7;
+    transition: opacity 0.15s;
+  }
+
+  .remove-comparison-btn:hover {
+    opacity: 1;
+    color: var(--text-secondary);
+  }
+
+  :global(.dark) .remove-comparison-btn {
+    background-color: var(--bg-dark);
+    border-color: var(--border-dark);
+    color: var(--text-tertiary-dark);
+  }
+
+  :global(.dark) .remove-comparison-btn:hover {
+    color: var(--text-secondary-dark);
+  }
+
+  /* Mobile: stack vertically */
+  @media (max-width: 480px) {
+    .profile-pair-wrapper {
+      flex-direction: column;
+    }
+
+    .comparison-legend {
+      gap: 1rem;
+    }
+
+    .pw-logo {
+      width: 48px;
+      height: 48px;
+    }
+
+    .pw-name {
+      font-size: 0.95rem;
+    }
+  }
+</style>
+
+<script>
+  import { swrFetch, setPageData, CACHE_PRESETS } from '../lib/utils/api-fetcher';
+
+  interface ProfileInfo {
+    id: number;
+    first_name?: string;
+    last_name?: string;
+    full_name?: string;
+    name?: string;
+    position?: string;
+    photo_url?: string;
+    logo_url?: string;
+    team?: { name: string; logo_url?: string };
+    venue_name?: string;
+    city?: string;
+    country?: string;
+  }
+
+  interface ProfileResponse {
+    entity_id: number;
+    entity_type: 'player' | 'team';
+    sport: string;
+    info: ProfileInfo;
+  }
+
+  class ProfileWidgetComparisonManager {
+    private container: HTMLElement | null = null;
+    private apiUrl: string = '';
+    private removeBtn: HTMLElement | null = null;
+
+    private primaryData: ProfileResponse | null = null;
+    private secondaryData: ProfileResponse | null = null;
+
+    constructor() {
+      this.container = document.getElementById('profile-widget-comparison');
+      if (!this.container) return;
+
+      const primaryWidget = document.getElementById('compare-primary-widget');
+      this.apiUrl = primaryWidget?.dataset.api || 'http://localhost:8000/api/v1';
+      this.removeBtn = document.getElementById('remove-comparison-btn');
+
+      this.bindEvents();
+      this.exposeAPI();
+    }
+
+    private bindEvents() {
+      this.removeBtn?.addEventListener('click', () => {
+        this.hide();
+        window.dispatchEvent(new CustomEvent('comparison:removed'));
+      });
+    }
+
+    private exposeAPI() {
+      (window as any).profileWidgetComparison = {
+        show: (
+          sport: string,
+          primaryType: string,
+          primaryId: string,
+          secondaryType: string,
+          secondaryId: string
+        ) => {
+          this.show(sport, primaryType, primaryId, secondaryType, secondaryId);
+        },
+        hide: () => this.hide(),
+        isVisible: () => this.isVisible(),
+        getPrimaryData: () => this.primaryData,
+        getSecondaryData: () => this.secondaryData,
+      };
+    }
+
+    public async show(
+      sport: string,
+      primaryType: string,
+      primaryId: string,
+      secondaryType: string,
+      secondaryId: string
+    ) {
+      if (!this.container) return;
+
+      this.container.classList.remove('hidden');
+
+      const [primaryResult, secondaryResult] = await Promise.all([
+        this.fetchProfile('compare-primary', primaryType, primaryId, sport),
+        this.fetchProfile('compare-secondary', secondaryType, secondaryId, sport),
+      ]);
+
+      this.primaryData = primaryResult;
+      this.secondaryData = secondaryResult;
+
+      this.updateLegend();
+
+      setPageData('comparisonWidget', {
+        primary: this.primaryData,
+        secondary: this.secondaryData,
+      });
+    }
+
+    private async fetchProfile(
+      prefix: string,
+      type: string,
+      id: string,
+      sport: string
+    ): Promise<ProfileResponse | null> {
+      const url = `${this.apiUrl}/widget/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
+
+      try {
+        const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);
+
+        if (!data || !data.info) {
+          this.showError(prefix);
+          return null;
+        }
+
+        this.renderProfile(prefix, data);
+        return data;
+      } catch {
+        this.showError(prefix);
+        return null;
+      }
+    }
+
+    private renderProfile(prefix: string, data: ProfileResponse) {
+      const info = data.info;
+      let name = '';
+      let logo = '';
+      let subtitle = '';
+
+      if (data.entity_type === 'team') {
+        name = info.name || info.full_name || 'Unknown';
+        logo = info.logo_url || '';
+        subtitle = info.venue_name || info.city || info.country || '';
+      } else {
+        name = info.full_name || `${info.first_name || ''} ${info.last_name || ''}`.trim() || 'Unknown';
+        logo = info.photo_url || '';
+        subtitle = info.team?.name || info.position || '';
+      }
+
+      const nameEl = document.getElementById(`${prefix}-name`);
+      const subtitleEl = document.getElementById(`${prefix}-subtitle`);
+      const logoEl = document.getElementById(`${prefix}-logo`) as HTMLImageElement;
+
+      if (nameEl) nameEl.textContent = name;
+      if (subtitleEl) subtitleEl.textContent = subtitle;
+
+      if (logoEl && logo) {
+        logoEl.src = logo;
+        logoEl.alt = name;
+        logoEl.style.display = 'block';
+      }
+
+      this.showContent(prefix);
+    }
+
+    private updateLegend() {
+      const primaryNameEl = document.getElementById('legend-primary-name');
+      const secondaryNameEl = document.getElementById('legend-secondary-name');
+
+      if (primaryNameEl && this.primaryData?.info) {
+        const info = this.primaryData.info;
+        const name = info.full_name || info.name ||
+          `${info.first_name || ''} ${info.last_name || ''}`.trim() || 'Primary';
+        primaryNameEl.textContent = name;
+      }
+
+      if (secondaryNameEl && this.secondaryData?.info) {
+        const info = this.secondaryData.info;
+        const name = info.full_name || info.name ||
+          `${info.first_name || ''} ${info.last_name || ''}`.trim() || 'Comparison';
+        secondaryNameEl.textContent = name;
+      }
+    }
+
+    private showContent(prefix: string) {
+      const loadingEl = document.getElementById(`${prefix}-loading`);
+      const contentEl = document.getElementById(`${prefix}-content`);
+      const errorEl = document.getElementById(`${prefix}-error`);
+
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (contentEl) contentEl.style.display = 'flex';
+      if (errorEl) errorEl.style.display = 'none';
+    }
+
+    private showError(prefix: string) {
+      const loadingEl = document.getElementById(`${prefix}-loading`);
+      const contentEl = document.getElementById(`${prefix}-content`);
+      const errorEl = document.getElementById(`${prefix}-error`);
+
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (contentEl) contentEl.style.display = 'none';
+      if (errorEl) errorEl.style.display = 'flex';
+    }
+
+    public hide() {
+      if (!this.container) return;
+      this.container.classList.add('hidden');
+      this.primaryData = null;
+      this.secondaryData = null;
+
+      ['compare-primary', 'compare-secondary'].forEach((prefix) => {
+        const loadingEl = document.getElementById(`${prefix}-loading`);
+        const contentEl = document.getElementById(`${prefix}-content`);
+        const errorEl = document.getElementById(`${prefix}-error`);
+
+        if (loadingEl) loadingEl.style.display = 'flex';
+        if (contentEl) contentEl.style.display = 'none';
+        if (errorEl) errorEl.style.display = 'none';
+      });
+    }
+
+    public isVisible(): boolean {
+      return this.container ? !this.container.classList.contains('hidden') : false;
+    }
+  }
+
+  new ProfileWidgetComparisonManager();
+</script>

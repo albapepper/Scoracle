@@ -290,15 +290,17 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       let logo = '';
       let subtitle = '';
 
-      // New API returns flat data
-      if (type === 'team') {
-        name = data.name || 'Unknown';
-        logo = data.logo || '';
-        subtitle = data.venue_name || data.city || data.country || '';
+      // New scoracle-data API returns nested data structure
+      const info = data.info || data;
+
+      if (type === 'team' || data.entity_type === 'team') {
+        name = info.name || info.full_name || 'Unknown';
+        logo = info.logo_url || '';
+        subtitle = info.venue_name || info.city || info.country || '';
       } else {
-        name = `${data.firstname || ''} ${data.lastname || ''}`.trim() || data.name || 'Unknown';
-        logo = data.photo || '';
-        subtitle = data.team_name || data.position || '';
+        name = info.full_name || `${info.first_name || ''} ${info.last_name || ''}`.trim() || 'Unknown';
+        logo = info.photo_url || '';
+        subtitle = info.team?.name || info.position || '';
       }
 
       const nameEl = document.getElementById(`${prefix}-ew-name`);

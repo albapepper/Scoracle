@@ -1,0 +1,726 @@
+---
+/**
+ * Stats Widget
+ *
+ * Displays entity statistics from the backend with optional pizza chart.
+ * Fetches: GET /api/v1/widget/stats/{entity_type}/{entity_id}?sport={sport}
+ *
+ * Response structure:
+ * {
+ *   entity_id, entity_type, sport, season,
+ *   info: { id, first_name, last_name, ... },
+ *   stats: { pass_yards, rush_yards, ... },
+ *   percentiles: []
+ * }
+ */
+
+interface Props {
+  title?: string;
+  showChart?: boolean;
+}
+
+const { title = 'Statistics', showChart = true } = Astro.props;
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+---
+
+<div class="stats-widget card" data-api-url={apiUrl} data-show-chart={showChart.toString()}>
+  <!-- Header -->
+  <div class="stats-widget-header">
+    <h3 class="stats-widget-title">{title}</h3>
+    <span id="stats-season" class="stats-widget-season"></span>
+  </div>
+
+  <!-- Pizza Chart Container -->
+  {
+    showChart && (
+      <div id="stats-chart-container" class="stats-chart-container">
+        <div id="stats-chart" class="stats-chart" />
+        <div id="stats-chart-loading" class="chart-skeleton">
+          <div class="chart-skeleton-circle" />
+        </div>
+      </div>
+    )
+  }
+
+  <!-- Stats Categories -->
+  <div class="stats-widget-body">
+    <!-- Loading State -->
+    <div id="stats-loading" class="stats-loading">
+      <div class="category-skeleton">
+        <div class="skeleton-header"></div>
+        <div class="skeleton-rows">
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+        </div>
+      </div>
+      <div class="category-skeleton">
+        <div class="skeleton-header"></div>
+        <div class="skeleton-rows">
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Categories Container -->
+    <div id="stats-categories" class="stats-categories hidden">
+      <!-- Categories populated by JavaScript -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="stats-empty" class="stats-empty hidden">
+      <p>No statistics available</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="stats-error" class="stats-error hidden">
+      <p>Unable to load statistics</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .stats-widget {
+    width: 100%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0.375rem;
+    overflow: hidden;
+  }
+
+  .stats-widget-header {
+    padding: 1.25rem 1.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  :global(.dark) .stats-widget-header {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .stats-widget-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  :global(.dark) .stats-widget-title {
+    color: var(--text-dark);
+  }
+
+  .stats-widget-season {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  :global(.dark) .stats-widget-season {
+    color: var(--text-secondary-dark);
+  }
+
+  /* Chart Container */
+  .stats-chart-container {
+    padding: 1.5rem 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    min-height: 280px;
+  }
+
+  :global(.dark) .stats-chart-container {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .stats-chart {
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .stats-chart :global(.pizza-chart-svg) {
+    display: block;
+  }
+
+  .stats-chart :global(.chart-no-data) {
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+    text-align: center;
+    margin: 0;
+  }
+
+  :global(.dark) .stats-chart :global(.chart-no-data) {
+    color: var(--text-tertiary-dark);
+  }
+
+  /* Chart Skeleton */
+  .chart-skeleton {
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .chart-skeleton-circle {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: var(--border);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  :global(.dark) .chart-skeleton-circle {
+    background: var(--border-dark);
+  }
+
+  /* Stats Body */
+  .stats-widget-body {
+    padding: 0 1.5rem 1.25rem;
+  }
+
+  /* Loading Skeleton */
+  .stats-loading {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding-top: 1rem;
+  }
+
+  .category-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .skeleton-header {
+    width: 30%;
+    height: 14px;
+    background: var(--border);
+    border-radius: 3px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .skeleton-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .skeleton-row {
+    height: 28px;
+    background: var(--border);
+    border-radius: 3px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  :global(.dark) .skeleton-header,
+  :global(.dark) .skeleton-row {
+    background: var(--border-dark);
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  /* Categories */
+  .stats-categories {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stats-categories :global(.stats-category) {
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stats-categories :global(.stats-category:first-child) {
+    padding-top: 1.25rem;
+  }
+
+  .stats-categories :global(.stats-category:last-child) {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  :global(.dark) .stats-categories :global(.stats-category) {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .stats-categories :global(.category-header) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.625rem;
+  }
+
+  .stats-categories :global(.category-indicator) {
+    width: 3px;
+    height: 14px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .stats-categories :global(.category-title) {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  :global(.dark) .stats-categories :global(.category-title) {
+    color: var(--text-dark);
+  }
+
+  .stats-categories :global(.category-stats) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .stats-categories :global(.stat-row) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.375rem 0;
+  }
+
+  .stats-categories :global(.stat-label) {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    flex: 1;
+  }
+
+  :global(.dark) .stats-categories :global(.stat-label) {
+    color: var(--text-secondary-dark);
+  }
+
+  .stats-categories :global(.stat-values) {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  .stats-categories :global(.stat-value) {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    min-width: 48px;
+    text-align: right;
+  }
+
+  :global(.dark) .stats-categories :global(.stat-value) {
+    color: var(--text-dark);
+  }
+
+  .stats-categories :global(.stat-percentile) {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    min-width: 38px;
+    text-align: center;
+    color: #ffffff;
+  }
+
+  /* Percentile tier colors */
+  .stats-categories :global(.percentile-elite) {
+    background-color: var(--percentile-elite);
+  }
+  .stats-categories :global(.percentile-above) {
+    background-color: var(--percentile-above);
+  }
+  .stats-categories :global(.percentile-average) {
+    background-color: var(--percentile-average);
+  }
+  .stats-categories :global(.percentile-below) {
+    background-color: var(--percentile-below);
+  }
+  .stats-categories :global(.percentile-poor) {
+    background-color: var(--percentile-poor);
+  }
+
+  /* Empty & Error States */
+  .stats-empty,
+  .stats-error {
+    padding: 2rem 0;
+    text-align: center;
+  }
+
+  .stats-empty p,
+  .stats-error p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-tertiary);
+  }
+
+  :global(.dark) .stats-empty p,
+  :global(.dark) .stats-error p {
+    color: var(--text-tertiary-dark);
+  }
+
+  /* Utility */
+  .hidden {
+    display: none !important;
+  }
+
+  /* Responsive - Mobile */
+  @media (max-width: 480px) {
+    .stats-widget-header {
+      padding: 1rem;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.25rem;
+    }
+
+    .stats-widget-title {
+      font-size: 0.9rem;
+    }
+
+    .stats-widget-season {
+      font-size: 0.75rem;
+    }
+
+    .stats-chart-container {
+      padding: 1rem;
+      min-height: 240px;
+    }
+
+    .stats-chart {
+      max-width: 280px;
+    }
+
+    .stats-widget-body {
+      padding: 0 1rem 1rem;
+    }
+
+    .stats-categories :global(.stat-row) {
+      flex-wrap: wrap;
+      gap: 0.25rem;
+    }
+
+    .stats-categories :global(.stat-values) {
+      gap: 0.5rem;
+    }
+
+    .stats-categories :global(.stat-value) {
+      font-size: 0.8rem;
+      min-width: 40px;
+    }
+
+    .stats-categories :global(.stat-percentile) {
+      font-size: 0.65rem;
+      min-width: 34px;
+      padding: 0.1rem 0.25rem;
+    }
+  }
+
+  /* Extra small screens */
+  @media (max-width: 320px) {
+    .stats-widget-header {
+      padding: 0.75rem;
+    }
+
+    .stats-widget-body {
+      padding: 0 0.75rem 0.75rem;
+    }
+
+    .stats-chart-container {
+      min-height: 200px;
+    }
+
+    .stats-chart {
+      max-width: 220px;
+    }
+  }
+</style>
+
+<script>
+  import { escapeHtml, parseEntityParams } from '../lib/utils/dom';
+  import { swrFetch, setPageData, CACHE_PRESETS } from '../lib/utils/api-fetcher';
+  import { PizzaChart, type PizzaChartStat } from '../lib/charts/pizza-chart';
+  import { categorizeStats, type StatItem, type Category } from '../lib/utils/stats-categorizer';
+
+  // API Response types matching scoracle-data backend
+  interface StatsResponse {
+    entity_id: number;
+    entity_type: 'player' | 'team';
+    sport: string;
+    season: number;
+    info: {
+      id: number;
+      first_name?: string;
+      last_name?: string;
+      full_name?: string;
+      name?: string;
+      position?: string;
+      team?: { name: string };
+    };
+    stats: Record<string, unknown>;
+    percentiles: Array<{ stat_key: string; percentile: number }> | Record<string, number>;
+  }
+
+  /**
+   * StatsWidget Manager
+   *
+   * Handles loading stats from the backend API,
+   * rendering the pizza chart, and populating category tables.
+   */
+  class StatsWidgetManager {
+    private widget: HTMLElement;
+    private apiUrl: string;
+    private showChart: boolean;
+    private pizzaChart: PizzaChart | null = null;
+
+    constructor(widget: HTMLElement) {
+      this.widget = widget;
+      this.apiUrl = widget.dataset.apiUrl || '';
+      this.showChart = widget.dataset.showChart === 'true';
+      this.init();
+    }
+
+    private async init() {
+      const params = parseEntityParams();
+      const sport = params.sport;
+      const type = params.type;
+      const id = params.id;
+
+      if (!sport || !type || !id) {
+        this.showError();
+        return;
+      }
+
+      try {
+        await this.loadStats(sport, type, id);
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.error('Failed to load stats:', error);
+        }
+        this.showError();
+      }
+    }
+
+    private async loadStats(sport: string, type: string, id: string) {
+      const url = `${this.apiUrl}/widget/stats/${type}/${id}?sport=${sport.toUpperCase()}`;
+
+      const { data } = await swrFetch<StatsResponse>(url, CACHE_PRESETS.stats);
+
+      if (!data || !data.stats) {
+        this.showEmpty();
+        return;
+      }
+
+      // Convert percentiles array to object if needed
+      let percentilesObj: Record<string, number> = {};
+      if (Array.isArray(data.percentiles)) {
+        for (const p of data.percentiles) {
+          percentilesObj[p.stat_key] = p.percentile;
+        }
+      } else if (data.percentiles && typeof data.percentiles === 'object') {
+        percentilesObj = data.percentiles as Record<string, number>;
+      }
+
+      // Transform flat stats into categorized format
+      const categories = categorizeStats(data.stats, percentilesObj, sport);
+
+      if (categories.length === 0) {
+        this.showEmpty();
+        return;
+      }
+
+      // Share data with other components
+      setPageData('stats', {
+        season: data.season,
+        entity: {
+          id: String(data.entity_id),
+          name: data.info?.full_name || data.info?.name || '',
+          type: data.entity_type,
+        },
+        categories: categories,
+      });
+
+      // Update season display
+      const seasonEl = this.widget.querySelector('#stats-season');
+      if (seasonEl) {
+        seasonEl.textContent = `${data.season} Season`;
+      }
+
+      // Render pizza chart if enabled
+      if (this.showChart) {
+        this.renderChart(categories);
+      }
+
+      // Render category tables
+      this.renderCategories(categories);
+    }
+
+    private renderChart(categories: Category[]) {
+      const chartContainer = this.widget.querySelector('#stats-chart') as HTMLElement;
+      const chartLoading = this.widget.querySelector('#stats-chart-loading');
+
+      if (!chartContainer) return;
+
+      // Collect all stats with percentiles for the chart
+      const chartStats: PizzaChartStat[] = [];
+
+      categories.forEach((category) => {
+        category.stats.forEach((stat) => {
+          if (stat.percentile !== undefined && stat.percentile !== null) {
+            chartStats.push({
+              key: stat.key,
+              label: stat.label,
+              value: stat.value ?? '-',
+              percentile: stat.percentile,
+              categoryId: category.id,
+            });
+          }
+        });
+      });
+
+      // Hide loading skeleton
+      chartLoading?.classList.add('hidden');
+
+      if (chartStats.length < 3) {
+        // Not enough data - hide chart section entirely
+        const chartSection = this.widget.querySelector('#stats-chart-container');
+        chartSection?.classList.add('hidden');
+        return;
+      }
+
+      // Create and render chart
+      this.pizzaChart = new PizzaChart(chartContainer, {
+        width: 360,
+        height: 360,
+        innerRadius: 35,
+        outerRadius: 120,
+        labelOffset: 30,
+      });
+
+      this.pizzaChart.render(chartStats);
+    }
+
+    private renderCategories(categories: Category[]) {
+      const container = this.widget.querySelector('#stats-categories');
+      if (!container) return;
+
+      container.innerHTML = categories
+        .map(
+          (category) => `
+        <div class="stats-category" data-category="${category.id}">
+          <div class="category-header">
+            <div class="category-indicator" style="background: var(--category-${category.id}, var(--accent))"></div>
+            <h4 class="category-title">${escapeHtml(category.label)}</h4>
+          </div>
+          <div class="category-stats">
+            ${category.stats.map((stat) => this.renderStatRow(stat)).join('')}
+          </div>
+        </div>
+      `
+        )
+        .join('');
+
+      this.showContent();
+    }
+
+    private renderStatRow(stat: StatItem): string {
+      const percentileClass = this.getPercentileClass(stat.percentile);
+      const percentileDisplay =
+        stat.percentile !== undefined && stat.percentile !== null
+          ? `<span class="stat-percentile ${percentileClass}">${Math.round(stat.percentile)}%</span>`
+          : '';
+
+      const displayValue = stat.value !== null ? String(stat.value) : '-';
+
+      return `
+        <div class="stat-row">
+          <span class="stat-label">${escapeHtml(stat.label)}</span>
+          <div class="stat-values">
+            <span class="stat-value">${escapeHtml(displayValue)}</span>
+            ${percentileDisplay}
+          </div>
+        </div>
+      `;
+    }
+
+    private getPercentileClass(percentile?: number | null): string {
+      if (percentile === undefined || percentile === null) return '';
+      if (percentile >= 90) return 'percentile-elite';
+      if (percentile >= 75) return 'percentile-above';
+      if (percentile >= 50) return 'percentile-average';
+      if (percentile >= 25) return 'percentile-below';
+      return 'percentile-poor';
+    }
+
+    private showContent() {
+      this.widget.querySelector('#stats-loading')?.classList.add('hidden');
+      this.widget.querySelector('#stats-categories')?.classList.remove('hidden');
+      this.widget.querySelector('#stats-empty')?.classList.add('hidden');
+      this.widget.querySelector('#stats-error')?.classList.add('hidden');
+    }
+
+    private showEmpty() {
+      this.widget.querySelector('#stats-loading')?.classList.add('hidden');
+      this.widget.querySelector('#stats-categories')?.classList.add('hidden');
+      this.widget.querySelector('#stats-empty')?.classList.remove('hidden');
+      this.widget.querySelector('#stats-error')?.classList.add('hidden');
+
+      // Hide chart if no data
+      const chartContainer = this.widget.querySelector('#stats-chart-container');
+      chartContainer?.classList.add('hidden');
+    }
+
+    private showError() {
+      this.widget.querySelector('#stats-loading')?.classList.add('hidden');
+      this.widget.querySelector('#stats-categories')?.classList.add('hidden');
+      this.widget.querySelector('#stats-empty')?.classList.add('hidden');
+      this.widget.querySelector('#stats-error')?.classList.remove('hidden');
+
+      // Hide chart on error
+      const chartContainer = this.widget.querySelector('#stats-chart-container');
+      chartContainer?.classList.add('hidden');
+    }
+
+    /**
+     * Refresh the chart (e.g., on theme change).
+     */
+    public refreshChart(): void {
+      this.pizzaChart?.refresh();
+    }
+  }
+
+  // Initialize stats widget on page load
+  const statsWidget = document.querySelector<HTMLElement>('.stats-widget');
+  let manager: StatsWidgetManager | null = null;
+
+  if (statsWidget) {
+    manager = new StatsWidgetManager(statsWidget);
+  }
+
+  // Listen for theme changes to refresh chart colors
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.attributeName === 'class') {
+        // Theme changed - refresh chart to pick up new CSS variables
+        manager?.refreshChart();
+      }
+    });
+  });
+
+  observer.observe(document.documentElement, { attributes: true });
+</script>
