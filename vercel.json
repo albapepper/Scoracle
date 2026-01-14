@@ -4,17 +4,5 @@
   "buildCommand": "cd astro-frontend && npm run build",
   "installCommand": "cd astro-frontend && npm install",
   "outputDirectory": "astro-frontend/dist",
-  "framework": "astro",
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.py" },
-    { "source": "/health", "destination": "/api/index.py" }
-  ],
-  "functions": {
-    "api/index.py": {
-      "includeFiles": "backend/**"
-    }
-  },
-  "env": {
-    "PYTHONPATH": "backend"
-  }
+  "framework": "astro"
 }

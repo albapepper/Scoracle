@@ -7,23 +7,29 @@ const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('d
 export default defineConfig({
   // Set your site URL for proper canonical URLs and SEO
   site: 'https://scoracle.vercel.app',
-  
-  // Pure static output - no server-side rendering needed
-  output: 'static',
-  
+
+  // Hybrid output - static by default, SSR for dynamic pages
+  output: 'hybrid',
+
   build: {
     format: 'directory',
   },
-  
+
   integrations: [
     // Only compress in production
     ...(!isDev ? [compress()] : []),
   ],
-  
+
   vite: {
     build: {
       minify: 'terser',
       cssMinify: true,
+      // Drop console.log in production for smaller bundle
+      terserOptions: {
+        compress: {
+          drop_console: !isDev,
+        },
+      },
     },
   },
 });

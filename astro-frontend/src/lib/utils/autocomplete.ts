@@ -62,6 +62,7 @@ export class AutocompleteManager {
   }
 
   private async init() {
+    // Load data immediately for instant search results
     await this.loadData();
     this.bindEvents();
   }

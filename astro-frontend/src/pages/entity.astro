@@ -5,6 +5,9 @@ import StatsWidget from '../components/StatsWidget.astro';
 import ComparisonSearchModal from '../components/ComparisonSearchModal.astro';
 import ProfileWidgetComparison from '../components/ProfileWidgetComparison.astro';
 import StatsWidgetComparison from '../components/StatsWidgetComparison.astro';
+
+// Enable SSR for dynamic entity pages (faster initial load)
+export const prerender = false;
 ---
 
 <Layout

@@ -2,6 +2,9 @@
 import Layout from '../layouts/Layout.astro';
 import ProfileWidget from '../components/ProfileWidget.astro';
 import IntelWidget from '../components/IntelWidget.astro';
+
+// Enable SSR for dynamic mentions pages (faster initial load)
+export const prerender = false;
 ---
 
 <Layout

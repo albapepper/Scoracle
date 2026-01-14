@@ -18,11 +18,9 @@
   "dependencies": {
     "astro": "^5.16.5",
     "astro-compress": "^2.3.8",
-    "d3": "^7.9.0",
     "typescript": "^5.9.3"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.6",
-    "@types/d3": "^7.4.3"
+    "@astrojs/check": "^0.9.6"
   }
 }

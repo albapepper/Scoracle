@@ -15,7 +15,7 @@ const sports = SPORTS.map(s => ({ id: s.idLower, display: s.display, logo: s.log
 <div class="crystal-ball-container">
   <!-- The logo with hands around crystal ball -->
   <div class="logo-wrapper">
-    <img src="/logo.png" alt="Scoracle" class="crystal-logo" />
+    <img src="/logo.png" alt="Scoracle" class="crystal-logo" loading="eager" fetchpriority="high" />
     
     <!-- Sport selector overlay positioned inside the ball -->
     <div id="crystal-selector" class="crystal-selector" data-initial={initialSport}>
@@ -35,7 +35,7 @@ const sports = SPORTS.map(s => ({ id: s.idLower, display: s.display, logo: s.log
             data-sport={sport.id}
             class={`sport-option ${initialSport === sport.id ? 'active' : ''}`}
           >
-            <img src={sport.logo} alt={sport.display} class="sport-logo" />
+            <img src={sport.logo} alt={sport.display} class="sport-logo" loading="eager" />
           </div>
         ))}
       </div>

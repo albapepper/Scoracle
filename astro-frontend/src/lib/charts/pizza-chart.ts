@@ -1,9 +1,9 @@
 /**
  * Pizza/Radar Chart for Percentile Visualization
  *
- * A D3.js implementation of a pizza/radar-style chart that visualizes
- * stat percentiles as radial slices. Each slice's radius represents
- * the percentile rank (0-100), with labels showing both stat names
+ * A lightweight SVG implementation (no D3 dependency) of a pizza/radar-style
+ * chart that visualizes stat percentiles as radial slices. Each slice's radius
+ * represents the percentile rank (0-100), with labels showing both stat names
  * and raw values.
  *
  * Features:
@@ -15,8 +15,6 @@
  * - Theme-aware (light/dark mode via CSS variables)
  * - Responsive SVG with viewBox
  */
-
-import * as d3 from 'd3';
 
 export interface PizzaChartStat {
   key: string;
@@ -38,7 +36,6 @@ export interface PizzaChartOptions {
  * Get the color for a percentile tier from CSS variables.
  */
 function getPercentileColor(percentile: number): string {
-  // Get computed CSS variable values
   const style = getComputedStyle(document.documentElement);
 
   if (percentile >= 90) {
@@ -66,12 +63,71 @@ function getChartColors() {
     ringMajor: style.getPropertyValue('--chart-ring-major').trim() || '#d1d5db',
     label: style.getPropertyValue('--chart-label').trim() || '#1a1a1a',
     sublabel: style.getPropertyValue('--chart-sublabel').trim() || '#666666',
+    cardBg: style.getPropertyValue('--bg-card').trim() || '#ffffff',
   };
+}
+
+/**
+ * Convert polar coordinates to cartesian.
+ */
+function polarToCartesian(centerX: number, centerY: number, radius: number, angleInRadians: number): { x: number; y: number } {
+  return {
+    x: centerX + radius * Math.cos(angleInRadians),
+    y: centerY + radius * Math.sin(angleInRadians),
+  };
+}
+
+/**
+ * Generate an SVG arc path.
+ */
+function describeArc(
+  centerX: number,
+  centerY: number,
+  innerRadius: number,
+  outerRadius: number,
+  startAngle: number,
+  endAngle: number,
+  padAngle: number = 0
+): string {
+  // Apply pad angle
+  const adjustedStart = startAngle + padAngle / 2;
+  const adjustedEnd = endAngle - padAngle / 2;
+
+  const outerStart = polarToCartesian(centerX, centerY, outerRadius, adjustedStart);
+  const outerEnd = polarToCartesian(centerX, centerY, outerRadius, adjustedEnd);
+  const innerStart = polarToCartesian(centerX, centerY, innerRadius, adjustedStart);
+  const innerEnd = polarToCartesian(centerX, centerY, innerRadius, adjustedEnd);
+
+  const largeArcFlag = adjustedEnd - adjustedStart > Math.PI ? 1 : 0;
+
+  // Create arc path: outer arc -> line to inner -> inner arc (reversed) -> close
+  return [
+    'M', outerStart.x, outerStart.y,
+    'A', outerRadius, outerRadius, 0, largeArcFlag, 1, outerEnd.x, outerEnd.y,
+    'L', innerEnd.x, innerEnd.y,
+    'A', innerRadius, innerRadius, 0, largeArcFlag, 0, innerStart.x, innerStart.y,
+    'Z',
+  ].join(' ');
+}
+
+/**
+ * Create an SVG element with proper namespace.
+ */
+function createSvgElement<K extends keyof SVGElementTagNameMap>(tag: K): SVGElementTagNameMap[K] {
+  return document.createElementNS('http://www.w3.org/2000/svg', tag);
+}
+
+/**
+ * Truncate label if too long.
+ */
+function truncateLabel(label: string, maxLength: number): string {
+  if (label.length <= maxLength) return label;
+  return label.substring(0, maxLength - 1) + '…';
 }
 
 export class PizzaChart {
   private container: HTMLElement;
-  private svg: d3.Selection<SVGSVGElement, unknown, null, undefined> | null = null;
+  private svg: SVGSVGElement | null = null;
   private options: Required<PizzaChartOptions>;
   private stats: PizzaChartStat[] = [];
 
@@ -93,7 +149,6 @@ export class PizzaChart {
     this.stats = stats;
 
     if (stats.length < 3) {
-      // Not enough data for a meaningful chart
       this.container.innerHTML = '<p class="chart-no-data">Not enough data for chart</p>';
       return;
     }
@@ -107,24 +162,23 @@ export class PizzaChart {
     this.container.innerHTML = '';
 
     // Create SVG with viewBox for responsiveness
-    this.svg = d3
-      .select(this.container)
-      .append('svg')
-      .attr('viewBox', `0 0 ${width} ${height}`)
-      .attr('preserveAspectRatio', 'xMidYMid meet')
-      .attr('class', 'pizza-chart-svg')
-      .style('width', '100%')
-      .style('max-width', `${width}px`)
-      .style('height', 'auto');
+    this.svg = createSvgElement('svg');
+    this.svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    this.svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    this.svg.setAttribute('class', 'pizza-chart-svg');
+    this.svg.style.width = '100%';
+    this.svg.style.maxWidth = `${width}px`;
+    this.svg.style.height = 'auto';
 
-    // Create main group centered
-    const g = this.svg.append('g').attr('transform', `translate(${centerX}, ${centerY})`);
+    // Create main group
+    const g = createSvgElement('g');
+    g.setAttribute('transform', `translate(${centerX}, ${centerY})`);
 
     // Calculate angle for each stat
     const angleStep = (2 * Math.PI) / stats.length;
 
     // Draw background rings (25%, 50%, 75%, 100%)
-    this.drawBackgroundRings(g, innerRadius, outerRadius, colors);
+    this.drawBackgroundRings(g, innerRadius, outerRadius, colors, centerX, centerY);
 
     // Draw pizza slices
     stats.forEach((stat, i) => {
@@ -138,23 +192,17 @@ export class PizzaChart {
       // Get color for this percentile
       const color = getPercentileColor(percentile);
 
-      // Create arc generator for the slice
-      const arc = d3
-        .arc<unknown>()
-        .innerRadius(innerRadius)
-        .outerRadius(sliceRadius)
-        .startAngle(startAngle)
-        .endAngle(endAngle)
-        .padAngle(0.02)
-        .cornerRadius(2);
+      // Create arc path
+      const arcPath = describeArc(0, 0, innerRadius, sliceRadius, startAngle, endAngle, 0.02);
 
       // Draw slice
-      g.append('path')
-        .attr('d', arc({}) as string)
-        .attr('fill', color)
-        .attr('fill-opacity', 0.85)
-        .attr('stroke', colors.ring)
-        .attr('stroke-width', 1);
+      const path = createSvgElement('path');
+      path.setAttribute('d', arcPath);
+      path.setAttribute('fill', color);
+      path.setAttribute('fill-opacity', '0.85');
+      path.setAttribute('stroke', colors.ring);
+      path.setAttribute('stroke-width', '1');
+      g.appendChild(path);
 
       // Calculate label position (outside the chart)
       const labelAngle = (startAngle + endAngle) / 2;
@@ -163,28 +211,30 @@ export class PizzaChart {
       const labelY = Math.sin(labelAngle) * labelRadius;
 
       // Determine text anchor based on position
-      let textAnchor: 'start' | 'middle' | 'end' = 'middle';
+      let textAnchor: string = 'middle';
       if (labelX > 10) textAnchor = 'start';
       else if (labelX < -10) textAnchor = 'end';
 
       // Draw stat label (name)
-      g.append('text')
-        .attr('x', labelX)
-        .attr('y', labelY - 6)
-        .attr('text-anchor', textAnchor)
-        .attr('fill', colors.label)
-        .attr('font-size', '10px')
-        .attr('font-weight', '500')
-        .text(this.truncateLabel(stat.label, 14));
+      const labelText = createSvgElement('text');
+      labelText.setAttribute('x', String(labelX));
+      labelText.setAttribute('y', String(labelY - 6));
+      labelText.setAttribute('text-anchor', textAnchor);
+      labelText.setAttribute('fill', colors.label);
+      labelText.setAttribute('font-size', '10px');
+      labelText.setAttribute('font-weight', '500');
+      labelText.textContent = truncateLabel(stat.label, 14);
+      g.appendChild(labelText);
 
       // Draw value label
-      g.append('text')
-        .attr('x', labelX)
-        .attr('y', labelY + 8)
-        .attr('text-anchor', textAnchor)
-        .attr('fill', colors.sublabel)
-        .attr('font-size', '9px')
-        .text(String(stat.value));
+      const valueText = createSvgElement('text');
+      valueText.setAttribute('x', String(labelX));
+      valueText.setAttribute('y', String(labelY + 8));
+      valueText.setAttribute('text-anchor', textAnchor);
+      valueText.setAttribute('fill', colors.sublabel);
+      valueText.setAttribute('font-size', '9px');
+      valueText.textContent = String(stat.value);
+      g.appendChild(valueText);
 
       // Draw percentile inside the slice (if slice is large enough)
       if (percentile >= 20) {
@@ -192,61 +242,64 @@ export class PizzaChart {
         const percentX = Math.cos(labelAngle) * percentLabelRadius;
         const percentY = Math.sin(labelAngle) * percentLabelRadius;
 
-        g.append('text')
-          .attr('x', percentX)
-          .attr('y', percentY + 3)
-          .attr('text-anchor', 'middle')
-          .attr('fill', '#ffffff')
-          .attr('font-size', '10px')
-          .attr('font-weight', '600')
-          .text(`${Math.round(stat.percentile)}`);
+        const percentText = createSvgElement('text');
+        percentText.setAttribute('x', String(percentX));
+        percentText.setAttribute('y', String(percentY + 3));
+        percentText.setAttribute('text-anchor', 'middle');
+        percentText.setAttribute('fill', '#ffffff');
+        percentText.setAttribute('font-size', '10px');
+        percentText.setAttribute('font-weight', '600');
+        percentText.textContent = String(Math.round(stat.percentile));
+        g.appendChild(percentText);
       }
     });
 
     // Draw center circle (covers inner radius)
-    g.append('circle')
-      .attr('r', innerRadius - 2)
-      .attr('fill', getComputedStyle(document.documentElement).getPropertyValue('--bg-card').trim() || '#ffffff');
+    const centerCircle = createSvgElement('circle');
+    centerCircle.setAttribute('r', String(innerRadius - 2));
+    centerCircle.setAttribute('fill', colors.cardBg);
+    g.appendChild(centerCircle);
 
     // Center label
-    g.append('text')
-      .attr('x', 0)
-      .attr('y', 3)
-      .attr('text-anchor', 'middle')
-      .attr('fill', colors.sublabel)
-      .attr('font-size', '9px')
-      .attr('font-weight', '500')
-      .text('PERCENTILE');
+    const centerLabel = createSvgElement('text');
+    centerLabel.setAttribute('x', '0');
+    centerLabel.setAttribute('y', '3');
+    centerLabel.setAttribute('text-anchor', 'middle');
+    centerLabel.setAttribute('fill', colors.sublabel);
+    centerLabel.setAttribute('font-size', '9px');
+    centerLabel.setAttribute('font-weight', '500');
+    centerLabel.textContent = 'PERCENTILE';
+    g.appendChild(centerLabel);
+
+    this.svg.appendChild(g);
+    this.container.appendChild(this.svg);
   }
 
   /**
    * Draw background reference rings.
    */
   private drawBackgroundRings(
-    g: d3.Selection<SVGGElement, unknown, null, undefined>,
+    g: SVGGElement,
     innerRadius: number,
     outerRadius: number,
-    colors: ReturnType<typeof getChartColors>
+    colors: ReturnType<typeof getChartColors>,
+    _centerX: number,
+    _centerY: number
   ): void {
     const rings = [25, 50, 75, 100];
 
     rings.forEach((pct) => {
       const r = innerRadius + ((outerRadius - innerRadius) * pct) / 100;
-      g.append('circle')
-        .attr('r', r)
-        .attr('fill', 'none')
-        .attr('stroke', pct === 50 ? colors.ringMajor : colors.ring)
-        .attr('stroke-width', pct === 50 ? 1.5 : 1)
-        .attr('stroke-dasharray', pct === 50 || pct === 100 ? 'none' : '3,3');
+      const circle = createSvgElement('circle');
+      circle.setAttribute('r', String(r));
+      circle.setAttribute('fill', 'none');
+      circle.setAttribute('stroke', pct === 50 ? colors.ringMajor : colors.ring);
+      circle.setAttribute('stroke-width', pct === 50 ? '1.5' : '1');
+      if (pct !== 50 && pct !== 100) {
+        circle.setAttribute('stroke-dasharray', '3,3');
+      }
+      g.appendChild(circle);
     });
-  }
-
-  /**
-   * Truncate label if too long.
-   */
-  private truncateLabel(label: string, maxLength: number): string {
-    if (label.length <= maxLength) return label;
-    return label.substring(0, maxLength - 1) + '…';
   }
 
   /**
