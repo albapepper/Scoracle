@@ -55,6 +55,8 @@ export const CACHE_PRESETS = {
   news: { staleTime: 2 * 60 * 1000, cacheTime: 10 * 60 * 1000 }, // 2min stale, 10min cache
   /** Intel (Twitter/Reddit) - backend caches 5min */
   intel: { staleTime: 60 * 1000, cacheTime: 5 * 60 * 1000 }, // 1min stale, 5min cache
+  /** ML predictions - moderate caching */
+  ml: { staleTime: 10 * 60 * 1000, cacheTime: 30 * 60 * 1000 }, // 10min stale, 30min cache
 } as const;
 
 /**
@@ -297,12 +299,18 @@ export function getCacheStats(): { size: number; inFlight: number } {
 }
 
 // Page-level data store for sharing between components
-interface PageData {
+export interface PageData {
   widget?: unknown;
   news?: unknown;
   stats?: unknown;
   comparisonWidget?: unknown;
   intelStatus?: IntelStatus;
+  ml?: {
+    transfer?: unknown;
+    vibe?: unknown;
+    similarity?: unknown;
+    prediction?: unknown;
+  };
 }
 
 export interface IntelStatus {

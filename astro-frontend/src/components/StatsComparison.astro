@@ -1,10 +1,11 @@
 ---
 /**
- * Stats Card Comparison
+ * Stats Comparison
  *
  * Displays statistics for two entities side-by-side for comparison.
+ * Fetches: GET /api/v1/widget/stats/{entity_type}/{entity_id}?sport={sport}
  * Shows colored bars for visual differentiation and a legend.
- * Used on the entity page when comparison mode is active.
+ * Used on the stats page when comparison mode is active.
  */
 
 interface Props {
@@ -15,7 +16,7 @@ const { title = "Statistics Comparison" } = Astro.props;
 const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 ---
 
-<div id="stats-card-comparison" class="stats-comparison-card card hidden" data-api-url={apiUrl}>
+<div id="stats-comparison" class="stats-comparison card hidden" data-api-url={apiUrl}>
   <!-- Header -->
   <div class="stats-card-header">
     <h3 class="stats-card-title">{title}</h3>
@@ -76,7 +77,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 </div>
 
 <style>
-  .stats-comparison-card {
+  .stats-comparison {
     width: 100%;
     max-width: 600px;
     display: flex;
@@ -85,7 +86,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     overflow: hidden;
   }
 
-  .stats-comparison-card.hidden {
+  .stats-comparison.hidden {
     display: none;
   }
 
@@ -375,13 +376,13 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   import { swrFetch } from '../lib/utils/api-fetcher';
 
   /**
-   * StatsCardComparisonManager
+   * StatsComparisonManager
    *
-   * Manages the comparison stats card, fetching and displaying
+   * Manages the stats comparison component, fetching and displaying
    * stats for both entities with visual comparison bars.
    */
-  class StatsCardComparisonManager {
-    private card: HTMLElement | null = null;
+  class StatsComparisonManager {
+    private container: HTMLElement | null = null;
     private apiUrl: string = '';
 
     private primaryStats: Array<{ label: string; value: string | number }> = [];
@@ -390,15 +391,15 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     private secondaryName: string = 'Comparison';
 
     constructor() {
-      this.card = document.getElementById('stats-card-comparison');
-      if (!this.card) return;
+      this.container = document.getElementById('stats-comparison');
+      if (!this.container) return;
 
-      this.apiUrl = this.card.dataset.apiUrl || '';
+      this.apiUrl = this.container.dataset.apiUrl || '';
       this.exposeAPI();
     }
 
     private exposeAPI() {
-      (window as any).statsCardComparison = {
+      (window as any).statsComparison = {
         show: (
           sport: string,
           primaryType: string,
@@ -424,10 +425,10 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       secondaryType: string,
       secondaryId: string
     ) {
-      if (!this.card) return;
+      if (!this.container) return;
 
-      // Show card and loading state
-      this.card.classList.remove('hidden');
+      // Show widget and loading state
+      this.container.classList.remove('hidden');
       this.showLoading();
 
       // Update legend names
@@ -592,44 +593,44 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private showLoading() {
-      this.card?.querySelector('#stats-comparison-loading')?.classList.remove('hidden');
-      this.card?.querySelector('#stats-comparison-content')?.classList.add('hidden');
-      this.card?.querySelector('#stats-comparison-empty')?.classList.add('hidden');
-      this.card?.querySelector('#stats-comparison-error')?.classList.add('hidden');
+      this.container?.querySelector('#stats-comparison-loading')?.classList.remove('hidden');
+      this.container?.querySelector('#stats-comparison-content')?.classList.add('hidden');
+      this.container?.querySelector('#stats-comparison-empty')?.classList.add('hidden');
+      this.container?.querySelector('#stats-comparison-error')?.classList.add('hidden');
     }
 
     private showContent() {
-      this.card?.querySelector('#stats-comparison-loading')?.classList.add('hidden');
-      this.card?.querySelector('#stats-comparison-content')?.classList.remove('hidden');
-      this.card?.querySelector('#stats-comparison-empty')?.classList.add('hidden');
-      this.card?.querySelector('#stats-comparison-error')?.classList.add('hidden');
+      this.container?.querySelector('#stats-comparison-loading')?.classList.add('hidden');
+      this.container?.querySelector('#stats-comparison-content')?.classList.remove('hidden');
+      this.container?.querySelector('#stats-comparison-empty')?.classList.add('hidden');
+      this.container?.querySelector('#stats-comparison-error')?.classList.add('hidden');
     }
 
     private showEmpty() {
-      this.card?.querySelector('#stats-comparison-loading')?.classList.add('hidden');
-      this.card?.querySelector('#stats-comparison-content')?.classList.add('hidden');
-      this.card?.querySelector('#stats-comparison-empty')?.classList.remove('hidden');
-      this.card?.querySelector('#stats-comparison-error')?.classList.add('hidden');
+      this.container?.querySelector('#stats-comparison-loading')?.classList.add('hidden');
+      this.container?.querySelector('#stats-comparison-content')?.classList.add('hidden');
+      this.container?.querySelector('#stats-comparison-empty')?.classList.remove('hidden');
+      this.container?.querySelector('#stats-comparison-error')?.classList.add('hidden');
     }
 
     private showError() {
-      this.card?.querySelector('#stats-comparison-loading')?.classList.add('hidden');
-      this.card?.querySelector('#stats-comparison-content')?.classList.add('hidden');
-      this.card?.querySelector('#stats-comparison-empty')?.classList.add('hidden');
-      this.card?.querySelector('#stats-comparison-error')?.classList.remove('hidden');
+      this.container?.querySelector('#stats-comparison-loading')?.classList.add('hidden');
+      this.container?.querySelector('#stats-comparison-content')?.classList.add('hidden');
+      this.container?.querySelector('#stats-comparison-empty')?.classList.add('hidden');
+      this.container?.querySelector('#stats-comparison-error')?.classList.remove('hidden');
     }
 
     public hide() {
-      this.card?.classList.add('hidden');
+      this.container?.classList.add('hidden');
       this.primaryStats = [];
       this.secondaryStats = [];
     }
 
     public isVisible(): boolean {
-      return this.card ? !this.card.classList.contains('hidden') : false;
+      return this.container ? !this.container.classList.contains('hidden') : false;
     }
   }
 
   // Initialize
-  new StatsCardComparisonManager();
+  new StatsComparisonManager();
 </script>

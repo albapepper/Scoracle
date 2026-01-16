@@ -24,7 +24,8 @@
       "Bash(npm run build:*)",
       "Bash(du:*)",
       "Bash(wc:*)",
-      "Bash(npm run check:*)"
+      "Bash(npm run check:*)",
+      "Bash(npx astro check)"
     ]
   }
 }

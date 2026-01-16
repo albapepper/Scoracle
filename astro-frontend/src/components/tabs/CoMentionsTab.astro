@@ -1,0 +1,255 @@
+---
+/**
+ * Co-Mentions Tab Component
+ *
+ * Displays entities frequently mentioned together with the current entity.
+ * Uses frontend-based entity matching on news article titles.
+ *
+ * Features:
+ * - 2-part name matching to reduce false positives
+ * - Handles accents/special characters
+ * - Links to entity stats pages
+ * - Sorted by mention count
+ *
+ * Usage:
+ * This component is designed to be embedded in NewsContentCard.
+ * It receives articles data from the parent and processes co-mentions.
+ */
+---
+
+<div id="comentions-tab-content">
+  <div id="comentions-loading" class="loading-skeleton">
+    <div class="skeleton-item"></div>
+    <div class="skeleton-item"></div>
+    <div class="skeleton-item"></div>
+  </div>
+  <div id="comentions-content" class="hidden">
+    <div id="comentions-list" class="content-list"></div>
+  </div>
+  <div id="comentions-empty" class="empty-state hidden">
+    No co-mentions found in recent articles
+  </div>
+</div>
+
+<style>
+  .loading-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .skeleton-item {
+    height: 60px;
+    border-radius: 4px;
+    background-color: var(--border);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  :global(.dark) .skeleton-item {
+    background-color: var(--border-dark);
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .content-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  #comentions-tab-content :global(.comention-item) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+    gap: 1rem;
+  }
+
+  :global(.dark) #comentions-tab-content :global(.comention-item) {
+    border-bottom-color: var(--border-dark);
+  }
+
+  #comentions-tab-content :global(.comention-item:last-child) {
+    border-bottom: none;
+  }
+
+  #comentions-tab-content :global(.comention-info) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  #comentions-tab-content :global(.comention-name) {
+    font-weight: 600;
+    color: var(--text);
+    text-decoration: underline;
+    text-decoration-color: var(--text-tertiary);
+    text-underline-offset: 2px;
+    font-size: 0.95rem;
+  }
+
+  :global(.dark) #comentions-tab-content :global(.comention-name) {
+    color: var(--text-dark);
+    text-decoration-color: var(--text-tertiary-dark);
+  }
+
+  #comentions-tab-content :global(.comention-type) {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+
+  :global(.dark) #comentions-tab-content :global(.comention-type) {
+    color: var(--text-secondary-dark);
+  }
+
+  #comentions-tab-content :global(.comention-count) {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background-color: var(--border);
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  :global(.dark) #comentions-tab-content :global(.comention-count) {
+    color: var(--text-secondary-dark);
+    background-color: var(--border-dark);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+  }
+
+  :global(.dark) .empty-state {
+    color: var(--text-secondary-dark);
+  }
+
+  .hidden {
+    display: none !important;
+  }
+</style>
+
+<script>
+  import { escapeHtml, parseEntityParams } from '../../lib/utils/dom';
+  import { findCoMentions, loadEntitiesForSport, type Article, type CoMention } from '../../lib/utils/co-mentions';
+  import { waitForPageData } from '../../lib/utils/api-fetcher';
+
+  class CoMentionsTabManager {
+    private sport: string | null = null;
+    private type: string | null = null;
+    private id: string | null = null;
+    private loaded = false;
+
+    constructor() {
+      const params = parseEntityParams();
+      this.sport = params.sport;
+      this.type = params.type;
+      this.id = params.id;
+    }
+
+    /**
+     * Load co-mentions data. Called when the tab becomes active.
+     */
+    async load(): Promise<void> {
+      if (this.loaded) return;
+      this.loaded = true;
+
+      if (!this.sport || !this.type || !this.id) {
+        this.showEmpty();
+        return;
+      }
+
+      try {
+        // Wait for news data from NewsContentCard
+        const newsData = await waitForPageData('news', 3000) as { articles?: Article[] };
+        const articles = newsData?.articles || [];
+
+        if (articles.length === 0) {
+          this.showEmpty();
+          return;
+        }
+
+        // Load entities for this sport
+        const entities = await loadEntitiesForSport(this.sport);
+
+        // Find co-mentions
+        const coMentions = findCoMentions(
+          articles,
+          entities,
+          this.id,
+          this.type
+        );
+
+        if (coMentions.length === 0) {
+          this.showEmpty();
+          return;
+        }
+
+        this.render(coMentions);
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          console.error('CoMentionsTab error:', err);
+        }
+        this.showEmpty();
+      }
+    }
+
+    private render(coMentions: CoMention[]): void {
+      const listEl = document.getElementById('comentions-list');
+      if (!listEl) return;
+
+      const html = coMentions.map(cm => {
+        const name = escapeHtml(cm.entity.name);
+        const type = cm.entity.type === 'player' ? 'Player' : 'Team';
+        const team = cm.entity.team ? ` - ${escapeHtml(cm.entity.team)}` : '';
+        const count = cm.mentionCount;
+        const countLabel = count === 1 ? 'mention' : 'mentions';
+
+        // Link to the entity's stats page
+        const link = `/stats?sport=${this.sport}&type=${cm.entity.type}&id=${cm.entity.id}`;
+
+        return `<div class="comention-item">
+          <div class="comention-info">
+            <a href="${link}" class="comention-name">${name}</a>
+            <span class="comention-type">${type}${team}</span>
+          </div>
+          <span class="comention-count">${count} ${countLabel}</span>
+        </div>`;
+      }).join('');
+
+      listEl.innerHTML = html;
+      this.showContent();
+    }
+
+    private showContent(): void {
+      document.getElementById('comentions-loading')?.classList.add('hidden');
+      document.getElementById('comentions-content')?.classList.remove('hidden');
+      document.getElementById('comentions-empty')?.classList.add('hidden');
+    }
+
+    private showEmpty(): void {
+      document.getElementById('comentions-loading')?.classList.add('hidden');
+      document.getElementById('comentions-content')?.classList.add('hidden');
+      document.getElementById('comentions-empty')?.classList.remove('hidden');
+    }
+  }
+
+  // Create manager and expose load function globally
+  const manager = new CoMentionsTabManager();
+  (window as any).coMentionsTab = {
+    load: () => manager.load()
+  };
+</script>

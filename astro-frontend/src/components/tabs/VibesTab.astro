@@ -1,0 +1,501 @@
+---
+/**
+ * Vibes Tab Component
+ *
+ * Displays sentiment analysis (vibe score) for an entity.
+ * Fetches: GET /api/v1/ml/vibe/{entity_type}/{entity_id}
+ *
+ * Features:
+ * - Overall vibe score with gauge
+ * - Source breakdown (Twitter, News, Reddit)
+ * - 7-day trend
+ * - Top themes
+ */
+
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+---
+
+<div id="vibes-tab-content" data-api-url={apiUrl}>
+  <div id="vibes-loading" class="loading-skeleton">
+    <div class="skeleton-score"></div>
+    <div class="skeleton-bars">
+      <div class="skeleton-bar"></div>
+      <div class="skeleton-bar"></div>
+      <div class="skeleton-bar"></div>
+    </div>
+  </div>
+
+  <div id="vibes-content" class="hidden">
+    <div class="vibe-score-section">
+      <div class="vibe-score-container">
+        <span id="vibe-score" class="vibe-score">--</span>
+        <span id="vibe-label" class="vibe-label">Loading</span>
+      </div>
+      <div id="vibe-gauge" class="vibe-gauge">
+        <div class="gauge-track">
+          <div id="gauge-fill" class="gauge-fill"></div>
+        </div>
+      </div>
+      <div id="vibe-trend" class="vibe-trend"></div>
+    </div>
+
+    <div class="vibe-breakdown">
+      <h4 class="breakdown-title">Source Breakdown</h4>
+      <div id="breakdown-bars" class="breakdown-bars"></div>
+    </div>
+
+    <div id="vibe-themes" class="vibe-themes hidden">
+      <h4 class="themes-title">Top Themes</h4>
+      <div id="themes-list" class="themes-list"></div>
+    </div>
+  </div>
+
+  <div id="vibes-empty" class="empty-state hidden">
+    No sentiment data available
+  </div>
+
+  <div id="vibes-error" class="empty-state hidden">
+    Unable to load vibe data
+  </div>
+</div>
+
+<style>
+  .loading-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem 0;
+  }
+
+  .skeleton-score {
+    width: 80px;
+    height: 60px;
+    border-radius: 8px;
+    background-color: var(--border);
+    margin: 0 auto;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .skeleton-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .skeleton-bar {
+    height: 24px;
+    border-radius: 4px;
+    background-color: var(--border);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  :global(.dark) .skeleton-score,
+  :global(.dark) .skeleton-bar {
+    background-color: var(--border-dark);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .vibe-score-section {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .vibe-score-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .vibe-score {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :global(.dark) .vibe-score {
+    color: var(--text-dark);
+  }
+
+  .vibe-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .vibe-label.positive {
+    background: rgba(34, 197, 94, 0.15);
+    color: #16a34a;
+  }
+
+  .vibe-label.negative {
+    background: rgba(239, 68, 68, 0.15);
+    color: #dc2626;
+  }
+
+  .vibe-label.neutral {
+    background: rgba(156, 163, 175, 0.15);
+    color: #6b7280;
+  }
+
+  :global(.dark) .vibe-label.positive {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+  }
+
+  :global(.dark) .vibe-label.negative {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+  }
+
+  :global(.dark) .vibe-label.neutral {
+    background: rgba(156, 163, 175, 0.2);
+    color: #9ca3af;
+  }
+
+  .vibe-gauge {
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto;
+  }
+
+  .gauge-track {
+    height: 8px;
+    background: linear-gradient(to right, #ef4444, #f59e0b, #22c55e);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gauge-fill {
+    position: absolute;
+    top: -2px;
+    width: 12px;
+    height: 12px;
+    background: var(--text);
+    border: 2px solid var(--card-bg);
+    border-radius: 50%;
+    transform: translateX(-50%);
+    transition: left 0.3s ease;
+  }
+
+  :global(.dark) .gauge-fill {
+    background: var(--text-dark);
+    border-color: var(--card-bg-dark);
+  }
+
+  .vibe-trend {
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+
+  :global(.dark) .vibe-trend {
+    color: var(--text-secondary-dark);
+  }
+
+  #vibes-tab-content :global(.trend-up) {
+    color: #16a34a;
+  }
+
+  #vibes-tab-content :global(.trend-down) {
+    color: #dc2626;
+  }
+
+  :global(.dark) #vibes-tab-content :global(.trend-up) {
+    color: #4ade80;
+  }
+
+  :global(.dark) #vibes-tab-content :global(.trend-down) {
+    color: #f87171;
+  }
+
+  .vibe-breakdown {
+    margin-bottom: 1rem;
+  }
+
+  .breakdown-title,
+  .themes-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 0.75rem 0;
+  }
+
+  :global(.dark) .breakdown-title,
+  :global(.dark) .themes-title {
+    color: var(--text-secondary-dark);
+  }
+
+  .breakdown-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  #vibes-tab-content :global(.breakdown-bar) {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  #vibes-tab-content :global(.bar-label) {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    width: 60px;
+    flex-shrink: 0;
+  }
+
+  :global(.dark) #vibes-tab-content :global(.bar-label) {
+    color: var(--text-secondary-dark);
+  }
+
+  #vibes-tab-content :global(.bar-track) {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  :global(.dark) #vibes-tab-content :global(.bar-track) {
+    background: var(--border-dark);
+  }
+
+  #vibes-tab-content :global(.bar-fill) {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+
+  #vibes-tab-content :global(.bar-fill.twitter) {
+    background: #1da1f2;
+  }
+
+  #vibes-tab-content :global(.bar-fill.news) {
+    background: #6366f1;
+  }
+
+  #vibes-tab-content :global(.bar-fill.reddit) {
+    background: #ff4500;
+  }
+
+  #vibes-tab-content :global(.bar-value) {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text);
+    width: 32px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :global(.dark) #vibes-tab-content :global(.bar-value) {
+    color: var(--text-dark);
+  }
+
+  .vibe-themes {
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+  }
+
+  :global(.dark) .vibe-themes {
+    border-top-color: var(--border-dark);
+  }
+
+  .themes-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  #vibes-tab-content :global(.theme-tag) {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    background: var(--border);
+    color: var(--text-secondary);
+    border-radius: 4px;
+  }
+
+  :global(.dark) #vibes-tab-content :global(.theme-tag) {
+    background: var(--border-dark);
+    color: var(--text-secondary-dark);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+  }
+
+  :global(.dark) .empty-state {
+    color: var(--text-secondary-dark);
+  }
+
+  .hidden {
+    display: none !important;
+  }
+</style>
+
+<script>
+  import { parseEntityParams, escapeHtml } from '../../lib/utils/dom';
+  import { swrFetch, setPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
+  import type { VibeScoreResponse } from '../../lib/types';
+
+  class VibesTabManager {
+    private container: HTMLElement | null;
+    private apiUrl: string;
+    private loaded = false;
+
+    constructor() {
+      this.container = document.getElementById('vibes-tab-content');
+      this.apiUrl = this.container?.dataset.apiUrl || '';
+    }
+
+    async load(): Promise<void> {
+      if (this.loaded || !this.container) return;
+      this.loaded = true;
+
+      const params = parseEntityParams();
+      const { type, id } = params;
+
+      if (!type || !id) {
+        this.showError();
+        return;
+      }
+
+      try {
+        const url = `${this.apiUrl}/ml/vibe/${type}/${id}`;
+        const { data } = await swrFetch<VibeScoreResponse>(url, CACHE_PRESETS.ml);
+
+        if (!data || data.vibe_score === undefined) {
+          this.showEmpty();
+          return;
+        }
+
+        setPageData('ml', { vibe: data });
+        this.renderScore(data);
+        this.renderBreakdown(data.breakdown);
+        this.renderTrend(data.trend);
+        this.renderThemes(data.themes);
+        this.showContent();
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          console.error('VibesTab error:', err);
+        }
+        this.showError();
+      }
+    }
+
+    private renderScore(data: VibeScoreResponse): void {
+      const scoreEl = this.container?.querySelector('#vibe-score');
+      const labelEl = this.container?.querySelector('#vibe-label');
+      const gaugeFill = this.container?.querySelector('#gauge-fill') as HTMLElement | null;
+
+      if (scoreEl) {
+        scoreEl.textContent = String(Math.round(data.vibe_score));
+      }
+
+      if (labelEl) {
+        labelEl.textContent = data.vibe_label;
+        labelEl.className = 'vibe-label';
+
+        const score = data.vibe_score;
+        if (score >= 60) labelEl.classList.add('positive');
+        else if (score <= 40) labelEl.classList.add('negative');
+        else labelEl.classList.add('neutral');
+      }
+
+      if (gaugeFill) {
+        gaugeFill.style.left = `${data.vibe_score}%`;
+      }
+    }
+
+    private renderBreakdown(breakdown: VibeScoreResponse['breakdown']): void {
+      const barsEl = this.container?.querySelector('#breakdown-bars');
+      if (!barsEl) return;
+
+      const sources = [
+        { key: 'twitter', label: 'Twitter', value: breakdown.twitter },
+        { key: 'news', label: 'News', value: breakdown.news },
+        { key: 'reddit', label: 'Reddit', value: breakdown.reddit },
+      ].filter(s => s.value !== undefined);
+
+      if (sources.length === 0) {
+        barsEl.innerHTML = '<p style="color: var(--text-tertiary); font-size: 0.8rem;">No breakdown available</p>';
+        return;
+      }
+
+      barsEl.innerHTML = sources.map(source => `
+        <div class="breakdown-bar">
+          <span class="bar-label">${escapeHtml(source.label)}</span>
+          <div class="bar-track">
+            <div class="bar-fill ${source.key}" style="width: ${source.value}%"></div>
+          </div>
+          <span class="bar-value">${Math.round(source.value!)}</span>
+        </div>
+      `).join('');
+    }
+
+    private renderTrend(trend: VibeScoreResponse['trend']): void {
+      const trendEl = this.container?.querySelector('#vibe-trend');
+      if (!trendEl) return;
+
+      const arrow = trend.direction === 'up' ? '↑' : trend.direction === 'down' ? '↓' : '→';
+      const trendClass = trend.direction === 'up' ? 'trend-up' : trend.direction === 'down' ? 'trend-down' : '';
+      const change7d = trend.change_7d > 0 ? `+${trend.change_7d}` : String(trend.change_7d);
+
+      trendEl.innerHTML = `<span class="${trendClass}">${arrow} ${change7d}</span> past 7 days`;
+    }
+
+    private renderThemes(themes: Record<string, number>): void {
+      const themesSection = this.container?.querySelector('#vibe-themes');
+      const themesList = this.container?.querySelector('#themes-list');
+      if (!themesSection || !themesList) return;
+
+      const themeEntries = Object.entries(themes).sort((a, b) => b[1] - a[1]).slice(0, 5);
+      if (themeEntries.length === 0) return;
+
+      themesList.innerHTML = themeEntries.map(([theme]) =>
+        `<span class="theme-tag">${escapeHtml(theme)}</span>`
+      ).join('');
+
+      themesSection.classList.remove('hidden');
+    }
+
+    private showContent(): void {
+      this.container?.querySelector('#vibes-loading')?.classList.add('hidden');
+      this.container?.querySelector('#vibes-content')?.classList.remove('hidden');
+      this.container?.querySelector('#vibes-empty')?.classList.add('hidden');
+      this.container?.querySelector('#vibes-error')?.classList.add('hidden');
+    }
+
+    private showEmpty(): void {
+      this.container?.querySelector('#vibes-loading')?.classList.add('hidden');
+      this.container?.querySelector('#vibes-content')?.classList.add('hidden');
+      this.container?.querySelector('#vibes-empty')?.classList.remove('hidden');
+      this.container?.querySelector('#vibes-error')?.classList.add('hidden');
+    }
+
+    private showError(): void {
+      this.container?.querySelector('#vibes-loading')?.classList.add('hidden');
+      this.container?.querySelector('#vibes-content')?.classList.add('hidden');
+      this.container?.querySelector('#vibes-empty')?.classList.add('hidden');
+      this.container?.querySelector('#vibes-error')?.classList.remove('hidden');
+    }
+  }
+
+  const manager = new VibesTabManager();
+  (window as any).vibesTab = { load: () => manager.load() };
+</script>

@@ -204,7 +204,7 @@ const sportDisplay = getSportDisplay(sport);
       itemClass: 'suggestion-item',
       onSelect: (entity) => {
         const sportParam = autocomplete.getSport().toUpperCase();
-        window.location.href = `/mentions?sport=${sportParam}&type=${entity.type}&id=${entity.id}`;
+        window.location.href = `/news?sport=${sportParam}&type=${entity.type}&id=${entity.id}`;
       },
       renderItem: (entity, index) => `
         <button

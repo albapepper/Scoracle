@@ -8,8 +8,8 @@ export default defineConfig({
   // Set your site URL for proper canonical URLs and SEO
   site: 'https://scoracle.vercel.app',
 
-  // Hybrid output - static by default, SSR for dynamic pages
-  output: 'hybrid',
+  // Static output (default behavior)
+  output: 'static',
 
   build: {
     format: 'directory',

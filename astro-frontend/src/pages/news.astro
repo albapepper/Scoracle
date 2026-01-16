@@ -1,24 +1,24 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import ProfileWidget from '../components/ProfileWidget.astro';
-import IntelWidget from '../components/IntelWidget.astro';
+import NewsContentCard from '../components/NewsContentCard.astro';
 
-// Enable SSR for dynamic mentions pages (faster initial load)
+// Enable SSR for dynamic news pages (faster initial load)
 export const prerender = false;
 ---
 
 <Layout
-  title="Mentions - Scoracle"
-  description="View recent mentions and news about sports players and teams"
+  title="News - Scoracle"
+  description="View recent news, social media mentions, and updates about sports players and teams"
 >
-  <main class="mentions-main">
-    <ProfileWidget page="mentions" />
-    <IntelWidget />
+  <main class="news-main">
+    <ProfileWidget page="news" />
+    <NewsContentCard />
   </main>
 </Layout>
 
 <style>
-  .mentions-main {
+  .news-main {
     min-height: calc(100vh - 3.5rem);
     display: flex;
     flex-direction: column;
@@ -32,7 +32,7 @@ export const prerender = false;
     gap: 2rem;
   }
 
-  :global(.dark) .mentions-main {
+  :global(.dark) .news-main {
     background-color: var(--bg-dark);
   }
 </style>

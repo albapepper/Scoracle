@@ -13,13 +13,13 @@
  */
 
 interface Props {
-  page?: 'mentions' | 'entity';
+  page?: 'news' | 'stats';
   showCompareButton?: boolean;
 }
 
-const { page = 'mentions', showCompareButton = false } = Astro.props;
-const buttonText = page === 'mentions' ? 'Statistical Profile' : 'Recent Mentions';
-const buttonDest = page === 'mentions' ? 'entity' : 'mentions';
+const { page = 'news', showCompareButton = false } = Astro.props;
+const buttonText = page === 'news' ? 'View Stats' : 'View News';
+const buttonDest = page === 'news' ? 'stats' : 'news';
 const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 ---
 

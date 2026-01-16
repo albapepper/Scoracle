@@ -1,20 +1,15 @@
 ---
 /**
- * Stats Card with Pizza/Radar Chart
+ * Stats Tab Component
  *
- * Displays entity statistics grouped by category with a D3.js
- * pizza/radar chart visualization of percentiles.
+ * Displays entity statistics with pizza chart visualization.
+ * Fetches: GET /api/v1/widget/stats/{entity_type}/{entity_id}
  *
  * Features:
- * - Pizza chart showing all stats with percentile rankings
- * - Stats grouped by category (Scoring, Defense, etc.)
- * - Categories sorted by volume (most stats first)
- * - Percentile badges color-coded by tier
- * - Responsive design for mobile
- *
- * Props:
- * - title: Card title (defaults to "Statistics")
- * - showChart: Whether to show the pizza chart (defaults to true)
+ * - Pizza chart for percentile visualization
+ * - Categorized stat tables with percentile badges
+ * - Season display
+ * - Lazy loading support via window.statsTab.load()
  */
 
 interface Props {
@@ -26,11 +21,11 @@ const { title = 'Statistics', showChart = true } = Astro.props;
 const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 ---
 
-<div class="stats-card card" data-api-url={apiUrl} data-show-chart={showChart.toString()}>
+<div id="stats-tab-content" data-api-url={apiUrl} data-show-chart={showChart.toString()}>
   <!-- Header -->
-  <div class="stats-card-header">
-    <h3 class="stats-card-title">{title}</h3>
-    <span id="stats-season" class="stats-card-season"></span>
+  <div class="stats-header">
+    <h3 class="stats-title">{title}</h3>
+    <span id="stats-season" class="stats-season"></span>
   </div>
 
   <!-- Pizza Chart Container -->
@@ -46,7 +41,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   }
 
   <!-- Stats Categories -->
-  <div class="stats-card-body">
+  <div class="stats-body">
     <!-- Loading State -->
     <div id="stats-loading" class="stats-loading">
       <div class="category-skeleton">
@@ -84,16 +79,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 </div>
 
 <style>
-  .stats-card {
-    width: 100%;
-    max-width: 600px;
-    display: flex;
-    flex-direction: column;
-    border-radius: 0.375rem;
-    overflow: hidden;
-  }
-
-  .stats-card-header {
+  /* Stats Header */
+  .stats-header {
     padding: 1.25rem 1.5rem 1rem;
     border-bottom: 1px solid var(--border);
     display: flex;
@@ -101,11 +88,11 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     align-items: center;
   }
 
-  :global(.dark) .stats-card-header {
+  :global(.dark) .stats-header {
     border-bottom-color: var(--border-dark);
   }
 
-  .stats-card-title {
+  .stats-title {
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
@@ -113,17 +100,17 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     line-height: 1.4;
   }
 
-  :global(.dark) .stats-card-title {
+  :global(.dark) .stats-title {
     color: var(--text-dark);
   }
 
-  .stats-card-season {
+  .stats-season {
     font-size: 0.8rem;
     color: var(--text-secondary);
     font-weight: 500;
   }
 
-  :global(.dark) .stats-card-season {
+  :global(.dark) .stats-season {
     color: var(--text-secondary-dark);
   }
 
@@ -185,7 +172,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   }
 
   /* Stats Body */
-  .stats-card-body {
+  .stats-body {
     padding: 0 1.5rem 1.25rem;
   }
 
@@ -385,18 +372,18 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
   /* Responsive - Mobile */
   @media (max-width: 480px) {
-    .stats-card-header {
+    .stats-header {
       padding: 1rem;
       flex-direction: column;
       align-items: flex-start;
       gap: 0.25rem;
     }
 
-    .stats-card-title {
+    .stats-title {
       font-size: 0.9rem;
     }
 
-    .stats-card-season {
+    .stats-season {
       font-size: 0.75rem;
     }
 
@@ -409,7 +396,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       max-width: 280px;
     }
 
-    .stats-card-body {
+    .stats-body {
       padding: 0 1rem 1rem;
     }
 
@@ -436,11 +423,11 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
   /* Extra small screens */
   @media (max-width: 320px) {
-    .stats-card-header {
+    .stats-header {
       padding: 0.75rem;
     }
 
-    .stats-card-body {
+    .stats-body {
       padding: 0 0.75rem 0.75rem;
     }
 
@@ -455,50 +442,55 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 </style>
 
 <script>
-  import { escapeHtml } from '../lib/utils/dom';
-  import { swrFetch, setPageData, CACHE_PRESETS } from '../lib/utils/api-fetcher';
-  import { PizzaChart, type PizzaChartStat } from '../lib/charts/pizza-chart';
-  import { categorizeStats, type StatItem, type Category } from '../lib/utils/stats-categorizer';
+  import { escapeHtml, parseEntityParams } from '../../lib/utils/dom';
+  import { swrFetch, setPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
+  import { PizzaChart, type PizzaChartStat } from '../../lib/charts/pizza-chart';
+  import { categorizeStats, type StatItem, type Category } from '../../lib/utils/stats-categorizer';
 
-  interface EntityInfo {
-    id: string;
-    name: string;
-    type: string;
-    position?: string;
-    team?: string;
-  }
-
-  interface CategorizedStatsResponse {
-    season: string;
-    entity: EntityInfo;
-    categories: Category[];
-    source?: string;
+  // API Response types matching scoracle-data backend
+  interface StatsResponse {
+    entity_id: number;
+    entity_type: 'player' | 'team';
+    sport: string;
+    season: number;
+    info: {
+      id: number;
+      first_name?: string;
+      last_name?: string;
+      full_name?: string;
+      name?: string;
+      position?: string;
+      team?: { name: string };
+    };
+    stats: Record<string, unknown>;
+    percentiles: Array<{ stat_key: string; percentile: number }> | Record<string, number>;
   }
 
   /**
-   * StatsCard Manager
+   * Stats Tab Manager
    *
-   * Handles loading categorized statistics from the backend API,
+   * Handles loading stats from the backend API,
    * rendering the pizza chart, and populating category tables.
    */
-  class StatsCardManager {
-    private card: HTMLElement;
+  class StatsTabManager {
+    private container: HTMLElement | null;
     private apiUrl: string;
     private showChart: boolean;
     private pizzaChart: PizzaChart | null = null;
+    private loaded = false;
 
-    constructor(card: HTMLElement) {
-      this.card = card;
-      this.apiUrl = card.dataset.apiUrl || '';
-      this.showChart = card.dataset.showChart === 'true';
-      this.init();
+    constructor() {
+      this.container = document.getElementById('stats-tab-content');
+      this.apiUrl = this.container?.dataset.apiUrl || '';
+      this.showChart = this.container?.dataset.showChart === 'true';
     }
 
-    private async init() {
-      const params = new URLSearchParams(window.location.search);
-      const sport = params.get('sport');
-      const type = params.get('type');
-      const id = params.get('id');
+    async load(): Promise<void> {
+      if (this.loaded || !this.container) return;
+      this.loaded = true;
+
+      const params = parseEntityParams();
+      const { sport, type, id } = params;
 
       if (!sport || !type || !id) {
         this.showError();
@@ -516,46 +508,48 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private async loadStats(sport: string, type: string, id: string) {
-      // Use the stats endpoint which returns stats + percentiles
-      const url = `${this.apiUrl}/widget/stats/${type}/${id}?sport=${sport.toUpperCase()}&include_percentiles=true`;
+      const url = `${this.apiUrl}/widget/stats/${type}/${id}?sport=${sport.toUpperCase()}`;
 
-      const { data } = await swrFetch<{
-        info?: Record<string, unknown>;
-        stats?: Record<string, unknown>;
-        percentiles?: Record<string, number>;
-      }>(url, CACHE_PRESETS.stats);
+      const { data } = await swrFetch<StatsResponse>(url, CACHE_PRESETS.stats);
 
       if (!data || !data.stats) {
         this.showEmpty();
         return;
       }
 
-      // Transform flat stats into categorized format using shared utility
-      const categories = categorizeStats(data.stats, data.percentiles || {}, sport);
+      // Convert percentiles array to object if needed
+      let percentilesObj: Record<string, number> = {};
+      if (Array.isArray(data.percentiles)) {
+        for (const p of data.percentiles) {
+          percentilesObj[p.stat_key] = p.percentile;
+        }
+      } else if (data.percentiles && typeof data.percentiles === 'object') {
+        percentilesObj = data.percentiles as Record<string, number>;
+      }
+
+      // Transform flat stats into categorized format
+      const categories = categorizeStats(data.stats, percentilesObj, sport);
 
       if (categories.length === 0) {
         this.showEmpty();
         return;
       }
 
-      // Build response in expected format for sharing
-      const categorizedData: CategorizedStatsResponse = {
-        season: String(data.stats.season || new Date().getFullYear()),
+      // Share data with other components
+      setPageData('stats', {
+        season: data.season,
         entity: {
-          id: String(data.info?.id || id),
-          name: String(data.info?.name || ''),
-          type: type,
+          id: String(data.entity_id),
+          name: data.info?.full_name || data.info?.name || '',
+          type: data.entity_type,
         },
         categories: categories,
-      };
-
-      // Share data with other components
-      setPageData('stats', categorizedData);
+      });
 
       // Update season display
-      const seasonEl = this.card.querySelector('#stats-season');
+      const seasonEl = this.container?.querySelector('#stats-season');
       if (seasonEl) {
-        seasonEl.textContent = `${categorizedData.season} Season`;
+        seasonEl.textContent = `${data.season} Season`;
       }
 
       // Render pizza chart if enabled
@@ -568,8 +562,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private renderChart(categories: Category[]) {
-      const chartContainer = this.card.querySelector('#stats-chart') as HTMLElement;
-      const chartLoading = this.card.querySelector('#stats-chart-loading');
+      const chartContainer = this.container?.querySelector('#stats-chart') as HTMLElement;
+      const chartLoading = this.container?.querySelector('#stats-chart-loading');
 
       if (!chartContainer) return;
 
@@ -595,7 +589,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
       if (chartStats.length < 3) {
         // Not enough data - hide chart section entirely
-        const chartSection = this.card.querySelector('#stats-chart-container');
+        const chartSection = this.container?.querySelector('#stats-chart-container');
         chartSection?.classList.add('hidden');
         return;
       }
@@ -613,10 +607,9 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private renderCategories(categories: Category[]) {
-      const container = this.card.querySelector('#stats-categories');
+      const container = this.container?.querySelector('#stats-categories');
       if (!container) return;
 
-      // Categories are already sorted by volume from the API
       container.innerHTML = categories
         .map(
           (category) => `
@@ -666,31 +659,31 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private showContent() {
-      this.card.querySelector('#stats-loading')?.classList.add('hidden');
-      this.card.querySelector('#stats-categories')?.classList.remove('hidden');
-      this.card.querySelector('#stats-empty')?.classList.add('hidden');
-      this.card.querySelector('#stats-error')?.classList.add('hidden');
+      this.container?.querySelector('#stats-loading')?.classList.add('hidden');
+      this.container?.querySelector('#stats-categories')?.classList.remove('hidden');
+      this.container?.querySelector('#stats-empty')?.classList.add('hidden');
+      this.container?.querySelector('#stats-error')?.classList.add('hidden');
     }
 
     private showEmpty() {
-      this.card.querySelector('#stats-loading')?.classList.add('hidden');
-      this.card.querySelector('#stats-categories')?.classList.add('hidden');
-      this.card.querySelector('#stats-empty')?.classList.remove('hidden');
-      this.card.querySelector('#stats-error')?.classList.add('hidden');
+      this.container?.querySelector('#stats-loading')?.classList.add('hidden');
+      this.container?.querySelector('#stats-categories')?.classList.add('hidden');
+      this.container?.querySelector('#stats-empty')?.classList.remove('hidden');
+      this.container?.querySelector('#stats-error')?.classList.add('hidden');
 
       // Hide chart if no data
-      const chartContainer = this.card.querySelector('#stats-chart-container');
+      const chartContainer = this.container?.querySelector('#stats-chart-container');
       chartContainer?.classList.add('hidden');
     }
 
     private showError() {
-      this.card.querySelector('#stats-loading')?.classList.add('hidden');
-      this.card.querySelector('#stats-categories')?.classList.add('hidden');
-      this.card.querySelector('#stats-empty')?.classList.add('hidden');
-      this.card.querySelector('#stats-error')?.classList.remove('hidden');
+      this.container?.querySelector('#stats-loading')?.classList.add('hidden');
+      this.container?.querySelector('#stats-categories')?.classList.add('hidden');
+      this.container?.querySelector('#stats-empty')?.classList.add('hidden');
+      this.container?.querySelector('#stats-error')?.classList.remove('hidden');
 
       // Hide chart on error
-      const chartContainer = this.card.querySelector('#stats-chart-container');
+      const chartContainer = this.container?.querySelector('#stats-chart-container');
       chartContainer?.classList.add('hidden');
     }
 
@@ -702,20 +695,22 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
   }
 
-  // Initialize stats card on page load
-  const statsCard = document.querySelector<HTMLElement>('.stats-card');
-  let manager: StatsCardManager | null = null;
+  // Initialize manager and expose on window
+  const manager = new StatsTabManager();
+  (window as any).statsTab = {
+    load: () => manager.load(),
+    refreshChart: () => manager.refreshChart(),
+  };
 
-  if (statsCard) {
-    manager = new StatsCardManager(statsCard);
-  }
+  // Auto-load if this is the active tab (stats tab is default)
+  // This maintains backward compatibility
+  manager.load();
 
   // Listen for theme changes to refresh chart colors
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       if (mutation.attributeName === 'class') {
-        // Theme changed - refresh chart to pick up new CSS variables
-        manager?.refreshChart();
+        manager.refreshChart();
       }
     });
   });

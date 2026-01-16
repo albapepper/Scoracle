@@ -1,30 +1,30 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import ProfileWidget from '../components/ProfileWidget.astro';
-import StatsWidget from '../components/StatsWidget.astro';
+import StatsContentCard from '../components/StatsContentCard.astro';
 import ComparisonSearchModal from '../components/ComparisonSearchModal.astro';
 import ProfileWidgetComparison from '../components/ProfileWidgetComparison.astro';
-import StatsWidgetComparison from '../components/StatsWidgetComparison.astro';
+import StatsComparison from '../components/StatsComparison.astro';
 
-// Enable SSR for dynamic entity pages (faster initial load)
+// Enable SSR for dynamic stats pages (faster initial load)
 export const prerender = false;
 ---
 
 <Layout
-  title="Entity Profile - Scoracle"
-  description="View detailed statistics, news, and information about sports players and teams"
+  title="Stats - Scoracle"
+  description="View detailed statistics, comparisons, and predictions for sports players and teams"
 >
-  <main class="entity-main">
+  <main class="stats-main">
     <!-- Single Entity View (default) -->
     <div id="single-entity-view">
-      <ProfileWidget page="entity" showCompareButton={true} />
-      <StatsWidget title="Statistics" />
+      <ProfileWidget page="stats" showCompareButton={true} />
+      <StatsContentCard title="Statistics" />
     </div>
 
     <!-- Comparison View (hidden by default) -->
     <div id="comparison-view" class="comparison-view hidden">
       <ProfileWidgetComparison />
-      <StatsWidgetComparison title="Statistics Comparison" />
+      <StatsComparison title="Statistics Comparison" />
     </div>
 
     <!-- Comparison Search Modal -->
@@ -33,7 +33,7 @@ export const prerender = false;
 </Layout>
 
 <style>
-  .entity-main {
+  .stats-main {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -43,7 +43,7 @@ export const prerender = false;
     background-color: var(--bg);
   }
 
-  :global(.dark) .entity-main {
+  :global(.dark) .stats-main {
     background-color: var(--bg-dark);
   }
 
@@ -162,7 +162,7 @@ export const prerender = false;
       }
 
       // Initialize comparison stats widget
-      const statsComparison = (window as any).statsWidgetComparison;
+      const statsComparison = (window as any).statsComparison;
       if (statsComparison) {
         statsComparison.show(
           this.primarySport,
@@ -190,7 +190,7 @@ export const prerender = false;
       const widgetComparison = (window as any).profileWidgetComparison;
       if (widgetComparison) widgetComparison.hide();
 
-      const statsComparison = (window as any).statsWidgetComparison;
+      const statsComparison = (window as any).statsComparison;
       if (statsComparison) statsComparison.hide();
 
       // Reset secondary entity

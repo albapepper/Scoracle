@@ -1,0 +1,474 @@
+---
+/**
+ * Predictions Tab Component
+ *
+ * Displays LSTM-based game performance predictions.
+ * Fetches: GET /api/v1/ml/predictions/{entity_type}/{entity_id}/next
+ *
+ * Features:
+ * - Next game matchup info
+ * - Predicted stats vs historical average
+ * - Confidence scoring
+ * - Key factors affecting prediction
+ */
+
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+---
+
+<div id="predictions-tab-content" data-api-url={apiUrl}>
+  <div id="predictions-loading" class="loading-skeleton">
+    <div class="skeleton-matchup"></div>
+    <div class="skeleton-table">
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+  </div>
+
+  <div id="predictions-content" class="hidden">
+    <div class="predictions-header">
+      <span id="predictions-confidence" class="confidence-badge"></span>
+    </div>
+
+    <div id="predictions-matchup" class="predictions-matchup">
+      <span id="matchup-opponent" class="matchup-opponent"></span>
+      <span id="matchup-date" class="matchup-date"></span>
+    </div>
+
+    <div class="predictions-table-container">
+      <table class="predictions-table">
+        <thead>
+          <tr>
+            <th>Stat</th>
+            <th>Predicted</th>
+            <th>Range</th>
+            <th>Avg</th>
+          </tr>
+        </thead>
+        <tbody id="predictions-tbody"></tbody>
+      </table>
+    </div>
+
+    <div id="predictions-factors" class="predictions-factors hidden">
+      <h4 class="factors-title">Key Factors</h4>
+      <ul id="factors-list" class="factors-list"></ul>
+    </div>
+  </div>
+
+  <div id="predictions-empty" class="empty-state hidden">
+    No upcoming game predictions
+  </div>
+
+  <div id="predictions-error" class="empty-state hidden">
+    Unable to load prediction data
+  </div>
+</div>
+
+<style>
+  .loading-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .skeleton-matchup {
+    height: 40px;
+    border-radius: 6px;
+    background-color: var(--border);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .skeleton-table {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .skeleton-row {
+    height: 36px;
+    border-radius: 4px;
+    background-color: var(--border);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  :global(.dark) .skeleton-matchup,
+  :global(.dark) .skeleton-row {
+    background-color: var(--border-dark);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .predictions-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.75rem;
+  }
+
+  .confidence-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .confidence-badge.high {
+    background: rgba(34, 197, 94, 0.15);
+    color: #16a34a;
+  }
+
+  .confidence-badge.medium {
+    background: rgba(245, 158, 11, 0.15);
+    color: #d97706;
+  }
+
+  .confidence-badge.low {
+    background: rgba(107, 114, 128, 0.15);
+    color: #6b7280;
+  }
+
+  :global(.dark) .confidence-badge.high {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+  }
+
+  :global(.dark) .confidence-badge.medium {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+  }
+
+  :global(.dark) .confidence-badge.low {
+    background: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+  }
+
+  .predictions-matchup {
+    padding: 0.75rem 1rem;
+    background: var(--border);
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  :global(.dark) .predictions-matchup {
+    background: var(--border-dark);
+  }
+
+  .matchup-opponent {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  :global(.dark) .matchup-opponent {
+    color: var(--text-dark);
+  }
+
+  .matchup-date {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+
+  :global(.dark) .matchup-date {
+    color: var(--text-secondary-dark);
+  }
+
+  .predictions-table-container {
+    overflow-x: auto;
+  }
+
+  .predictions-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+
+  .predictions-table th {
+    text-align: left;
+    padding: 0.5rem 0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .predictions-table th:not(:first-child) {
+    text-align: right;
+  }
+
+  :global(.dark) .predictions-table th {
+    color: var(--text-secondary-dark);
+    border-bottom-color: var(--border-dark);
+  }
+
+  .predictions-table td {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .predictions-table td:not(:first-child) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :global(.dark) .predictions-table td {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .predictions-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  #predictions-tab-content :global(.stat-name) {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  :global(.dark) #predictions-tab-content :global(.stat-name) {
+    color: var(--text-dark);
+  }
+
+  #predictions-tab-content :global(.predicted-value) {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  :global(.dark) #predictions-tab-content :global(.predicted-value) {
+    color: var(--text-dark);
+  }
+
+  #predictions-tab-content :global(.range-value) {
+    color: var(--text-tertiary);
+    font-size: 0.75rem;
+  }
+
+  :global(.dark) #predictions-tab-content :global(.range-value) {
+    color: var(--text-tertiary-dark);
+  }
+
+  #predictions-tab-content :global(.avg-value) {
+    color: var(--text-secondary);
+  }
+
+  :global(.dark) #predictions-tab-content :global(.avg-value) {
+    color: var(--text-secondary-dark);
+  }
+
+  #predictions-tab-content :global(.value-up) {
+    color: #16a34a;
+  }
+
+  #predictions-tab-content :global(.value-down) {
+    color: #dc2626;
+  }
+
+  :global(.dark) #predictions-tab-content :global(.value-up) {
+    color: #4ade80;
+  }
+
+  :global(.dark) #predictions-tab-content :global(.value-down) {
+    color: #f87171;
+  }
+
+  .predictions-factors {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  :global(.dark) .predictions-factors {
+    border-top-color: var(--border-dark);
+  }
+
+  .factors-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 0.5rem 0;
+  }
+
+  :global(.dark) .factors-title {
+    color: var(--text-secondary-dark);
+  }
+
+  .factors-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  #predictions-tab-content :global(.factor-item) {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    background: var(--border);
+    color: var(--text-secondary);
+    border-radius: 4px;
+  }
+
+  :global(.dark) #predictions-tab-content :global(.factor-item) {
+    background: var(--border-dark);
+    color: var(--text-secondary-dark);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+  }
+
+  :global(.dark) .empty-state {
+    color: var(--text-secondary-dark);
+  }
+
+  .hidden {
+    display: none !important;
+  }
+</style>
+
+<script>
+  import { parseEntityParams, escapeHtml } from '../../lib/utils/dom';
+  import { swrFetch, setPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
+  import type { GamePredictionResponse, StatPrediction } from '../../lib/types';
+
+  class PredictionsTabManager {
+    private container: HTMLElement | null;
+    private apiUrl: string;
+    private loaded = false;
+
+    constructor() {
+      this.container = document.getElementById('predictions-tab-content');
+      this.apiUrl = this.container?.dataset.apiUrl || '';
+    }
+
+    async load(): Promise<void> {
+      if (this.loaded || !this.container) return;
+      this.loaded = true;
+
+      const params = parseEntityParams();
+      const { type, id } = params;
+
+      if (!type || !id) {
+        this.showError();
+        return;
+      }
+
+      try {
+        const url = `${this.apiUrl}/ml/predictions/${type}/${id}/next`;
+        const { data } = await swrFetch<GamePredictionResponse>(url, CACHE_PRESETS.ml);
+
+        if (!data || !data.predictions || Object.keys(data.predictions).length === 0) {
+          this.showEmpty();
+          return;
+        }
+
+        setPageData('ml', { prediction: data });
+        this.renderConfidence(data.confidence_score);
+        this.renderMatchup(data);
+        this.renderPredictions(data.predictions);
+        this.renderFactors(data.key_factors);
+        this.showContent();
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          console.error('PredictionsTab error:', err);
+        }
+        this.showError();
+      }
+    }
+
+    private renderConfidence(score: number): void {
+      const badge = this.container?.querySelector('#predictions-confidence');
+      if (!badge) return;
+
+      const percent = Math.round(score * 100);
+      const cls = percent >= 70 ? 'high' : percent >= 50 ? 'medium' : 'low';
+
+      badge.textContent = `${percent}% confident`;
+      badge.className = `confidence-badge ${cls}`;
+    }
+
+    private renderMatchup(data: GamePredictionResponse): void {
+      const opponentEl = this.container?.querySelector('#matchup-opponent');
+      const dateEl = this.container?.querySelector('#matchup-date');
+
+      if (opponentEl) {
+        opponentEl.textContent = `vs ${data.opponent_name}`;
+      }
+
+      if (dateEl && data.game_date) {
+        const date = new Date(data.game_date);
+        dateEl.textContent = date.toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+        });
+      }
+    }
+
+    private renderPredictions(predictions: Record<string, StatPrediction>): void {
+      const tbody = this.container?.querySelector('#predictions-tbody');
+      if (!tbody) return;
+
+      const formatValue = (v: number) => v === undefined || v === null ? '-' : Number.isInteger(v) ? String(v) : v.toFixed(1);
+      const formatKey = (k: string) => k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+      tbody.innerHTML = Object.entries(predictions).map(([key, pred]) => {
+        const diff = pred.predicted_value - pred.historical_avg;
+        const diffClass = diff > 0 ? 'value-up' : diff < 0 ? 'value-down' : '';
+
+        return `
+          <tr>
+            <td class="stat-name">${escapeHtml(pred.stat_name || formatKey(key))}</td>
+            <td class="predicted-value ${diffClass}">${formatValue(pred.predicted_value)}</td>
+            <td class="range-value">${formatValue(pred.confidence_lower)} - ${formatValue(pred.confidence_upper)}</td>
+            <td class="avg-value">${formatValue(pred.historical_avg)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    private renderFactors(factors: string[]): void {
+      const section = this.container?.querySelector('#predictions-factors');
+      const list = this.container?.querySelector('#factors-list');
+      if (!section || !list || !factors || factors.length === 0) return;
+
+      list.innerHTML = factors.map(f => `<li class="factor-item">${escapeHtml(f)}</li>`).join('');
+      section.classList.remove('hidden');
+    }
+
+    private showContent(): void {
+      this.container?.querySelector('#predictions-loading')?.classList.add('hidden');
+      this.container?.querySelector('#predictions-content')?.classList.remove('hidden');
+      this.container?.querySelector('#predictions-empty')?.classList.add('hidden');
+      this.container?.querySelector('#predictions-error')?.classList.add('hidden');
+    }
+
+    private showEmpty(): void {
+      this.container?.querySelector('#predictions-loading')?.classList.add('hidden');
+      this.container?.querySelector('#predictions-content')?.classList.add('hidden');
+      this.container?.querySelector('#predictions-empty')?.classList.remove('hidden');
+      this.container?.querySelector('#predictions-error')?.classList.add('hidden');
+    }
+
+    private showError(): void {
+      this.container?.querySelector('#predictions-loading')?.classList.add('hidden');
+      this.container?.querySelector('#predictions-content')?.classList.add('hidden');
+      this.container?.querySelector('#predictions-empty')?.classList.add('hidden');
+      this.container?.querySelector('#predictions-error')?.classList.remove('hidden');
+    }
+  }
+
+  const manager = new PredictionsTabManager();
+  (window as any).predictionsTab = { load: () => manager.load() };
+</script>

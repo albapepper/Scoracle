@@ -1,0 +1,312 @@
+---
+/**
+ * Twitter Tab Component
+ *
+ * Displays tweets about an entity.
+ * Fetches: GET /api/v1/intel/twitter?query={entity_name}&sport={sport}&limit=10
+ *
+ * Features:
+ * - Tweets with engagement metrics
+ * - Author info
+ * - Checks intel service availability
+ * - Lazy loading when tab is activated
+ */
+
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+---
+
+<div id="twitter-tab-content" data-api-url={apiUrl}>
+  <div id="twitter-loading" class="loading-skeleton">
+    <div class="skeleton-item"></div>
+    <div class="skeleton-item"></div>
+    <div class="skeleton-item"></div>
+  </div>
+
+  <div id="twitter-content" class="hidden">
+    <div id="twitter-list" class="content-list"></div>
+  </div>
+
+  <div id="twitter-empty" class="empty-state hidden">
+    No tweets found
+  </div>
+
+  <div id="twitter-unavailable" class="empty-state hidden">
+    Twitter integration not configured
+  </div>
+
+  <div id="twitter-error" class="empty-state hidden">
+    Unable to load tweets
+  </div>
+</div>
+
+<style>
+  .loading-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .skeleton-item {
+    height: 80px;
+    border-radius: 4px;
+    background-color: var(--border);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  :global(.dark) .skeleton-item {
+    background-color: var(--border-dark);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .content-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  #twitter-tab-content :global(.content-item) {
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  :global(.dark) #twitter-tab-content :global(.content-item) {
+    border-bottom-color: var(--border-dark);
+  }
+
+  #twitter-tab-content :global(.content-item:last-child) {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  #twitter-tab-content :global(.content-excerpt) {
+    font-size: 0.9rem;
+    color: var(--text);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  :global(.dark) #twitter-tab-content :global(.content-excerpt) {
+    color: var(--text-dark);
+  }
+
+  #twitter-tab-content :global(.content-meta) {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+  }
+
+  :global(.dark) #twitter-tab-content :global(.content-meta) {
+    color: var(--text-secondary-dark);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+  }
+
+  :global(.dark) .empty-state {
+    color: var(--text-secondary-dark);
+  }
+
+  .hidden {
+    display: none !important;
+  }
+</style>
+
+<script>
+  import { escapeHtml, parseEntityParams } from '../../lib/utils/dom';
+  import { formatDate } from '../../lib/utils/date';
+  import { swrFetch, waitForPageData, getPageData, setPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
+
+  interface Tweet {
+    id: string;
+    text: string;
+    author: string;
+    author_username: string;
+    created_at: string;
+    metrics?: {
+      like_count?: number;
+      retweet_count?: number;
+    };
+  }
+
+  interface TwitterResponse {
+    tweets?: Tweet[];
+  }
+
+  interface IntelStatusResponse {
+    services: {
+      twitter: { configured: boolean };
+      news: { configured: boolean };
+      reddit: { configured: boolean };
+    };
+  }
+
+  interface ProfileResponse {
+    entity_id: number;
+    entity_type: string;
+    info: {
+      full_name?: string;
+      first_name?: string;
+      last_name?: string;
+      name?: string;
+      team?: { name: string };
+    };
+  }
+
+  class TwitterTabManager {
+    private container: HTMLElement | null;
+    private apiUrl: string;
+    private loaded = false;
+
+    constructor() {
+      this.container = document.getElementById('twitter-tab-content');
+      this.apiUrl = this.container?.dataset.apiUrl || '';
+    }
+
+    async load(): Promise<void> {
+      if (this.loaded || !this.container) return;
+      this.loaded = true;
+
+      const params = parseEntityParams();
+      const { sport, type, id } = params;
+
+      if (!sport || !type || !id) {
+        this.showEmpty();
+        return;
+      }
+
+      try {
+        // Check if Twitter is enabled
+        const isEnabled = await this.checkTwitterEnabled();
+        if (!isEnabled) {
+          this.showUnavailable();
+          return;
+        }
+
+        // Get entity name
+        const entityName = await this.getEntityName(type, id, sport);
+        if (!entityName) {
+          this.showEmpty();
+          return;
+        }
+
+        await this.fetchTwitter(entityName, sport);
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          console.error('TwitterTab error:', err);
+        }
+        this.showError();
+      }
+    }
+
+    private async checkTwitterEnabled(): Promise<boolean> {
+      try {
+        const { data } = await swrFetch<IntelStatusResponse>(`${this.apiUrl}/intel/status`, CACHE_PRESETS.intel);
+        return data?.services?.twitter?.configured ?? false;
+      } catch {
+        return false;
+      }
+    }
+
+    private async getEntityName(type: string, id: string, sport: string): Promise<string | null> {
+      let profileData = getPageData('widget') as ProfileResponse | undefined;
+
+      if (!profileData) {
+        try {
+          profileData = await waitForPageData('widget', 1000) as ProfileResponse;
+        } catch {
+          const url = `${this.apiUrl}/widget/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
+          const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);
+          profileData = data;
+          if (data) setPageData('widget', data);
+        }
+      }
+
+      if (!profileData?.info) return null;
+
+      const info = profileData.info;
+      if (profileData.entity_type === 'team') {
+        return info.name || info.full_name || null;
+      }
+      return info.full_name || `${info.first_name || ''} ${info.last_name || ''}`.trim() || null;
+    }
+
+    private async fetchTwitter(entityName: string, sport: string): Promise<void> {
+      const params = new URLSearchParams();
+      params.set('query', entityName);
+      params.set('sport', sport.toUpperCase());
+      params.set('limit', '10');
+
+      const url = `${this.apiUrl}/intel/twitter?${params.toString()}`;
+      const { data } = await swrFetch<TwitterResponse>(url, CACHE_PRESETS.intel);
+
+      const tweets = data?.tweets || [];
+      if (tweets.length === 0) {
+        this.showEmpty();
+        return;
+      }
+
+      this.renderTweets(tweets);
+      this.showContent();
+    }
+
+    private renderTweets(tweets: Tweet[]): void {
+      const list = this.container?.querySelector('#twitter-list');
+      if (!list) return;
+
+      list.innerHTML = tweets.map(tweet => {
+        const text = escapeHtml(tweet.text);
+        const username = escapeHtml(tweet.author_username);
+        const date = formatDate(tweet.created_at);
+        const likes = tweet.metrics?.like_count || 0;
+        const retweets = tweet.metrics?.retweet_count || 0;
+
+        return `<div class="content-item">
+          <p class="content-excerpt">${text}</p>
+          <div class="content-meta">@${username} · ${date} · ${likes} likes · ${retweets} retweets</div>
+        </div>`;
+      }).join('');
+    }
+
+    private showContent(): void {
+      this.container?.querySelector('#twitter-loading')?.classList.add('hidden');
+      this.container?.querySelector('#twitter-content')?.classList.remove('hidden');
+      this.container?.querySelector('#twitter-empty')?.classList.add('hidden');
+      this.container?.querySelector('#twitter-unavailable')?.classList.add('hidden');
+      this.container?.querySelector('#twitter-error')?.classList.add('hidden');
+    }
+
+    private showEmpty(): void {
+      this.container?.querySelector('#twitter-loading')?.classList.add('hidden');
+      this.container?.querySelector('#twitter-content')?.classList.add('hidden');
+      this.container?.querySelector('#twitter-empty')?.classList.remove('hidden');
+      this.container?.querySelector('#twitter-unavailable')?.classList.add('hidden');
+      this.container?.querySelector('#twitter-error')?.classList.add('hidden');
+    }
+
+    private showUnavailable(): void {
+      this.container?.querySelector('#twitter-loading')?.classList.add('hidden');
+      this.container?.querySelector('#twitter-content')?.classList.add('hidden');
+      this.container?.querySelector('#twitter-empty')?.classList.add('hidden');
+      this.container?.querySelector('#twitter-unavailable')?.classList.remove('hidden');
+      this.container?.querySelector('#twitter-error')?.classList.add('hidden');
+    }
+
+    private showError(): void {
+      this.container?.querySelector('#twitter-loading')?.classList.add('hidden');
+      this.container?.querySelector('#twitter-content')?.classList.add('hidden');
+      this.container?.querySelector('#twitter-empty')?.classList.add('hidden');
+      this.container?.querySelector('#twitter-unavailable')?.classList.add('hidden');
+      this.container?.querySelector('#twitter-error')?.classList.remove('hidden');
+    }
+  }
+
+  const manager = new TwitterTabManager();
+  (window as any).twitterTab = { load: () => manager.load() };
+</script>

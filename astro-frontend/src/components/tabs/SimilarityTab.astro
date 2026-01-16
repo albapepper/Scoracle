@@ -1,0 +1,300 @@
+---
+/**
+ * Similarity Tab Component
+ *
+ * Displays similar entities based on 64-dimensional embeddings.
+ * Fetches: GET /api/v1/ml/similar/{entity_type}/{entity_id}?limit=5
+ *
+ * Features:
+ * - Similarity score with visual bar
+ * - Click to navigate to entity stats page
+ * - Lazy loading when tab is activated
+ */
+
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+---
+
+<div id="similarity-tab-content" data-api-url={apiUrl}>
+  <div id="similarity-loading" class="loading-skeleton">
+    <div class="skeleton-item"></div>
+    <div class="skeleton-item"></div>
+    <div class="skeleton-item"></div>
+  </div>
+
+  <div id="similarity-content" class="hidden">
+    <ul id="similarity-list" class="similarity-list"></ul>
+  </div>
+
+  <div id="similarity-empty" class="empty-state hidden">
+    No similar entities found
+  </div>
+
+  <div id="similarity-error" class="empty-state hidden">
+    Unable to load similarity data
+  </div>
+</div>
+
+<style>
+  .loading-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .skeleton-item {
+    height: 56px;
+    border-radius: 6px;
+    background-color: var(--border);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  :global(.dark) .skeleton-item {
+    background-color: var(--border-dark);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .similarity-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  #similarity-tab-content :global(.similarity-item) {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }
+
+  #similarity-tab-content :global(.similarity-item:last-child) {
+    border-bottom: none;
+  }
+
+  #similarity-tab-content :global(.similarity-item:hover) {
+    background: var(--hover-bg, rgba(0, 0, 0, 0.03));
+    margin: 0 -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  :global(.dark) #similarity-tab-content :global(.similarity-item) {
+    border-bottom-color: var(--border-dark);
+  }
+
+  :global(.dark) #similarity-tab-content :global(.similarity-item:hover) {
+    background: var(--hover-bg-dark, rgba(255, 255, 255, 0.05));
+  }
+
+  #similarity-tab-content :global(.similarity-item-info) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  #similarity-tab-content :global(.similarity-item-name) {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text);
+    margin: 0 0 0.125rem 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :global(.dark) #similarity-tab-content :global(.similarity-item-name) {
+    color: var(--text-dark);
+  }
+
+  #similarity-tab-content :global(.similarity-item-meta) {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :global(.dark) #similarity-tab-content :global(.similarity-item-meta) {
+    color: var(--text-secondary-dark);
+  }
+
+  #similarity-tab-content :global(.similarity-score) {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+  }
+
+  #similarity-tab-content :global(.score-value) {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  :global(.dark) #similarity-tab-content :global(.score-value) {
+    color: var(--text-dark);
+  }
+
+  #similarity-tab-content :global(.score-bar) {
+    width: 48px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 0.25rem;
+    overflow: hidden;
+  }
+
+  :global(.dark) #similarity-tab-content :global(.score-bar) {
+    background: var(--border-dark);
+  }
+
+  #similarity-tab-content :global(.score-bar-fill) {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+
+  #similarity-tab-content :global(.score-bar-fill.high) {
+    background: #22c55e;
+  }
+
+  #similarity-tab-content :global(.score-bar-fill.medium) {
+    background: #f59e0b;
+  }
+
+  #similarity-tab-content :global(.score-bar-fill.low) {
+    background: #6b7280;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+  }
+
+  :global(.dark) .empty-state {
+    color: var(--text-secondary-dark);
+  }
+
+  .hidden {
+    display: none !important;
+  }
+</style>
+
+<script>
+  import { parseEntityParams, escapeHtml } from '../../lib/utils/dom';
+  import { swrFetch, setPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
+  import type { SimilarityResponse, SimilarEntity } from '../../lib/types';
+
+  class SimilarityTabManager {
+    private container: HTMLElement | null;
+    private apiUrl: string;
+    private loaded = false;
+
+    constructor() {
+      this.container = document.getElementById('similarity-tab-content');
+      this.apiUrl = this.container?.dataset.apiUrl || '';
+    }
+
+    async load(): Promise<void> {
+      if (this.loaded || !this.container) return;
+      this.loaded = true;
+
+      const params = parseEntityParams();
+      const { sport, type, id } = params;
+
+      if (!sport || !type || !id) {
+        this.showError();
+        return;
+      }
+
+      try {
+        const url = `${this.apiUrl}/ml/similar/${type}/${id}?limit=5`;
+        const { data } = await swrFetch<SimilarityResponse>(url, CACHE_PRESETS.ml);
+
+        if (!data || !data.similar_entities || data.similar_entities.length === 0) {
+          this.showEmpty();
+          return;
+        }
+
+        setPageData('ml', { similarity: data });
+        this.renderList(data.similar_entities, sport);
+        this.showContent();
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          console.error('SimilarityTab error:', err);
+        }
+        this.showError();
+      }
+    }
+
+    private renderList(entities: SimilarEntity[], sport: string): void {
+      const list = this.container?.querySelector('#similarity-list');
+      if (!list) return;
+
+      list.innerHTML = entities.map(entity => {
+        const scorePercent = Math.round(entity.similarity_score * 100);
+        const scoreClass = scorePercent >= 80 ? 'high' : scorePercent >= 60 ? 'medium' : 'low';
+        const meta = [entity.position, entity.team].filter(Boolean).join(' - ');
+
+        return `
+          <li class="similarity-item"
+              data-sport="${escapeHtml(sport)}"
+              data-type="${escapeHtml(entity.entity_type)}"
+              data-id="${entity.entity_id}">
+            <div class="similarity-item-info">
+              <p class="similarity-item-name">${escapeHtml(entity.entity_name)}</p>
+              ${meta ? `<span class="similarity-item-meta">${escapeHtml(meta)}</span>` : ''}
+            </div>
+            <div class="similarity-score">
+              <span class="score-value">${scorePercent}%</span>
+              <div class="score-bar">
+                <div class="score-bar-fill ${scoreClass}" style="width: ${scorePercent}%"></div>
+              </div>
+            </div>
+          </li>
+        `;
+      }).join('');
+
+      list.querySelectorAll('.similarity-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const el = item as HTMLElement;
+          const { sport: s, type: t, id: i } = el.dataset;
+          if (s && t && i) {
+            window.location.href = `/stats?sport=${s}&type=${t}&id=${i}`;
+          }
+        });
+      });
+    }
+
+    private showContent(): void {
+      this.container?.querySelector('#similarity-loading')?.classList.add('hidden');
+      this.container?.querySelector('#similarity-content')?.classList.remove('hidden');
+      this.container?.querySelector('#similarity-empty')?.classList.add('hidden');
+      this.container?.querySelector('#similarity-error')?.classList.add('hidden');
+    }
+
+    private showEmpty(): void {
+      this.container?.querySelector('#similarity-loading')?.classList.add('hidden');
+      this.container?.querySelector('#similarity-content')?.classList.add('hidden');
+      this.container?.querySelector('#similarity-empty')?.classList.remove('hidden');
+      this.container?.querySelector('#similarity-error')?.classList.add('hidden');
+    }
+
+    private showError(): void {
+      this.container?.querySelector('#similarity-loading')?.classList.add('hidden');
+      this.container?.querySelector('#similarity-content')?.classList.add('hidden');
+      this.container?.querySelector('#similarity-empty')?.classList.add('hidden');
+      this.container?.querySelector('#similarity-error')?.classList.remove('hidden');
+    }
+  }
+
+  const manager = new SimilarityTabManager();
+  (window as any).similarityTab = { load: () => manager.load() };
+</script>

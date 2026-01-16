@@ -1,0 +1,309 @@
+---
+/**
+ * News Content Card
+ *
+ * Primary content card for the news page. Displays news and related
+ * content for an entity in a tabbed interface.
+ *
+ * Tabs:
+ * - News: News articles from various sources
+ * - RSS: RSS feed content (Coming Soon)
+ * - Co-mentions: Entities mentioned together
+ * - Transfers: Transfer predictions
+ * - Vibes: Sentiment analysis
+ * - Twitter: Tweets about the entity
+ * - Reddit: Reddit posts about the entity
+ */
+
+import NewsTab from './tabs/NewsTab.astro';
+import CoMentionsTab from './tabs/CoMentionsTab.astro';
+import TransfersTab from './tabs/TransfersTab.astro';
+import VibesTab from './tabs/VibesTab.astro';
+import TwitterTab from './tabs/TwitterTab.astro';
+import RedditTab from './tabs/RedditTab.astro';
+
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+---
+
+<div id="news-content-card" class="news-content-card card" data-api-url={apiUrl}>
+  <!-- Tab Navigation -->
+  <div class="tabs-nav">
+    <button class="tab-btn active" data-tab="news">News</button>
+    <button class="tab-btn" data-tab="rss">RSS</button>
+    <button class="tab-btn" data-tab="comentions">Co-mentions</button>
+    <button class="tab-btn" data-tab="transfers">Transfers</button>
+    <button class="tab-btn" data-tab="vibes">Vibes</button>
+    <button class="tab-btn" data-tab="twitter">Twitter</button>
+    <button class="tab-btn" data-tab="reddit">Reddit</button>
+  </div>
+
+  <!-- Tab Content -->
+  <div class="tabs-content">
+    <!-- News Tab -->
+    <div id="news-tab" class="tab-content active">
+      <NewsTab />
+    </div>
+
+    <!-- RSS Tab -->
+    <div id="rss-tab" class="tab-content">
+      <div class="coming-soon-state">
+        <div class="coming-soon-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 11a9 9 0 0 1 9 9"></path>
+            <path d="M4 4a16 16 0 0 1 16 16"></path>
+            <circle cx="5" cy="19" r="1"></circle>
+          </svg>
+        </div>
+        <h3 class="coming-soon-title">RSS Feeds</h3>
+        <p class="coming-soon-text">Subscribe to custom RSS feeds for personalized news updates. Coming soon.</p>
+      </div>
+    </div>
+
+    <!-- Co-mentions Tab -->
+    <div id="comentions-tab" class="tab-content">
+      <CoMentionsTab />
+    </div>
+
+    <!-- Transfers Tab -->
+    <div id="transfers-tab" class="tab-content">
+      <TransfersTab />
+    </div>
+
+    <!-- Vibes Tab -->
+    <div id="vibes-tab" class="tab-content">
+      <VibesTab />
+    </div>
+
+    <!-- Twitter Tab -->
+    <div id="twitter-tab" class="tab-content">
+      <TwitterTab />
+    </div>
+
+    <!-- Reddit Tab -->
+    <div id="reddit-tab" class="tab-content">
+      <RedditTab />
+    </div>
+  </div>
+</div>
+
+<style>
+  .news-content-card {
+    width: 100%;
+    max-width: 600px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0.375rem;
+  }
+
+  .tabs-nav {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background-color: transparent;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .tabs-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  :global(.dark) .tabs-nav {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .tab-btn {
+    flex: 0 0 auto;
+    padding: 0.875rem 0.75rem;
+    min-height: 48px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+  }
+
+  :global(.dark) .tab-btn {
+    color: var(--text-secondary-dark);
+  }
+
+  .tab-btn:hover {
+    color: var(--text);
+  }
+
+  :global(.dark) .tab-btn:hover {
+    color: var(--text-dark);
+  }
+
+  .tab-btn.active {
+    color: var(--text);
+    border-bottom-color: var(--text);
+  }
+
+  :global(.dark) .tab-btn.active {
+    color: var(--text-dark);
+    border-bottom-color: var(--text-dark);
+  }
+
+  .tabs-content {
+    padding: 1.5rem;
+    min-height: 300px;
+  }
+
+  .tab-content {
+    display: none;
+  }
+
+  .tab-content.active {
+    display: block;
+  }
+
+  /* Coming Soon State */
+  .coming-soon-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    text-align: center;
+    min-height: 250px;
+  }
+
+  .coming-soon-icon {
+    color: var(--text-tertiary);
+    margin-bottom: 1rem;
+    opacity: 0.6;
+  }
+
+  :global(.dark) .coming-soon-icon {
+    color: var(--text-tertiary-dark);
+  }
+
+  .coming-soon-title {
+    margin: 0 0 0.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  :global(.dark) .coming-soon-title {
+    color: var(--text-dark);
+  }
+
+  .coming-soon-text {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    max-width: 280px;
+  }
+
+  :global(.dark) .coming-soon-text {
+    color: var(--text-secondary-dark);
+  }
+
+  /* Responsive - Mobile */
+  @media (max-width: 480px) {
+    .tabs-nav {
+      gap: 0;
+    }
+
+    .tab-btn {
+      padding: 0.75rem 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .tabs-content {
+      padding: 1rem;
+    }
+
+    .coming-soon-state {
+      padding: 2rem 1rem;
+      min-height: 200px;
+    }
+
+    .coming-soon-icon svg {
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  /* Extra small screens */
+  @media (max-width: 320px) {
+    .tab-btn {
+      font-size: 0.7rem;
+      padding: 0.75rem 0.375rem;
+    }
+
+    .tabs-content {
+      padding: 0.75rem;
+    }
+  }
+</style>
+
+<script>
+  /**
+   * NewsContentCard Tab Manager
+   *
+   * Handles tab switching and lazy loading of tab content.
+   * Each tab component manages its own data fetching and rendering.
+   */
+  class NewsContentCardManager {
+    private card: HTMLElement | null = null;
+
+    constructor() {
+      const card = document.getElementById('news-content-card');
+      if (!card) return;
+
+      this.card = card;
+      this.bindTabEvents();
+
+      // Load News tab immediately (first tab)
+      (window as any).newsTab?.load();
+    }
+
+    private bindTabEvents() {
+      if (!this.card) return;
+
+      this.card.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const target = e.currentTarget as HTMLButtonElement;
+          const tab = target.dataset.tab;
+
+          // Update active tab button
+          this.card!.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          target.classList.add('active');
+
+          // Update active tab content
+          this.card!.querySelectorAll('.tab-content').forEach(p => p.classList.remove('active'));
+          const panel = document.getElementById(`${tab}-tab`);
+          if (panel) panel.classList.add('active');
+
+          // Lazy-load tab content
+          this.loadTabContent(tab);
+        });
+      });
+    }
+
+    private loadTabContent(tab: string | undefined) {
+      if (!tab) return;
+
+      const tabLoaders: Record<string, () => void> = {
+        news: () => (window as any).newsTab?.load(),
+        comentions: () => (window as any).coMentionsTab?.load(),
+        transfers: () => (window as any).transfersTab?.load(),
+        vibes: () => (window as any).vibesTab?.load(),
+        twitter: () => (window as any).twitterTab?.load(),
+        reddit: () => (window as any).redditTab?.load(),
+      };
+
+      tabLoaders[tab]?.();
+    }
+  }
+
+  new NewsContentCardManager();
+</script>
