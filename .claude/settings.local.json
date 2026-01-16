@@ -25,7 +25,8 @@
       "Bash(du:*)",
       "Bash(wc:*)",
       "Bash(npm run check:*)",
-      "Bash(npx astro check)"
+      "Bash(npx astro check)",
+      "Bash(xargs:*)"
     ]
   }
 }

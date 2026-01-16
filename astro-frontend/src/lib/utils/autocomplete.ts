@@ -2,11 +2,12 @@
  * Autocomplete Manager
  *
  * Shared autocomplete logic for search components.
- * Handles data loading, caching, filtering, and rendering.
+ * Uses EntityDataStore for preloaded data - no per-sport fetching needed.
  */
 
 import { escapeHtml } from './dom';
-import { getSportDisplay, getSportByIdLower, type AutocompleteEntity } from '../types';
+import { getSportDisplay, type AutocompleteEntity } from '../types';
+import { entityDataStore } from './entity-data-store';
 
 export type { AutocompleteEntity };
 
@@ -20,9 +21,6 @@ export interface AutocompleteConfig {
   /** Filter to only show entities of this type ('player' or 'team') */
   typeFilter?: 'player' | 'team';
 }
-
-const CACHE_KEY = 'scoracle_autocomplete_cache';
-const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 
 export class AutocompleteManager {
   private inputEl!: HTMLInputElement;
@@ -69,70 +67,8 @@ export class AutocompleteManager {
 
   private async loadData() {
     try {
-      // Get sport config for data file path
-      const sportConfig = getSportByIdLower(this.currentSport);
-      if (!sportConfig) {
-        throw new Error(`Unknown sport: ${this.currentSport}`);
-      }
-
-      // Check cache first
-      const cache = localStorage.getItem(CACHE_KEY);
-      if (cache) {
-        const cachedData = JSON.parse(cache);
-        if (cachedData[this.currentSport]) {
-          const { data, timestamp } = cachedData[this.currentSport];
-          if (Date.now() - timestamp < CACHE_EXPIRY) {
-            this.allData = data;
-            return;
-          }
-        }
-      }
-
-      // Fetch fresh data using centralized data file path
-      const response = await fetch(sportConfig.dataFile);
-      if (!response.ok) throw new Error('Failed to fetch data');
-
-      const json = await response.json();
-      const items: AutocompleteEntity[] = [];
-
-      // Handle players - support both flat array and items array structure
-      if (json.players?.items) {
-        items.push(...json.players.items.map((p: any) => ({
-          id: String(p.id),
-          name: p.name,
-          type: 'player' as const,
-          team: p.currentTeam || p.team,
-        })));
-      } else if (Array.isArray(json.players)) {
-        items.push(...json.players.map((p: any) => ({
-          id: String(p.id),
-          name: p.name,
-          type: 'player' as const,
-          team: p.currentTeam || p.team,
-        })));
-      }
-
-      // Handle teams - support both flat array and items array structure
-      if (json.teams?.items) {
-        items.push(...json.teams.items.map((t: any) => ({
-          id: String(t.id),
-          name: t.name,
-          type: 'team' as const,
-        })));
-      } else if (Array.isArray(json.teams)) {
-        items.push(...json.teams.map((t: any) => ({
-          id: String(t.id),
-          name: t.name,
-          type: 'team' as const,
-        })));
-      }
-
-      this.allData = items;
-
-      // Update cache
-      const newCache = cache ? JSON.parse(cache) : {};
-      newCache[this.currentSport] = { data: items, timestamp: Date.now() };
-      localStorage.setItem(CACHE_KEY, JSON.stringify(newCache));
+      // Get data from preloaded EntityDataStore (instant if already loaded)
+      this.allData = await entityDataStore.getEntities(this.currentSport);
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error('Failed to load autocomplete data:', error);

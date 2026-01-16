@@ -345,98 +345,17 @@ export function findCoMentions(
 }
 
 /**
- * Load entity data for a sport from the static JSON files.
- * Uses localStorage cache if available and fresh.
+ * Load entity data for a sport from the preloaded EntityDataStore.
+ * Falls back to direct fetch if store not initialized.
  */
 export async function loadEntitiesForSport(sport: string): Promise<Entity[]> {
-  // Import centralized sport config
-  const { getSportById, getSportByIdLower } = await import('../types');
+  const { entityDataStore } = await import('./entity-data-store');
 
-  const sportConfig = getSportById(sport) || getSportByIdLower(sport);
-  if (!sportConfig) {
-    throw new Error(`Unknown sport: ${sport}`);
-  }
+  // Get from preloaded store (instant if already loaded)
+  const entities = await entityDataStore.getEntities(sport);
 
-  const sportLower = sportConfig.idLower;
-  const cacheKey = 'scoracle_autocomplete_cache';
-  const cacheExpiry = 24 * 60 * 60 * 1000; // 24 hours
-
-  // Check localStorage cache first
-  try {
-    const cache = localStorage.getItem(cacheKey);
-    if (cache) {
-      const cachedData = JSON.parse(cache);
-      if (cachedData[sportLower]) {
-        const { data, timestamp } = cachedData[sportLower];
-        if (Date.now() - timestamp < cacheExpiry) {
-          return data;
-        }
-      }
-    }
-  } catch {
-    // Cache read failed, continue to fetch
-  }
-
-  // Fetch from static JSON using centralized data file path
-  const response = await fetch(sportConfig.dataFile);
-  if (!response.ok) {
-    throw new Error(`Failed to load entity data for ${sport}`);
-  }
-
-  const json = await response.json();
-  const items: Entity[] = [];
-
-  // Handle players
-  if (json.players?.items) {
-    items.push(
-      ...json.players.items.map((p: any) => ({
-        id: String(p.id),
-        name: p.name,
-        type: 'player' as const,
-        team: p.currentTeam || p.team,
-      }))
-    );
-  } else if (Array.isArray(json.players)) {
-    items.push(
-      ...json.players.map((p: any) => ({
-        id: String(p.id),
-        name: p.name,
-        type: 'player' as const,
-        team: p.currentTeam || p.team,
-      }))
-    );
-  }
-
-  // Handle teams
-  if (json.teams?.items) {
-    items.push(
-      ...json.teams.items.map((t: any) => ({
-        id: String(t.id),
-        name: t.name,
-        type: 'team' as const,
-      }))
-    );
-  } else if (Array.isArray(json.teams)) {
-    items.push(
-      ...json.teams.map((t: any) => ({
-        id: String(t.id),
-        name: t.name,
-        type: 'team' as const,
-      }))
-    );
-  }
-
-  // Update localStorage cache
-  try {
-    const cache = localStorage.getItem(cacheKey);
-    const newCache = cache ? JSON.parse(cache) : {};
-    newCache[sportLower] = { data: items, timestamp: Date.now() };
-    localStorage.setItem(cacheKey, JSON.stringify(newCache));
-  } catch {
-    // Cache write failed, continue anyway
-  }
-
-  return items;
+  // EntityDataStore returns AutocompleteEntity[], which is compatible with Entity[]
+  return entities as Entity[];
 }
 
 /**

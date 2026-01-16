@@ -204,8 +204,6 @@ const sports = SPORTS.map(s => ({ id: s.idLower, display: s.display, logo: s.log
 </style>
 
 <script>
-  import { loadEntitiesForSport } from '../lib/utils/co-mentions';
-
   const STORAGE_KEY = 'activeSport';
 
   class CrystalBallSelector {
@@ -245,10 +243,6 @@ const sports = SPORTS.map(s => ({ id: s.idLower, display: s.display, logo: s.log
       this.prevBtn.addEventListener('click', () => this.navigate(-1));
       this.nextBtn.addEventListener('click', () => this.navigate(1));
 
-      // Prefetch on hover - load entity data for adjacent sports
-      this.prevBtn.addEventListener('mouseenter', () => this.prefetchAdjacentSport(-1));
-      this.nextBtn.addEventListener('mouseenter', () => this.prefetchAdjacentSport(1));
-
       // Keyboard support
       this.container.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowLeft') this.navigate(-1);
@@ -257,20 +251,6 @@ const sports = SPORTS.map(s => ({ id: s.idLower, display: s.display, logo: s.log
 
       // Dispatch initial event
       this.dispatchChange();
-    }
-
-    /**
-     * Prefetch entity data for the adjacent sport (on hover)
-     * This reduces latency when the user navigates to a new sport
-     */
-    private prefetchAdjacentSport(direction: number) {
-      const adjacentIndex = (this.currentIndex + direction + this.sports.length) % this.sports.length;
-      const adjacentSport = this.sports[adjacentIndex];
-
-      // Preload the entities JSON file for the adjacent sport (fire and forget)
-      loadEntitiesForSport(adjacentSport).catch(() => {
-        // Silently ignore prefetch errors
-      });
     }
 
     private navigate(direction: number) {
