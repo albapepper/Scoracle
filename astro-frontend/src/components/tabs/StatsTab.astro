@@ -2,43 +2,29 @@
 /**
  * Stats Tab Component
  *
- * Displays entity statistics with pizza chart visualization.
+ * Displays raw entity statistics in a table format.
  * Fetches: GET /api/v1/widget/stats/{entity_type}/{entity_id}
  *
  * Features:
- * - Pizza chart for percentile visualization
- * - Categorized stat tables with percentile badges
+ * - Categorized stat tables showing raw values
  * - Season display
  * - Lazy loading support via window.statsTab.load()
  */
 
 interface Props {
   title?: string;
-  showChart?: boolean;
 }
 
-const { title = 'Statistics', showChart = true } = Astro.props;
+const { title = 'Statistics' } = Astro.props;
 const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 ---
 
-<div id="stats-tab-content" data-api-url={apiUrl} data-show-chart={showChart.toString()}>
+<div id="stats-tab-content" data-api-url={apiUrl}>
   <!-- Header -->
   <div class="stats-header">
     <h3 class="stats-title">{title}</h3>
     <span id="stats-season" class="stats-season"></span>
   </div>
-
-  <!-- Pizza Chart Container -->
-  {
-    showChart && (
-      <div id="stats-chart-container" class="stats-chart-container">
-        <div id="stats-chart" class="stats-chart" />
-        <div id="stats-chart-loading" class="chart-skeleton">
-          <div class="chart-skeleton-circle" />
-        </div>
-      </div>
-    )
-  }
 
   <!-- Stats Categories -->
   <div class="stats-body">
@@ -112,63 +98,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
   :global(.dark) .stats-season {
     color: var(--text-secondary-dark);
-  }
-
-  /* Chart Container */
-  .stats-chart-container {
-    padding: 1.5rem 1rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-bottom: 1px solid var(--border);
-    min-height: 280px;
-  }
-
-  :global(.dark) .stats-chart-container {
-    border-bottom-color: var(--border-dark);
-  }
-
-  .stats-chart {
-    width: 100%;
-    max-width: 360px;
-    display: flex;
-    justify-content: center;
-  }
-
-  .stats-chart :global(.pizza-chart-svg) {
-    display: block;
-  }
-
-  .stats-chart :global(.chart-no-data) {
-    color: var(--text-tertiary);
-    font-size: 0.875rem;
-    text-align: center;
-    margin: 0;
-  }
-
-  :global(.dark) .stats-chart :global(.chart-no-data) {
-    color: var(--text-tertiary-dark);
-  }
-
-  /* Chart Skeleton */
-  .chart-skeleton {
-    width: 200px;
-    height: 200px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .chart-skeleton-circle {
-    width: 180px;
-    height: 180px;
-    border-radius: 50%;
-    background: var(--border);
-    animation: pulse 1.5s ease-in-out infinite;
-  }
-
-  :global(.dark) .chart-skeleton-circle {
-    background: var(--border-dark);
   }
 
   /* Stats Body */
@@ -300,12 +229,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     color: var(--text-secondary-dark);
   }
 
-  .stats-categories :global(.stat-values) {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-  }
-
   .stats-categories :global(.stat-value) {
     font-size: 0.875rem;
     font-weight: 500;
@@ -317,33 +240,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
   :global(.dark) .stats-categories :global(.stat-value) {
     color: var(--text-dark);
-  }
-
-  .stats-categories :global(.stat-percentile) {
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 0.125rem 0.375rem;
-    border-radius: 3px;
-    min-width: 38px;
-    text-align: center;
-    color: #ffffff;
-  }
-
-  /* Percentile tier colors */
-  .stats-categories :global(.percentile-elite) {
-    background-color: var(--percentile-elite);
-  }
-  .stats-categories :global(.percentile-above) {
-    background-color: var(--percentile-above);
-  }
-  .stats-categories :global(.percentile-average) {
-    background-color: var(--percentile-average);
-  }
-  .stats-categories :global(.percentile-below) {
-    background-color: var(--percentile-below);
-  }
-  .stats-categories :global(.percentile-poor) {
-    background-color: var(--percentile-poor);
   }
 
   /* Empty & Error States */
@@ -387,15 +283,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       font-size: 0.75rem;
     }
 
-    .stats-chart-container {
-      padding: 1rem;
-      min-height: 240px;
-    }
-
-    .stats-chart {
-      max-width: 280px;
-    }
-
     .stats-body {
       padding: 0 1rem 1rem;
     }
@@ -405,19 +292,9 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       gap: 0.25rem;
     }
 
-    .stats-categories :global(.stat-values) {
-      gap: 0.5rem;
-    }
-
     .stats-categories :global(.stat-value) {
       font-size: 0.8rem;
       min-width: 40px;
-    }
-
-    .stats-categories :global(.stat-percentile) {
-      font-size: 0.65rem;
-      min-width: 34px;
-      padding: 0.1rem 0.25rem;
     }
   }
 
@@ -430,21 +307,12 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     .stats-body {
       padding: 0 0.75rem 0.75rem;
     }
-
-    .stats-chart-container {
-      min-height: 200px;
-    }
-
-    .stats-chart {
-      max-width: 220px;
-    }
   }
 </style>
 
 <script>
   import { escapeHtml, parseEntityParams } from '../../lib/utils/dom';
   import { swrFetch, setPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
-  import { PizzaChart, type PizzaChartStat } from '../../lib/charts/pizza-chart';
   import { categorizeStats, type StatItem, type Category } from '../../lib/utils/stats-categorizer';
 
   // API Response types matching scoracle-data backend
@@ -469,20 +337,17 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   /**
    * Stats Tab Manager
    *
-   * Handles loading stats from the backend API,
-   * rendering the pizza chart, and populating category tables.
+   * Handles loading stats from the backend API and populating
+   * category tables with raw stat values.
    */
   class StatsTabManager {
     private container: HTMLElement | null;
     private apiUrl: string;
-    private showChart: boolean;
-    private pizzaChart: PizzaChart | null = null;
     private loaded = false;
 
     constructor() {
       this.container = document.getElementById('stats-tab-content');
       this.apiUrl = this.container?.dataset.apiUrl || '';
-      this.showChart = this.container?.dataset.showChart === 'true';
     }
 
     async load(): Promise<void> {
@@ -517,18 +382,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         return;
       }
 
-      // Convert percentiles array to object if needed
-      let percentilesObj: Record<string, number> = {};
-      if (Array.isArray(data.percentiles)) {
-        for (const p of data.percentiles) {
-          percentilesObj[p.stat_key] = p.percentile;
-        }
-      } else if (data.percentiles && typeof data.percentiles === 'object') {
-        percentilesObj = data.percentiles as Record<string, number>;
-      }
-
-      // Transform flat stats into categorized format
-      const categories = categorizeStats(data.stats, percentilesObj, sport);
+      // Transform flat stats into categorized format (no percentiles needed for raw stats)
+      const categories = categorizeStats(data.stats, {}, sport);
 
       if (categories.length === 0) {
         this.showEmpty();
@@ -552,58 +407,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         seasonEl.textContent = `${data.season} Season`;
       }
 
-      // Render pizza chart if enabled
-      if (this.showChart) {
-        this.renderChart(categories);
-      }
-
       // Render category tables
       this.renderCategories(categories);
-    }
-
-    private renderChart(categories: Category[]) {
-      const chartContainer = this.container?.querySelector('#stats-chart') as HTMLElement;
-      const chartLoading = this.container?.querySelector('#stats-chart-loading');
-
-      if (!chartContainer) return;
-
-      // Collect all stats with percentiles for the chart
-      const chartStats: PizzaChartStat[] = [];
-
-      categories.forEach((category) => {
-        category.stats.forEach((stat) => {
-          if (stat.percentile !== undefined && stat.percentile !== null) {
-            chartStats.push({
-              key: stat.key,
-              label: stat.label,
-              value: stat.value ?? '-',
-              percentile: stat.percentile,
-              categoryId: category.id,
-            });
-          }
-        });
-      });
-
-      // Hide loading skeleton
-      chartLoading?.classList.add('hidden');
-
-      if (chartStats.length < 3) {
-        // Not enough data - hide chart section entirely
-        const chartSection = this.container?.querySelector('#stats-chart-container');
-        chartSection?.classList.add('hidden');
-        return;
-      }
-
-      // Create and render chart
-      this.pizzaChart = new PizzaChart(chartContainer, {
-        width: 360,
-        height: 360,
-        innerRadius: 35,
-        outerRadius: 120,
-        labelOffset: 30,
-      });
-
-      this.pizzaChart.render(chartStats);
     }
 
     private renderCategories(categories: Category[]) {
@@ -630,32 +435,14 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private renderStatRow(stat: StatItem): string {
-      const percentileClass = this.getPercentileClass(stat.percentile);
-      const percentileDisplay =
-        stat.percentile !== undefined && stat.percentile !== null
-          ? `<span class="stat-percentile ${percentileClass}">${Math.round(stat.percentile)}%</span>`
-          : '';
-
       const displayValue = stat.value !== null ? String(stat.value) : '-';
 
       return `
         <div class="stat-row">
           <span class="stat-label">${escapeHtml(stat.label)}</span>
-          <div class="stat-values">
-            <span class="stat-value">${escapeHtml(displayValue)}</span>
-            ${percentileDisplay}
-          </div>
+          <span class="stat-value">${escapeHtml(displayValue)}</span>
         </div>
       `;
-    }
-
-    private getPercentileClass(percentile?: number | null): string {
-      if (percentile === undefined || percentile === null) return '';
-      if (percentile >= 90) return 'percentile-elite';
-      if (percentile >= 75) return 'percentile-above';
-      if (percentile >= 50) return 'percentile-average';
-      if (percentile >= 25) return 'percentile-below';
-      return 'percentile-poor';
     }
 
     private showContent() {
@@ -670,10 +457,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.container?.querySelector('#stats-categories')?.classList.add('hidden');
       this.container?.querySelector('#stats-empty')?.classList.remove('hidden');
       this.container?.querySelector('#stats-error')?.classList.add('hidden');
-
-      // Hide chart if no data
-      const chartContainer = this.container?.querySelector('#stats-chart-container');
-      chartContainer?.classList.add('hidden');
     }
 
     private showError() {
@@ -681,17 +464,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.container?.querySelector('#stats-categories')?.classList.add('hidden');
       this.container?.querySelector('#stats-empty')?.classList.add('hidden');
       this.container?.querySelector('#stats-error')?.classList.remove('hidden');
-
-      // Hide chart on error
-      const chartContainer = this.container?.querySelector('#stats-chart-container');
-      chartContainer?.classList.add('hidden');
-    }
-
-    /**
-     * Refresh the chart (e.g., on theme change).
-     */
-    public refreshChart(): void {
-      this.pizzaChart?.refresh();
     }
   }
 
@@ -699,21 +471,9 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   const manager = new StatsTabManager();
   (window as any).statsTab = {
     load: () => manager.load(),
-    refreshChart: () => manager.refreshChart(),
   };
 
   // Auto-load if this is the active tab (stats tab is default)
   // This maintains backward compatibility
   manager.load();
-
-  // Listen for theme changes to refresh chart colors
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (mutation.attributeName === 'class') {
-        manager.refreshChart();
-      }
-    });
-  });
-
-  observer.observe(document.documentElement, { attributes: true });
 </script>

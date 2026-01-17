@@ -303,6 +303,7 @@ export interface PageData {
   widget?: unknown;
   news?: unknown;
   stats?: unknown;
+  percentiles?: unknown;
   comparisonWidget?: unknown;
   intelStatus?: IntelStatus;
   ml?: {

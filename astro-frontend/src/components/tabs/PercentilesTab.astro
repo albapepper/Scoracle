@@ -1,0 +1,706 @@
+---
+/**
+ * Percentiles Tab Component
+ *
+ * Displays entity percentile data with pizza chart visualization.
+ * Fetches: GET /api/v1/widget/percentiles/{entity_type}/{entity_id}
+ *
+ * Features:
+ * - Pizza chart for percentile visualization
+ * - Categorized percentile tables with colored badges
+ * - Season display
+ * - Lazy loading support via window.percentilesTab.load()
+ */
+
+interface Props {
+  title?: string;
+}
+
+const { title = 'Percentiles' } = Astro.props;
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+---
+
+<div id="percentiles-tab-content" data-api-url={apiUrl}>
+  <!-- Header -->
+  <div class="percentiles-header">
+    <h3 class="percentiles-title">{title}</h3>
+    <span id="percentiles-season" class="percentiles-season"></span>
+  </div>
+
+  <!-- Pizza Chart Container -->
+  <div id="percentiles-chart-container" class="percentiles-chart-container">
+    <div id="percentiles-chart" class="percentiles-chart"></div>
+    <div id="percentiles-chart-loading" class="chart-skeleton">
+      <div class="chart-skeleton-circle"></div>
+    </div>
+  </div>
+
+  <!-- Percentiles Categories -->
+  <div class="percentiles-body">
+    <!-- Loading State -->
+    <div id="percentiles-loading" class="percentiles-loading">
+      <div class="category-skeleton">
+        <div class="skeleton-header"></div>
+        <div class="skeleton-rows">
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+        </div>
+      </div>
+      <div class="category-skeleton">
+        <div class="skeleton-header"></div>
+        <div class="skeleton-rows">
+          <div class="skeleton-row"></div>
+          <div class="skeleton-row"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Categories Container -->
+    <div id="percentiles-categories" class="percentiles-categories hidden">
+      <!-- Categories populated by JavaScript -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="percentiles-empty" class="percentiles-empty hidden">
+      <p>No percentile data available</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="percentiles-error" class="percentiles-error hidden">
+      <p>Unable to load percentile data</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Percentiles Header */
+  .percentiles-header {
+    padding: 1.25rem 1.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  :global(.dark) .percentiles-header {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .percentiles-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  :global(.dark) .percentiles-title {
+    color: var(--text-dark);
+  }
+
+  .percentiles-season {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  :global(.dark) .percentiles-season {
+    color: var(--text-secondary-dark);
+  }
+
+  /* Chart Container */
+  .percentiles-chart-container {
+    padding: 1.5rem 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    min-height: 280px;
+  }
+
+  :global(.dark) .percentiles-chart-container {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .percentiles-chart {
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .percentiles-chart :global(.pizza-chart-svg) {
+    display: block;
+  }
+
+  .percentiles-chart :global(.chart-no-data) {
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+    text-align: center;
+    margin: 0;
+  }
+
+  :global(.dark) .percentiles-chart :global(.chart-no-data) {
+    color: var(--text-tertiary-dark);
+  }
+
+  /* Chart Skeleton */
+  .chart-skeleton {
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .chart-skeleton-circle {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: var(--border);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  :global(.dark) .chart-skeleton-circle {
+    background: var(--border-dark);
+  }
+
+  /* Percentiles Body */
+  .percentiles-body {
+    padding: 0 1.5rem 1.25rem;
+  }
+
+  /* Loading Skeleton */
+  .percentiles-loading {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding-top: 1rem;
+  }
+
+  .category-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .skeleton-header {
+    width: 30%;
+    height: 14px;
+    background: var(--border);
+    border-radius: 3px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .skeleton-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .skeleton-row {
+    height: 28px;
+    background: var(--border);
+    border-radius: 3px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  :global(.dark) .skeleton-header,
+  :global(.dark) .skeleton-row {
+    background: var(--border-dark);
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  /* Categories */
+  .percentiles-categories {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .percentiles-categories :global(.percentiles-category) {
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .percentiles-categories :global(.percentiles-category:first-child) {
+    padding-top: 1.25rem;
+  }
+
+  .percentiles-categories :global(.percentiles-category:last-child) {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  :global(.dark) .percentiles-categories :global(.percentiles-category) {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .percentiles-categories :global(.category-header) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.625rem;
+  }
+
+  .percentiles-categories :global(.category-indicator) {
+    width: 3px;
+    height: 14px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .percentiles-categories :global(.category-title) {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  :global(.dark) .percentiles-categories :global(.category-title) {
+    color: var(--text-dark);
+  }
+
+  .percentiles-categories :global(.category-stats) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .percentiles-categories :global(.stat-row) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.375rem 0;
+  }
+
+  .percentiles-categories :global(.stat-label) {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    flex: 1;
+  }
+
+  :global(.dark) .percentiles-categories :global(.stat-label) {
+    color: var(--text-secondary-dark);
+  }
+
+  .percentiles-categories :global(.stat-values) {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  .percentiles-categories :global(.stat-value) {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    min-width: 48px;
+    text-align: right;
+  }
+
+  :global(.dark) .percentiles-categories :global(.stat-value) {
+    color: var(--text-dark);
+  }
+
+  .percentiles-categories :global(.stat-percentile) {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    min-width: 38px;
+    text-align: center;
+    color: #ffffff;
+  }
+
+  /* Percentile tier colors */
+  .percentiles-categories :global(.percentile-elite) {
+    background-color: var(--percentile-elite);
+  }
+  .percentiles-categories :global(.percentile-above) {
+    background-color: var(--percentile-above);
+  }
+  .percentiles-categories :global(.percentile-average) {
+    background-color: var(--percentile-average);
+  }
+  .percentiles-categories :global(.percentile-below) {
+    background-color: var(--percentile-below);
+  }
+  .percentiles-categories :global(.percentile-poor) {
+    background-color: var(--percentile-poor);
+  }
+
+  /* Empty & Error States */
+  .percentiles-empty,
+  .percentiles-error {
+    padding: 2rem 0;
+    text-align: center;
+  }
+
+  .percentiles-empty p,
+  .percentiles-error p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-tertiary);
+  }
+
+  :global(.dark) .percentiles-empty p,
+  :global(.dark) .percentiles-error p {
+    color: var(--text-tertiary-dark);
+  }
+
+  /* Utility */
+  .hidden {
+    display: none !important;
+  }
+
+  /* Responsive - Mobile */
+  @media (max-width: 480px) {
+    .percentiles-header {
+      padding: 1rem;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.25rem;
+    }
+
+    .percentiles-title {
+      font-size: 0.9rem;
+    }
+
+    .percentiles-season {
+      font-size: 0.75rem;
+    }
+
+    .percentiles-chart-container {
+      padding: 1rem;
+      min-height: 240px;
+    }
+
+    .percentiles-chart {
+      max-width: 280px;
+    }
+
+    .percentiles-body {
+      padding: 0 1rem 1rem;
+    }
+
+    .percentiles-categories :global(.stat-row) {
+      flex-wrap: wrap;
+      gap: 0.25rem;
+    }
+
+    .percentiles-categories :global(.stat-values) {
+      gap: 0.5rem;
+    }
+
+    .percentiles-categories :global(.stat-value) {
+      font-size: 0.8rem;
+      min-width: 40px;
+    }
+
+    .percentiles-categories :global(.stat-percentile) {
+      font-size: 0.65rem;
+      min-width: 34px;
+      padding: 0.1rem 0.25rem;
+    }
+  }
+
+  /* Extra small screens */
+  @media (max-width: 320px) {
+    .percentiles-header {
+      padding: 0.75rem;
+    }
+
+    .percentiles-body {
+      padding: 0 0.75rem 0.75rem;
+    }
+
+    .percentiles-chart-container {
+      min-height: 200px;
+    }
+
+    .percentiles-chart {
+      max-width: 220px;
+    }
+  }
+</style>
+
+<script>
+  import { escapeHtml, parseEntityParams } from '../../lib/utils/dom';
+  import { swrFetch, setPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
+  import { PizzaChart, type PizzaChartStat } from '../../lib/charts/pizza-chart';
+  import { categorizeStats, type StatItem, type Category } from '../../lib/utils/stats-categorizer';
+
+  // API Response types matching scoracle-data backend
+  interface PercentilesResponse {
+    entity_id: number;
+    entity_type: 'player' | 'team';
+    sport: string;
+    season: number;
+    info: {
+      id: number;
+      first_name?: string;
+      last_name?: string;
+      full_name?: string;
+      name?: string;
+      position?: string;
+      team?: { name: string };
+    };
+    stats: Record<string, unknown>;
+    percentiles: Array<{ stat_key: string; percentile: number }> | Record<string, number>;
+  }
+
+  /**
+   * Percentiles Tab Manager
+   *
+   * Handles loading percentile data from the backend API,
+   * rendering the pizza chart, and populating category tables.
+   */
+  class PercentilesTabManager {
+    private container: HTMLElement | null;
+    private apiUrl: string;
+    private pizzaChart: PizzaChart | null = null;
+    private loaded = false;
+
+    constructor() {
+      this.container = document.getElementById('percentiles-tab-content');
+      this.apiUrl = this.container?.dataset.apiUrl || '';
+    }
+
+    async load(): Promise<void> {
+      if (this.loaded || !this.container) return;
+      this.loaded = true;
+
+      const params = parseEntityParams();
+      const { sport, type, id } = params;
+
+      if (!sport || !type || !id) {
+        this.showError();
+        return;
+      }
+
+      try {
+        await this.loadPercentiles(sport, type, id);
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.error('Failed to load percentiles:', error);
+        }
+        this.showError();
+      }
+    }
+
+    private async loadPercentiles(sport: string, type: string, id: string) {
+      const url = `${this.apiUrl}/widget/percentiles/${type}/${id}?sport=${sport.toUpperCase()}`;
+
+      const { data } = await swrFetch<PercentilesResponse>(url, CACHE_PRESETS.stats);
+
+      if (!data || !data.percentiles) {
+        this.showEmpty();
+        return;
+      }
+
+      // Convert percentiles array to object if needed
+      let percentilesObj: Record<string, number> = {};
+      if (Array.isArray(data.percentiles)) {
+        for (const p of data.percentiles) {
+          percentilesObj[p.stat_key] = p.percentile;
+        }
+      } else if (data.percentiles && typeof data.percentiles === 'object') {
+        percentilesObj = data.percentiles as Record<string, number>;
+      }
+
+      // Transform flat stats into categorized format
+      const categories = categorizeStats(data.stats || {}, percentilesObj, sport);
+
+      if (categories.length === 0) {
+        this.showEmpty();
+        return;
+      }
+
+      // Share data with other components
+      setPageData('percentiles', {
+        season: data.season,
+        entity: {
+          id: String(data.entity_id),
+          name: data.info?.full_name || data.info?.name || '',
+          type: data.entity_type,
+        },
+        categories: categories,
+      });
+
+      // Update season display
+      const seasonEl = this.container?.querySelector('#percentiles-season');
+      if (seasonEl) {
+        seasonEl.textContent = `${data.season} Season`;
+      }
+
+      // Render pizza chart
+      this.renderChart(categories);
+
+      // Render category tables
+      this.renderCategories(categories);
+    }
+
+    private renderChart(categories: Category[]) {
+      const chartContainer = this.container?.querySelector('#percentiles-chart') as HTMLElement;
+      const chartLoading = this.container?.querySelector('#percentiles-chart-loading');
+
+      if (!chartContainer) return;
+
+      // Collect all stats with percentiles for the chart
+      const chartStats: PizzaChartStat[] = [];
+
+      categories.forEach((category) => {
+        category.stats.forEach((stat) => {
+          if (stat.percentile !== undefined && stat.percentile !== null) {
+            chartStats.push({
+              key: stat.key,
+              label: stat.label,
+              value: stat.value ?? '-',
+              percentile: stat.percentile,
+              categoryId: category.id,
+            });
+          }
+        });
+      });
+
+      // Hide loading skeleton
+      chartLoading?.classList.add('hidden');
+
+      if (chartStats.length < 3) {
+        // Not enough data - hide chart section entirely
+        const chartSection = this.container?.querySelector('#percentiles-chart-container');
+        chartSection?.classList.add('hidden');
+        return;
+      }
+
+      // Create and render chart
+      this.pizzaChart = new PizzaChart(chartContainer, {
+        width: 360,
+        height: 360,
+        innerRadius: 35,
+        outerRadius: 120,
+        labelOffset: 30,
+      });
+
+      this.pizzaChart.render(chartStats);
+    }
+
+    private renderCategories(categories: Category[]) {
+      const container = this.container?.querySelector('#percentiles-categories');
+      if (!container) return;
+
+      container.innerHTML = categories
+        .map(
+          (category) => `
+        <div class="percentiles-category" data-category="${category.id}">
+          <div class="category-header">
+            <div class="category-indicator" style="background: var(--category-${category.id}, var(--accent))"></div>
+            <h4 class="category-title">${escapeHtml(category.label)}</h4>
+          </div>
+          <div class="category-stats">
+            ${category.stats.map((stat) => this.renderStatRow(stat)).join('')}
+          </div>
+        </div>
+      `
+        )
+        .join('');
+
+      this.showContent();
+    }
+
+    private renderStatRow(stat: StatItem): string {
+      const percentileClass = this.getPercentileClass(stat.percentile);
+      const percentileDisplay =
+        stat.percentile !== undefined && stat.percentile !== null
+          ? `<span class="stat-percentile ${percentileClass}">${Math.round(stat.percentile)}%</span>`
+          : '';
+
+      const displayValue = stat.value !== null ? String(stat.value) : '-';
+
+      return `
+        <div class="stat-row">
+          <span class="stat-label">${escapeHtml(stat.label)}</span>
+          <div class="stat-values">
+            <span class="stat-value">${escapeHtml(displayValue)}</span>
+            ${percentileDisplay}
+          </div>
+        </div>
+      `;
+    }
+
+    private getPercentileClass(percentile?: number | null): string {
+      if (percentile === undefined || percentile === null) return '';
+      if (percentile >= 90) return 'percentile-elite';
+      if (percentile >= 75) return 'percentile-above';
+      if (percentile >= 50) return 'percentile-average';
+      if (percentile >= 25) return 'percentile-below';
+      return 'percentile-poor';
+    }
+
+    private showContent() {
+      this.container?.querySelector('#percentiles-loading')?.classList.add('hidden');
+      this.container?.querySelector('#percentiles-categories')?.classList.remove('hidden');
+      this.container?.querySelector('#percentiles-empty')?.classList.add('hidden');
+      this.container?.querySelector('#percentiles-error')?.classList.add('hidden');
+    }
+
+    private showEmpty() {
+      this.container?.querySelector('#percentiles-loading')?.classList.add('hidden');
+      this.container?.querySelector('#percentiles-categories')?.classList.add('hidden');
+      this.container?.querySelector('#percentiles-empty')?.classList.remove('hidden');
+      this.container?.querySelector('#percentiles-error')?.classList.add('hidden');
+
+      // Hide chart if no data
+      const chartContainer = this.container?.querySelector('#percentiles-chart-container');
+      chartContainer?.classList.add('hidden');
+    }
+
+    private showError() {
+      this.container?.querySelector('#percentiles-loading')?.classList.add('hidden');
+      this.container?.querySelector('#percentiles-categories')?.classList.add('hidden');
+      this.container?.querySelector('#percentiles-empty')?.classList.add('hidden');
+      this.container?.querySelector('#percentiles-error')?.classList.remove('hidden');
+
+      // Hide chart on error
+      const chartContainer = this.container?.querySelector('#percentiles-chart-container');
+      chartContainer?.classList.add('hidden');
+    }
+
+    /**
+     * Refresh the chart (e.g., on theme change).
+     */
+    public refreshChart(): void {
+      this.pizzaChart?.refresh();
+    }
+  }
+
+  // Initialize manager and expose on window
+  const manager = new PercentilesTabManager();
+  (window as any).percentilesTab = {
+    load: () => manager.load(),
+    refreshChart: () => manager.refreshChart(),
+  };
+
+  // Listen for theme changes to refresh chart colors
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.attributeName === 'class') {
+        manager.refreshChart();
+      }
+    });
+  });
+
+  observer.observe(document.documentElement, { attributes: true });
+</script>
