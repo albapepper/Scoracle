@@ -26,7 +26,10 @@
       "Bash(wc:*)",
       "Bash(npm run check:*)",
       "Bash(npx astro check)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
