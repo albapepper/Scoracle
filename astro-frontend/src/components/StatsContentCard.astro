@@ -8,6 +8,7 @@
  * Tabs:
  * - Stats: Entity statistics with pizza chart visualization
  * - Similarity: Similar players/teams based on embeddings
+ * - Transfers: Transfer predictions
  * - Predictions: LSTM-based performance predictions
  *
  * Props:
@@ -17,6 +18,7 @@
 
 import StatsTab from './tabs/StatsTab.astro';
 import SimilarityTab from './tabs/SimilarityTab.astro';
+import TransfersTab from './tabs/TransfersTab.astro';
 import PredictionsTab from './tabs/PredictionsTab.astro';
 
 interface Props {
@@ -32,6 +34,7 @@ const { title = 'Statistics', showChart = true } = Astro.props;
   <div class="tabs-nav">
     <button class="tab-btn active" data-tab="stats">Stats</button>
     <button class="tab-btn" data-tab="similarity">Similarity</button>
+    <button class="tab-btn" data-tab="transfers">Transfers</button>
     <button class="tab-btn" data-tab="predictions">Predictions</button>
   </div>
 
@@ -45,6 +48,11 @@ const { title = 'Statistics', showChart = true } = Astro.props;
     <!-- Similarity Tab -->
     <div id="similarity-tab" class="tab-content">
       <SimilarityTab />
+    </div>
+
+    <!-- Transfers Tab -->
+    <div id="transfers-tab" class="tab-content">
+      <TransfersTab />
     </div>
 
     <!-- Predictions Tab -->
@@ -179,6 +187,9 @@ const { title = 'Statistics', showChart = true } = Astro.props;
           }
           if (tab === 'similarity') {
             (window as any).similarityTab?.load();
+          }
+          if (tab === 'transfers') {
+            (window as any).transfersTab?.load();
           }
           if (tab === 'predictions') {
             (window as any).predictionsTab?.load();

@@ -6,18 +6,15 @@
  * content for an entity in a tabbed interface.
  *
  * Tabs:
- * - News: News articles from various sources
- * - RSS: RSS feed content (Coming Soon)
+ * - News: News articles from RSS feeds
  * - Co-mentions: Entities mentioned together
- * - Transfers: Transfer predictions
- * - Vibes: Sentiment analysis
  * - Twitter: Tweets about the entity
+ * - Vibes: Sentiment analysis
  * - Reddit: Reddit posts about the entity
  */
 
 import NewsTab from './tabs/NewsTab.astro';
 import CoMentionsTab from './tabs/CoMentionsTab.astro';
-import TransfersTab from './tabs/TransfersTab.astro';
 import VibesTab from './tabs/VibesTab.astro';
 import TwitterTab from './tabs/TwitterTab.astro';
 import RedditTab from './tabs/RedditTab.astro';
@@ -29,11 +26,9 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   <!-- Tab Navigation -->
   <div class="tabs-nav">
     <button class="tab-btn active" data-tab="news">News</button>
-    <button class="tab-btn" data-tab="rss">RSS</button>
     <button class="tab-btn" data-tab="comentions">Co-mentions</button>
-    <button class="tab-btn" data-tab="transfers">Transfers</button>
-    <button class="tab-btn" data-tab="vibes">Vibes</button>
     <button class="tab-btn" data-tab="twitter">Twitter</button>
+    <button class="tab-btn" data-tab="vibes">Vibes</button>
     <button class="tab-btn" data-tab="reddit">Reddit</button>
   </div>
 
@@ -44,39 +39,19 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       <NewsTab />
     </div>
 
-    <!-- RSS Tab -->
-    <div id="rss-tab" class="tab-content">
-      <div class="coming-soon-state">
-        <div class="coming-soon-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 11a9 9 0 0 1 9 9"></path>
-            <path d="M4 4a16 16 0 0 1 16 16"></path>
-            <circle cx="5" cy="19" r="1"></circle>
-          </svg>
-        </div>
-        <h3 class="coming-soon-title">RSS Feeds</h3>
-        <p class="coming-soon-text">Subscribe to custom RSS feeds for personalized news updates. Coming soon.</p>
-      </div>
-    </div>
-
     <!-- Co-mentions Tab -->
     <div id="comentions-tab" class="tab-content">
       <CoMentionsTab />
     </div>
 
-    <!-- Transfers Tab -->
-    <div id="transfers-tab" class="tab-content">
-      <TransfersTab />
+    <!-- Twitter Tab -->
+    <div id="twitter-tab" class="tab-content">
+      <TwitterTab />
     </div>
 
     <!-- Vibes Tab -->
     <div id="vibes-tab" class="tab-content">
       <VibesTab />
-    </div>
-
-    <!-- Twitter Tab -->
-    <div id="twitter-tab" class="tab-content">
-      <TwitterTab />
     </div>
 
     <!-- Reddit Tab -->
@@ -295,9 +270,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       const tabLoaders: Record<string, () => void> = {
         news: () => (window as any).newsTab?.load(),
         comentions: () => (window as any).coMentionsTab?.load(),
-        transfers: () => (window as any).transfersTab?.load(),
-        vibes: () => (window as any).vibesTab?.load(),
         twitter: () => (window as any).twitterTab?.load(),
+        vibes: () => (window as any).vibesTab?.load(),
         reddit: () => (window as any).redditTab?.load(),
       };
 

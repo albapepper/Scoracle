@@ -2,11 +2,11 @@
 /**
  * News Tab Component
  *
- * Displays news articles for an entity.
- * Fetches: GET /api/v1/news/{entity_name}?sport={sport}&team={team}&limit=10
+ * Displays news articles for an entity from RSS feeds.
+ * Fetches: GET /api/v1/news/{entity_name}?sport={sport}&team={team}
  *
  * Features:
- * - News articles from various sources
+ * - News articles from Google News RSS
  * - Source and date metadata
  * - Links to original articles
  * - Lazy loading when tab is activated
@@ -130,25 +130,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   import { escapeHtml, parseEntityParams } from '../../lib/utils/dom';
   import { formatDate } from '../../lib/utils/date';
   import { swrFetch, setPageData, waitForPageData, getPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
-
-  interface NewsArticle {
-    title: string;
-    url: string;
-    source?: string;
-    published_at?: string;
-    description?: string;
-    image_url?: string | null;
-  }
-
-  interface NewsResponse {
-    query: string;
-    sport: string;
-    articles: NewsArticle[];
-    meta?: {
-      total_results: number;
-      returned: number;
-    };
-  }
+  import type { NewsArticle, NewsData } from '../../lib/types';
 
   interface ProfileResponse {
     entity_id: number;
@@ -237,10 +219,9 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       const params = new URLSearchParams();
       params.set('sport', sport.toUpperCase());
       if (team) params.set('team', team);
-      params.set('limit', '10');
 
       const url = `${this.apiUrl}/news/${encodeURIComponent(entityName)}?${params.toString()}`;
-      const { data } = await swrFetch<NewsResponse>(url, CACHE_PRESETS.news);
+      const { data } = await swrFetch<NewsData>(url, CACHE_PRESETS.news);
 
       const articles = data?.articles || [];
       if (articles.length === 0) {
@@ -261,9 +242,9 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
       list.innerHTML = articles.map(article => {
         const title = escapeHtml(article.title || 'Untitled');
-        const link = article.url || '#';
+        const link = article.link || '#';
         const source = escapeHtml(article.source || '');
-        const date = formatDate(article.published_at);
+        const date = formatDate(article.pub_date);
 
         return `<div class="content-item">
           <h3 class="content-title">
