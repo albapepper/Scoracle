@@ -2,11 +2,11 @@
 /**
  * News Tab Component
  *
- * Displays news articles for an entity from RSS feeds.
- * Fetches: GET /api/v1/rss-news/{entity_name}?sport={sport}&team={team}
+ * Displays news articles for an entity.
+ * Fetches: GET /api/v1/news/{entity_type}/{entity_id}?sport={sport}
  *
  * Features:
- * - News articles from Google News RSS
+ * - News articles from Google News RSS (default) or NewsAPI
  * - Source and date metadata
  * - Links to original articles
  * - Lazy loading when tab is activated
@@ -129,20 +129,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 <script>
   import { escapeHtml, parseEntityParams } from '../../lib/utils/dom';
   import { formatDate } from '../../lib/utils/date';
-  import { swrFetch, setPageData, waitForPageData, getPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
+  import { swrFetch, setPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
   import type { NewsArticle, NewsData } from '../../lib/types';
-
-  interface ProfileResponse {
-    entity_id: number;
-    entity_type: string;
-    info: {
-      full_name?: string;
-      first_name?: string;
-      last_name?: string;
-      name?: string;
-      team?: { name: string };
-    };
-  }
 
   class NewsTabManager {
     private container: HTMLElement | null;
@@ -167,14 +155,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       }
 
       try {
-        // Get entity info from profile widget
-        const entityInfo = await this.getEntityInfo(type, id, sport);
-        if (!entityInfo.name) {
-          this.showEmpty();
-          return;
-        }
-
-        await this.fetchNews(entityInfo.name, sport, entityInfo.team);
+        await this.fetchNews(type, id, sport);
       } catch (err) {
         if (import.meta.env.DEV) {
           console.error('NewsTab error:', err);
@@ -183,44 +164,11 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       }
     }
 
-    private async getEntityInfo(type: string, id: string, sport: string): Promise<{ name: string | null; team: string | null }> {
-      let profileData = getPageData('widget') as ProfileResponse | undefined;
-
-      if (!profileData) {
-        try {
-          profileData = await waitForPageData('widget', 1000) as ProfileResponse;
-        } catch {
-          const url = `${this.apiUrl}/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
-          const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);
-          profileData = data;
-          if (data) setPageData('widget', data);
-        }
-      }
-
-      if (!profileData?.info) {
-        return { name: null, team: null };
-      }
-
-      const info = profileData.info;
-      let name: string | null = null;
-      let team: string | null = null;
-
-      if (profileData.entity_type === 'team') {
-        name = info.name || info.full_name || null;
-      } else {
-        name = info.full_name || `${info.first_name || ''} ${info.last_name || ''}`.trim() || null;
-        team = info.team?.name || null;
-      }
-
-      return { name, team };
-    }
-
-    private async fetchNews(entityName: string, sport: string, team: string | null): Promise<void> {
+    private async fetchNews(entityType: string, entityId: string, sport: string): Promise<void> {
       const params = new URLSearchParams();
       params.set('sport', sport.toUpperCase());
-      if (team) params.set('team', team);
 
-      const url = `${this.apiUrl}/rss-news/${encodeURIComponent(entityName)}?${params.toString()}`;
+      const url = `${this.apiUrl}/news/${entityType}/${entityId}?${params.toString()}`;
       const { data } = await swrFetch<NewsData>(url, CACHE_PRESETS.news);
 
       const articles = data?.articles || [];

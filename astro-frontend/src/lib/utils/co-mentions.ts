@@ -361,23 +361,21 @@ export async function loadEntitiesForSport(sport: string): Promise<Entity[]> {
 /**
  * Fetch news articles for an entity.
  *
- * Enhanced with sport/team context for better search relevance.
- * The backend will use these to build smarter queries and may
- * auto-extend the time range if few results are found.
+ * Uses the unified news endpoint which resolves entity name on the backend.
  */
 export async function fetchArticles(
-  entityName: string,
+  entityType: 'player' | 'team',
+  entityId: string,
   apiUrl: string,
-  hours: number = 48,
-  sport?: string,
-  team?: string
+  sport: string,
+  limit: number = 20
 ): Promise<Article[]> {
-  const params = new URLSearchParams({ hours: hours.toString() });
-  if (sport) params.set('sport', sport);
-  if (team) params.set('team', team);
+  const params = new URLSearchParams();
+  params.set('sport', sport.toUpperCase());
+  params.set('limit', limit.toString());
 
   const response = await fetch(
-    `${apiUrl}/rss-news/${encodeURIComponent(entityName)}?${params.toString()}`
+    `${apiUrl}/news/${entityType}/${entityId}?${params.toString()}`
   );
 
   if (!response.ok) {
@@ -391,27 +389,23 @@ export async function fetchArticles(
 /**
  * Main function to get co-mentions for an entity.
  *
- * @param entityName - Name of the entity to search for
  * @param entityId - ID of the entity (to exclude from results)
  * @param entityType - Type of the entity (to exclude from results)
  * @param sport - Sport code (FOOTBALL, NBA, NFL)
  * @param apiUrl - Base API URL
- * @param hours - Hours to look back for news
- * @param team - Team name for player context (improves search relevance)
+ * @param limit - Max articles to fetch
  * @returns List of co-mentioned entities with counts
  */
 export async function getCoMentions(
-  entityName: string,
   entityId: string,
   entityType: 'player' | 'team',
   sport: string,
   apiUrl: string,
-  hours: number = 48,
-  team?: string
+  limit: number = 20
 ): Promise<CoMention[]> {
   // Fetch articles and entities in parallel
   const [articles, entities] = await Promise.all([
-    fetchArticles(entityName, apiUrl, hours, sport, team),
+    fetchArticles(entityType, entityId, apiUrl, sport, limit),
     loadEntitiesForSport(sport),
   ]);
 

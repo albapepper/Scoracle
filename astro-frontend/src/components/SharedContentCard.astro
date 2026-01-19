@@ -361,7 +361,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
     private async getEntityName(type: string, id: string): Promise<string | null> {
       try {
-        const url = `${this.apiUrl}/widget/profile/${type}/${id}?sport=${this.params.sport!.toUpperCase()}`;
+        const url = `${this.apiUrl}/profile/${type}/${id}?sport=${this.params.sport!.toUpperCase()}`;
         const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);
 
         if (!data?.info) return null;
@@ -411,7 +411,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         if (this.params.sport) newsParams.set('sport', this.params.sport.toUpperCase());
         newsParams.set('limit', '20');
 
-        const newsUrl = `${this.apiUrl}/rss-news/${encodeURIComponent(this.primaryName)}?${newsParams.toString()}`;
+        const newsUrl = `${this.apiUrl}/news/${this.params.type}/${this.params.id}?${newsParams.toString()}`;
         const { data } = await swrFetch<NewsResponse>(newsUrl, CACHE_PRESETS.news);
 
         // Transform API response
