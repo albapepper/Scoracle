@@ -1,0 +1,575 @@
+---
+/**
+ * Strengths & Weaknesses Tab Component
+ *
+ * Displays player/team strengths and weaknesses based on percentile data.
+ * This is a frontend-only component that uses data already loaded by StatsTab.
+ *
+ * Thresholds:
+ * - Strengths: percentile >= 70%
+ * - Weaknesses: percentile <= 30%
+ *
+ * Indicator brackets:
+ * - 90-100%: ++++ (4 plusses)
+ * - 80-89%: +++ (3 plusses)
+ * - 70-79%: ++ (2 plusses)
+ * - 20-30%: -- (2 minuses)
+ * - 10-19%: --- (3 minuses)
+ * - 0-9%: ---- (4 minuses)
+ *
+ * Features:
+ * - No backend calls - uses waitForPageData('stats')
+ * - Color-coded indicators (green for strengths, red for weaknesses)
+ * - Sorted by percentile (strongest/weakest first)
+ * - Lazy loading support via window.strengthsTab.load()
+ */
+
+interface Props {
+  title?: string;
+}
+
+const { title = 'Strengths & Weaknesses' } = Astro.props;
+---
+
+<div id="sw-tab-content">
+  <!-- Header -->
+  <div class="sw-header">
+    <h3 class="sw-title">{title}</h3>
+  </div>
+
+  <!-- Content -->
+  <div class="sw-body">
+    <!-- Loading State -->
+    <div id="sw-loading" class="sw-loading">
+      <div class="sw-skeleton-section">
+        <div class="skeleton-header"></div>
+        <div class="skeleton-item"></div>
+        <div class="skeleton-item"></div>
+        <div class="skeleton-item"></div>
+      </div>
+      <div class="sw-skeleton-section">
+        <div class="skeleton-header"></div>
+        <div class="skeleton-item"></div>
+        <div class="skeleton-item"></div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="sw-content" class="sw-content hidden">
+      <!-- Strengths Section -->
+      <div class="sw-section" data-type="strengths">
+        <div class="section-header">
+          <span class="section-icon strength-icon">+</span>
+          <h4 class="section-title">Strengths</h4>
+        </div>
+        <div id="sw-strengths-list" class="sw-list">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Weaknesses Section -->
+      <div class="sw-section" data-type="weaknesses">
+        <div class="section-header">
+          <span class="section-icon weakness-icon">-</span>
+          <h4 class="section-title">Weaknesses</h4>
+        </div>
+        <div id="sw-weaknesses-list" class="sw-list">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State (no stats data at all) -->
+    <div id="sw-empty" class="sw-empty hidden">
+      <p>No statistics data available</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="sw-error" class="sw-error hidden">
+      <p>Unable to load strengths and weaknesses</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Header */
+  .sw-header {
+    padding: 1.25rem 1.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  :global(.dark) .sw-header {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .sw-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  :global(.dark) .sw-title {
+    color: var(--text-dark);
+  }
+
+  /* Body */
+  .sw-body {
+    padding: 1rem 1.5rem 1.25rem;
+  }
+
+  /* Loading Skeleton */
+  .sw-loading {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .sw-skeleton-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .skeleton-header {
+    width: 100px;
+    height: 16px;
+    background: var(--border);
+    border-radius: 3px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .skeleton-item {
+    height: 36px;
+    background: var(--border);
+    border-radius: 4px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  :global(.dark) .skeleton-header,
+  :global(.dark) .skeleton-item {
+    background: var(--border-dark);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Content */
+  .sw-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Section */
+  .sw-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .section-icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: #ffffff;
+  }
+
+  .strength-icon {
+    background-color: var(--percentile-elite);
+  }
+
+  .weakness-icon {
+    background-color: var(--percentile-poor);
+  }
+
+  .section-title {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  :global(.dark) .section-title {
+    color: var(--text-dark);
+  }
+
+  /* List */
+  .sw-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .sw-list :global(.sw-item) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    gap: 0.75rem;
+  }
+
+  :global(.dark) .sw-list :global(.sw-item) {
+    background: var(--bg-dark);
+    border-color: var(--border-dark);
+  }
+
+  .sw-list :global(.sw-item-info) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .sw-list :global(.sw-item-label) {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :global(.dark) .sw-list :global(.sw-item-label) {
+    color: var(--text-dark);
+  }
+
+  .sw-list :global(.sw-item-value) {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  :global(.dark) .sw-list :global(.sw-item-value) {
+    color: var(--text-secondary-dark);
+  }
+
+  .sw-list :global(.sw-item-indicator) {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: -0.05em;
+    flex-shrink: 0;
+  }
+
+  .sw-list :global(.sw-item-indicator.strength) {
+    color: var(--percentile-elite);
+  }
+
+  .sw-list :global(.sw-item-indicator.weakness) {
+    color: var(--percentile-poor);
+  }
+
+  .sw-list :global(.sw-item-percentile) {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    margin-left: 0.375rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :global(.dark) .sw-list :global(.sw-item-percentile) {
+    color: var(--text-tertiary-dark);
+  }
+
+  /* Empty message within a section */
+  .sw-list :global(.sw-none) {
+    padding: 0.75rem;
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 0.85rem;
+    font-style: italic;
+  }
+
+  :global(.dark) .sw-list :global(.sw-none) {
+    color: var(--text-tertiary-dark);
+  }
+
+  /* Empty & Error States */
+  .sw-empty,
+  .sw-error {
+    padding: 2rem 0;
+    text-align: center;
+  }
+
+  .sw-empty p,
+  .sw-error p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-tertiary);
+  }
+
+  :global(.dark) .sw-empty p,
+  :global(.dark) .sw-error p {
+    color: var(--text-tertiary-dark);
+  }
+
+  /* Utility */
+  .hidden {
+    display: none !important;
+  }
+
+  /* Responsive - Mobile */
+  @media (max-width: 480px) {
+    .sw-header {
+      padding: 1rem;
+    }
+
+    .sw-title {
+      font-size: 0.9rem;
+    }
+
+    .sw-body {
+      padding: 1rem;
+    }
+
+    .sw-list :global(.sw-item) {
+      padding: 0.375rem 0.625rem;
+    }
+
+    .sw-list :global(.sw-item-label) {
+      font-size: 0.8rem;
+    }
+
+    .sw-list :global(.sw-item-value) {
+      font-size: 0.7rem;
+    }
+
+    .sw-list :global(.sw-item-indicator) {
+      font-size: 0.8rem;
+    }
+  }
+
+  /* Extra small screens */
+  @media (max-width: 320px) {
+    .sw-header {
+      padding: 0.75rem;
+    }
+
+    .sw-body {
+      padding: 0.75rem;
+    }
+  }
+</style>
+
+<script>
+  import { escapeHtml } from '../../lib/utils/dom';
+  import { waitForPageData } from '../../lib/utils/api-fetcher';
+  import type { Category } from '../../lib/utils/stats-categorizer';
+
+  interface StatsPageData {
+    season: number;
+    entity: {
+      id: string;
+      name: string;
+      type: string;
+    };
+    categories: Category[];
+  }
+
+  interface StrengthWeaknessItem {
+    key: string;
+    label: string;
+    value: number | string | null;
+    percentile: number;
+    indicator: string;
+    count: number;
+    type: 'strength' | 'weakness';
+  }
+
+  /**
+   * Get indicator based on percentile bracket
+   */
+  function getIndicator(percentile: number): { symbol: string; count: number; type: 'strength' | 'weakness' } | null {
+    if (percentile >= 90) return { symbol: '+', count: 4, type: 'strength' };
+    if (percentile >= 80) return { symbol: '+', count: 3, type: 'strength' };
+    if (percentile >= 70) return { symbol: '+', count: 2, type: 'strength' };
+    if (percentile <= 10) return { symbol: '-', count: 4, type: 'weakness' };
+    if (percentile <= 20) return { symbol: '-', count: 3, type: 'weakness' };
+    if (percentile <= 30) return { symbol: '-', count: 2, type: 'weakness' };
+    return null;
+  }
+
+  /**
+   * Extract strengths and weaknesses from categories
+   */
+  function extractStrengthsWeaknesses(categories: Category[]): {
+    strengths: StrengthWeaknessItem[];
+    weaknesses: StrengthWeaknessItem[];
+  } {
+    const strengths: StrengthWeaknessItem[] = [];
+    const weaknesses: StrengthWeaknessItem[] = [];
+
+    for (const category of categories) {
+      for (const stat of category.stats) {
+        if (stat.percentile === undefined || stat.percentile === null) continue;
+
+        const indicator = getIndicator(stat.percentile);
+        if (!indicator) continue;
+
+        const item: StrengthWeaknessItem = {
+          key: stat.key,
+          label: stat.label,
+          value: stat.value,
+          percentile: stat.percentile,
+          indicator: indicator.symbol,
+          count: indicator.count,
+          type: indicator.type,
+        };
+
+        if (indicator.type === 'strength') {
+          strengths.push(item);
+        } else {
+          weaknesses.push(item);
+        }
+      }
+    }
+
+    // Sort by percentile (strongest first for strengths, weakest first for weaknesses)
+    strengths.sort((a, b) => b.percentile - a.percentile);
+    weaknesses.sort((a, b) => a.percentile - b.percentile);
+
+    return { strengths, weaknesses };
+  }
+
+  /**
+   * Format stat value for display
+   */
+  function formatValue(value: number | string | null): string {
+    if (value === null || value === undefined) return '-';
+    if (typeof value === 'number') {
+      // Check if it looks like a percentage (0-1 range)
+      if (value > 0 && value < 1) {
+        return (value * 100).toFixed(1) + '%';
+      }
+      // Round to 1 decimal if not an integer
+      if (!Number.isInteger(value)) {
+        return value.toFixed(1);
+      }
+    }
+    return String(value);
+  }
+
+  /**
+   * Strengths & Weaknesses Tab Manager
+   */
+  class StrengthsWeaknessesTabManager {
+    private loaded = false;
+
+    async load(): Promise<void> {
+      if (this.loaded) return;
+      this.loaded = true;
+
+      try {
+        // Wait for stats data from StatsTab
+        const statsData = await waitForPageData('stats', 5000) as StatsPageData;
+
+        if (!statsData || !statsData.categories || statsData.categories.length === 0) {
+          this.showEmpty();
+          return;
+        }
+
+        // Extract strengths and weaknesses
+        const { strengths, weaknesses } = extractStrengthsWeaknesses(statsData.categories);
+
+        // Render
+        this.render(strengths, weaknesses);
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          console.error('StrengthsWeaknessesTab error:', err);
+        }
+        this.showError();
+      }
+    }
+
+    private render(strengths: StrengthWeaknessItem[], weaknesses: StrengthWeaknessItem[]): void {
+      const strengthsList = document.getElementById('sw-strengths-list');
+      const weaknessesList = document.getElementById('sw-weaknesses-list');
+
+      if (!strengthsList || !weaknessesList) return;
+
+      // Render strengths
+      if (strengths.length > 0) {
+        strengthsList.innerHTML = strengths.map(item => this.renderItem(item)).join('');
+      } else {
+        strengthsList.innerHTML = '<p class="sw-none">No notable strengths</p>';
+      }
+
+      // Render weaknesses
+      if (weaknesses.length > 0) {
+        weaknessesList.innerHTML = weaknesses.map(item => this.renderItem(item)).join('');
+      } else {
+        weaknessesList.innerHTML = '<p class="sw-none">No notable weaknesses</p>';
+      }
+
+      this.showContent();
+    }
+
+    private renderItem(item: StrengthWeaknessItem): string {
+      const indicatorSymbols = item.indicator.repeat(item.count);
+      const typeClass = item.type;
+
+      return `
+        <div class="sw-item">
+          <div class="sw-item-info">
+            <span class="sw-item-label">${escapeHtml(item.label)}</span>
+            <span class="sw-item-value">${escapeHtml(formatValue(item.value))}</span>
+          </div>
+          <div class="sw-item-indicator ${typeClass}">
+            ${indicatorSymbols}
+            <span class="sw-item-percentile">${Math.round(item.percentile)}%</span>
+          </div>
+        </div>
+      `;
+    }
+
+    private showContent(): void {
+      document.getElementById('sw-loading')?.classList.add('hidden');
+      document.getElementById('sw-content')?.classList.remove('hidden');
+      document.getElementById('sw-empty')?.classList.add('hidden');
+      document.getElementById('sw-error')?.classList.add('hidden');
+    }
+
+    private showEmpty(): void {
+      document.getElementById('sw-loading')?.classList.add('hidden');
+      document.getElementById('sw-content')?.classList.add('hidden');
+      document.getElementById('sw-empty')?.classList.remove('hidden');
+      document.getElementById('sw-error')?.classList.add('hidden');
+    }
+
+    private showError(): void {
+      document.getElementById('sw-loading')?.classList.add('hidden');
+      document.getElementById('sw-content')?.classList.add('hidden');
+      document.getElementById('sw-empty')?.classList.add('hidden');
+      document.getElementById('sw-error')?.classList.remove('hidden');
+    }
+  }
+
+  // Initialize manager and expose on window
+  const manager = new StrengthsWeaknessesTabManager();
+  (window as any).strengthsTab = {
+    load: () => manager.load(),
+  };
+</script>

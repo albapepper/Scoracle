@@ -6,8 +6,8 @@
  * and related features in a tabbed interface.
  *
  * Tabs:
- * - Stats: Raw entity statistics table
- * - Percentiles: Percentile data with pizza chart visualization
+ * - Stats: Pizza chart + box score statistics
+ * - Strengths: Strengths & weaknesses based on percentiles
  * - Similarity: Similar players/teams based on embeddings
  * - Transfers: Transfer predictions
  * - Predictions: LSTM-based performance predictions
@@ -17,6 +17,7 @@
  */
 
 import StatsTab from './tabs/StatsTab.astro';
+import StrengthsWeaknessesTab from './tabs/StrengthsWeaknessesTab.astro';
 import SimilarityTab from './tabs/SimilarityTab.astro';
 import TransfersTab from './tabs/TransfersTab.astro';
 import PredictionsTab from './tabs/PredictionsTab.astro';
@@ -32,6 +33,7 @@ const { title = 'Statistics' } = Astro.props;
   <!-- Tab Navigation -->
   <div class="tabs-nav">
     <button class="tab-btn active" data-tab="stats">Stats</button>
+    <button class="tab-btn" data-tab="strengths">Strengths</button>
     <button class="tab-btn" data-tab="similarity">Similarity</button>
     <button class="tab-btn" data-tab="transfers">Transfers</button>
     <button class="tab-btn" data-tab="predictions">Predictions</button>
@@ -42,6 +44,11 @@ const { title = 'Statistics' } = Astro.props;
     <!-- Stats Tab -->
     <div id="stats-tab" class="tab-content active">
       <StatsTab title={title} />
+    </div>
+
+    <!-- Strengths & Weaknesses Tab -->
+    <div id="strengths-tab" class="tab-content">
+      <StrengthsWeaknessesTab />
     </div>
 
     <!-- Similarity Tab -->
@@ -183,6 +190,9 @@ const { title = 'Statistics' } = Astro.props;
           // Lazy-load tab content
           if (tab === 'stats') {
             (window as any).statsTab?.load();
+          }
+          if (tab === 'strengths') {
+            (window as any).strengthsTab?.load();
           }
           if (tab === 'similarity') {
             (window as any).similarityTab?.load();
