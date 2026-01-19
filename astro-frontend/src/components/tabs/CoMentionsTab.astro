@@ -218,8 +218,8 @@
         const count = cm.mentionCount;
         const countLabel = count === 1 ? 'mention' : 'mentions';
 
-        // Link to the entity's stats page
-        const link = `/stats?sport=${this.sport}&type=${cm.entity.type}&id=${cm.entity.id}`;
+        // Link to the co-mentions page with both entities
+        const link = `/co-mentions?sport=${this.sport}&type=${this.type}&id=${this.id}&coType=${cm.entity.type}&coId=${cm.entity.id}`;
 
         return `<div class="comention-item">
           <div class="comention-info">

@@ -1,0 +1,396 @@
+---
+/**
+ * Entity Widget Pair
+ *
+ * Displays two entity widgets side-by-side for co-mentions comparison.
+ * Each widget fetches its own data and has split navigation buttons
+ * for Stats and News pages.
+ */
+
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+---
+
+<div class="entity-pair-container">
+  <!-- Primary Entity (the one being searched) -->
+  <div
+    id="primary-entity-widget"
+    class="entity-widget-half card"
+    data-api={apiUrl}
+    data-entity="primary"
+  >
+    <div class="ew-body">
+      <div id="primary-ew-loading" class="ew-loading">
+        <div class="skeleton-circle"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line short"></div>
+      </div>
+      <div id="primary-ew-content" class="ew-content">
+        <img id="primary-ew-logo" class="ew-logo" src="" alt="" style="display: none;" />
+        <h2 id="primary-ew-name" class="ew-name"></h2>
+        <p id="primary-ew-subtitle" class="ew-subtitle"></p>
+      </div>
+      <div id="primary-ew-error" class="ew-error">
+        <p>Unable to load entity</p>
+      </div>
+    </div>
+    <div class="ew-button-split">
+      <a id="primary-ew-stats" href="#" class="ew-button-half">Stats</a>
+      <a id="primary-ew-news" href="#" class="ew-button-half">News</a>
+    </div>
+  </div>
+
+  <!-- Co-mentioned Entity -->
+  <div
+    id="secondary-entity-widget"
+    class="entity-widget-half card"
+    data-api={apiUrl}
+    data-entity="secondary"
+  >
+    <div class="ew-body">
+      <div id="secondary-ew-loading" class="ew-loading">
+        <div class="skeleton-circle"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line short"></div>
+      </div>
+      <div id="secondary-ew-content" class="ew-content">
+        <img id="secondary-ew-logo" class="ew-logo" src="" alt="" style="display: none;" />
+        <h2 id="secondary-ew-name" class="ew-name"></h2>
+        <p id="secondary-ew-subtitle" class="ew-subtitle"></p>
+      </div>
+      <div id="secondary-ew-error" class="ew-error">
+        <p>Unable to load entity</p>
+      </div>
+    </div>
+    <div class="ew-button-split">
+      <a id="secondary-ew-stats" href="#" class="ew-button-half">Stats</a>
+      <a id="secondary-ew-news" href="#" class="ew-button-half">News</a>
+    </div>
+  </div>
+</div>
+
+<style>
+  .entity-pair-container {
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+    max-width: 600px;
+  }
+
+  .entity-widget-half {
+    flex: 1;
+    text-align: center;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-radius: 0.375rem;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .ew-body {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    flex: 1;
+    min-height: 120px;
+  }
+
+  .ew-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .ew-content, .ew-error {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .skeleton-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--border);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .skeleton-line {
+    height: 12px;
+    width: 120px;
+    border-radius: 4px;
+    background: var(--border);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .skeleton-line.short {
+    width: 80px;
+  }
+
+  :global(.dark) .skeleton-circle,
+  :global(.dark) .skeleton-line {
+    background: var(--border-dark);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .ew-logo {
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+    margin-bottom: 0.25rem;
+  }
+
+  .ew-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  :global(.dark) .ew-name {
+    color: var(--text-dark);
+  }
+
+  .ew-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  :global(.dark) .ew-subtitle {
+    color: var(--text-secondary-dark);
+  }
+
+  .ew-error p {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+  }
+
+  :global(.dark) .ew-error p {
+    color: var(--text-secondary-dark);
+  }
+
+  /* Split button styles */
+  .ew-button-split {
+    display: flex;
+    width: 100%;
+  }
+
+  .ew-button-half {
+    flex: 1;
+    display: block;
+    padding: 0.75rem 0.5rem;
+    background-color: var(--accent);
+    color: var(--bg);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.8rem;
+    text-align: center;
+    transition: background-color 0.15s;
+  }
+
+  .ew-button-half:first-child {
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .ew-button-half:hover {
+    background-color: var(--accent-hover, var(--accent));
+    filter: brightness(1.1);
+  }
+
+  :global(.dark) .ew-button-half {
+    background-color: var(--accent-dark);
+    color: var(--bg-dark);
+  }
+
+  :global(.dark) .ew-button-half:first-child {
+    border-right-color: rgba(0, 0, 0, 0.2);
+  }
+
+  :global(.dark) .ew-button-half:hover {
+    background-color: var(--accent-dark-hover, var(--accent-dark));
+  }
+
+  /* Mobile: stack vertically */
+  @media (max-width: 480px) {
+    .entity-pair-container {
+      flex-direction: column;
+    }
+
+    .ew-logo {
+      width: 48px;
+      height: 48px;
+    }
+
+    .ew-name {
+      font-size: 1rem;
+    }
+  }
+</style>
+
+<script>
+  import { parseCoMentionsParams } from '../lib/utils/dom';
+  import { swrFetch, CACHE_PRESETS } from '../lib/utils/api-fetcher';
+
+  interface ProfileInfo {
+    id: number;
+    first_name?: string;
+    last_name?: string;
+    full_name?: string;
+    name?: string;
+    position?: string;
+    photo_url?: string;
+    logo_url?: string;
+    team?: { name: string; logo_url?: string };
+    venue_name?: string;
+    city?: string;
+    country?: string;
+  }
+
+  interface ProfileResponse {
+    entity_id: number;
+    entity_type: 'player' | 'team';
+    sport: string;
+    info: ProfileInfo;
+  }
+
+  class EntityWidgetPair {
+    private apiUrl!: string;
+    private params!: ReturnType<typeof parseCoMentionsParams>;
+
+    constructor() {
+      const primaryWidget = document.getElementById('primary-entity-widget');
+      if (!primaryWidget) return;
+
+      this.apiUrl = primaryWidget.dataset.api || 'http://localhost:8000/api/v1';
+      this.params = parseCoMentionsParams();
+
+      this.init();
+    }
+
+    private init() {
+      // Set up button links
+      this.setupButtonLinks();
+
+      // Fetch both entities in parallel for faster loading
+      const fetchPromises: Promise<void>[] = [];
+
+      if (this.params.sport && this.params.type && this.params.id) {
+        fetchPromises.push(this.fetchEntity('primary', this.params.type, this.params.id));
+      } else {
+        this.showError('primary');
+      }
+
+      if (this.params.sport && this.params.coType && this.params.coId) {
+        fetchPromises.push(this.fetchEntity('secondary', this.params.coType, this.params.coId));
+      } else {
+        this.showError('secondary');
+      }
+
+      // Execute both fetches in parallel
+      Promise.all(fetchPromises);
+    }
+
+    private setupButtonLinks() {
+      const primaryStatsBtn = document.getElementById('primary-ew-stats') as HTMLAnchorElement;
+      const primaryNewsBtn = document.getElementById('primary-ew-news') as HTMLAnchorElement;
+      const secondaryStatsBtn = document.getElementById('secondary-ew-stats') as HTMLAnchorElement;
+      const secondaryNewsBtn = document.getElementById('secondary-ew-news') as HTMLAnchorElement;
+
+      if (this.params.sport && this.params.type && this.params.id) {
+        const baseParams = `sport=${this.params.sport}&type=${this.params.type}&id=${this.params.id}`;
+        if (primaryStatsBtn) primaryStatsBtn.href = `/stats?${baseParams}`;
+        if (primaryNewsBtn) primaryNewsBtn.href = `/news?${baseParams}`;
+      }
+
+      if (this.params.sport && this.params.coType && this.params.coId) {
+        const baseParams = `sport=${this.params.sport}&type=${this.params.coType}&id=${this.params.coId}`;
+        if (secondaryStatsBtn) secondaryStatsBtn.href = `/stats?${baseParams}`;
+        if (secondaryNewsBtn) secondaryNewsBtn.href = `/news?${baseParams}`;
+      }
+    }
+
+    private async fetchEntity(prefix: string, type: string, id: string): Promise<void> {
+      const url = `${this.apiUrl}/widget/profile/${type}/${id}?sport=${this.params.sport!.toUpperCase()}`;
+
+      try {
+        const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);
+
+        if (!data || !data.info) {
+          this.showError(prefix);
+          return;
+        }
+
+        this.renderEntity(prefix, data);
+      } catch {
+        this.showError(prefix);
+      }
+    }
+
+    private renderEntity(prefix: string, data: ProfileResponse) {
+      const info = data.info;
+      let name = '';
+      let logo = '';
+      let subtitle = '';
+
+      if (data.entity_type === 'team') {
+        name = info.name || info.full_name || 'Unknown';
+        logo = info.logo_url || '';
+        subtitle = info.venue_name || info.city || info.country || '';
+      } else {
+        name = info.full_name || `${info.first_name || ''} ${info.last_name || ''}`.trim() || 'Unknown';
+        logo = info.photo_url || '';
+        subtitle = info.team?.name || info.position || '';
+      }
+
+      const nameEl = document.getElementById(`${prefix}-ew-name`);
+      const subtitleEl = document.getElementById(`${prefix}-ew-subtitle`);
+      const logoEl = document.getElementById(`${prefix}-ew-logo`) as HTMLImageElement;
+
+      if (nameEl) nameEl.textContent = name;
+      if (subtitleEl) subtitleEl.textContent = subtitle;
+
+      if (logoEl && logo) {
+        logoEl.src = logo;
+        logoEl.alt = name;
+        logoEl.style.display = 'block';
+      }
+
+      this.showContent(prefix);
+    }
+
+    private showContent(prefix: string) {
+      const loadingEl = document.getElementById(`${prefix}-ew-loading`);
+      const contentEl = document.getElementById(`${prefix}-ew-content`);
+      const errorEl = document.getElementById(`${prefix}-ew-error`);
+
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (contentEl) contentEl.style.display = 'flex';
+      if (errorEl) errorEl.style.display = 'none';
+    }
+
+    private showError(prefix: string) {
+      const loadingEl = document.getElementById(`${prefix}-ew-loading`);
+      const contentEl = document.getElementById(`${prefix}-ew-content`);
+      const errorEl = document.getElementById(`${prefix}-ew-error`);
+
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (contentEl) contentEl.style.display = 'none';
+      if (errorEl) errorEl.style.display = 'flex';
+    }
+  }
+
+  new EntityWidgetPair();
+</script>
