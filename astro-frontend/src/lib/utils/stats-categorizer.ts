@@ -21,6 +21,18 @@ export interface Category {
   stats: StatItem[];
 }
 
+export interface BoxScoreGroup {
+  id: string;
+  label: string;
+  stats: BoxScoreStat[];
+}
+
+export interface BoxScoreStat {
+  key: string;
+  abbrev: string;
+  value: number | string | null;
+}
+
 /**
  * Category configurations for each sport
  */
@@ -114,6 +126,99 @@ const STAT_LABELS: Record<string, string> = {
   fouls_committed: 'Fouls Committed',
   fouls_drawn: 'Fouls Drawn',
   rating: 'Rating',
+};
+
+/**
+ * Short abbreviations for box score display
+ */
+const STAT_ABBREVS: Record<string, string> = {
+  // NBA
+  points: 'PTS',
+  totReb: 'REB',
+  offReb: 'OREB',
+  defReb: 'DREB',
+  assists: 'AST',
+  steals: 'STL',
+  blocks: 'BLK',
+  turnovers: 'TO',
+  pFouls: 'PF',
+  fgp: 'FG%',
+  tpp: '3P%',
+  ftp: 'FT%',
+  fgm: 'FGM',
+  fga: 'FGA',
+  ftm: 'FTM',
+  fta: 'FTA',
+  tpm: '3PM',
+  tpa: '3PA',
+  games: 'GP',
+  minutes: 'MIN',
+  plusMinus: '+/-',
+
+  // NFL
+  passing_yards: 'YDS',
+  passing_tds: 'TD',
+  interceptions: 'INT',
+  passer_rating: 'RTG',
+  completions: 'CMP',
+  attempts: 'ATT',
+  rushing_yards: 'YDS',
+  rushing_tds: 'TD',
+  rushing_attempts: 'ATT',
+  yards_per_carry: 'Y/A',
+  receiving_yards: 'YDS',
+  receiving_tds: 'TD',
+  receptions: 'REC',
+  targets: 'TGT',
+  yards_per_reception: 'Y/R',
+  tackles: 'TKL',
+  sacks: 'SCK',
+  interceptions_def: 'INT',
+  forced_fumbles: 'FF',
+  passes_defended: 'PD',
+
+  // Football (Soccer)
+  goals: 'G',
+  shots: 'SH',
+  shots_on: 'SOT',
+  penalty_scored: 'PEN',
+  penalty_missed: 'PM',
+  passes: 'PAS',
+  passes_accuracy: 'ACC%',
+  key_passes: 'KP',
+  crosses: 'CRS',
+  crosses_accuracy: 'CRS%',
+  duels_won: 'DW',
+  duels_total: 'DT',
+  yellow_cards: 'YC',
+  red_cards: 'RC',
+  fouls_committed: 'FC',
+  fouls_drawn: 'FD',
+  rating: 'RTG',
+};
+
+/**
+ * Box score configuration - groups of stats for horizontal display
+ * Each group becomes a row in the box score table
+ */
+const BOX_SCORE_CONFIG: Record<string, { id: string; label: string; keys: string[] }[]> = {
+  NBA: [
+    { id: 'counting', label: 'Per Game', keys: ['points', 'totReb', 'assists', 'steals', 'blocks', 'turnovers'] },
+    { id: 'shooting', label: 'Shooting', keys: ['fgp', 'tpp', 'ftp'] },
+    { id: 'activity', label: 'Activity', keys: ['games', 'minutes', 'plusMinus'] },
+  ],
+  NFL: [
+    { id: 'passing', label: 'Passing', keys: ['passing_yards', 'passing_tds', 'interceptions', 'passer_rating'] },
+    { id: 'rushing', label: 'Rushing', keys: ['rushing_yards', 'rushing_tds', 'rushing_attempts', 'yards_per_carry'] },
+    { id: 'receiving', label: 'Receiving', keys: ['receiving_yards', 'receiving_tds', 'receptions', 'targets'] },
+    { id: 'defense', label: 'Defense', keys: ['tackles', 'sacks', 'interceptions_def', 'forced_fumbles'] },
+  ],
+  FOOTBALL: [
+    { id: 'attacking', label: 'Attacking', keys: ['goals', 'assists', 'shots_on', 'key_passes'] },
+    { id: 'passing', label: 'Passing', keys: ['passes', 'passes_accuracy', 'crosses'] },
+    { id: 'defense', label: 'Defense', keys: ['tackles', 'duels_won', 'fouls_committed'] },
+    { id: 'general', label: 'General', keys: ['games', 'minutes', 'rating'] },
+  ],
 };
 
 /**
@@ -222,4 +327,70 @@ export function flattenStats(
   }
 
   return result;
+}
+
+/**
+ * Get box score stats grouped for horizontal table display
+ *
+ * @param stats - Flat stats object from API
+ * @param sport - Sport identifier (NBA, NFL, FOOTBALL)
+ * @returns Array of groups, each containing stats for a row in the box score
+ */
+export function getBoxScoreGroups(
+  stats: Record<string, unknown>,
+  sport: string
+): BoxScoreGroup[] {
+  const config = BOX_SCORE_CONFIG[sport.toUpperCase()] || BOX_SCORE_CONFIG.NBA;
+  const groups: BoxScoreGroup[] = [];
+
+  for (const groupConfig of config) {
+    const groupStats: BoxScoreStat[] = [];
+
+    for (const key of groupConfig.keys) {
+      const value = stats[key];
+      if (value !== undefined && value !== null) {
+        groupStats.push({
+          key,
+          abbrev: STAT_ABBREVS[key] || key.toUpperCase().slice(0, 3),
+          value: formatStatValue(value),
+        });
+      }
+    }
+
+    // Only add groups that have at least one stat
+    if (groupStats.length > 0) {
+      groups.push({
+        id: groupConfig.id,
+        label: groupConfig.label,
+        stats: groupStats,
+      });
+    }
+  }
+
+  return groups;
+}
+
+/**
+ * Format stat value for display (round numbers, handle percentages)
+ */
+function formatStatValue(value: unknown): string | number {
+  if (typeof value === 'number') {
+    // Check if it's a percentage (usually 0-100 or 0-1)
+    if (value > 0 && value < 1) {
+      return (value * 100).toFixed(1);
+    }
+    // Round to 1 decimal for most stats
+    if (!Number.isInteger(value)) {
+      return value.toFixed(1);
+    }
+    return value;
+  }
+  return String(value);
+}
+
+/**
+ * Get abbreviation for a stat key
+ */
+export function getStatAbbrev(key: string): string {
+  return STAT_ABBREVS[key] || key.toUpperCase().slice(0, 3);
 }

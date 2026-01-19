@@ -2,11 +2,16 @@
 /**
  * Stats Tab Component
  *
- * Displays raw entity statistics in a table format.
- * Fetches: GET /api/v1/stats/{entity_type}/{entity_id}
+ * Unified stats view with:
+ * - Pizza chart for percentile visualization (color-coded: red=low, green=high)
+ * - Box score table with raw per-game stats in horizontal format
+ *
+ * Fetches: GET /api/v1/widget/percentiles/{entity_type}/{entity_id}
+ * (This endpoint returns both raw stats and percentiles)
  *
  * Features:
- * - Categorized stat tables showing raw values
+ * - Pizza chart showing all percentile data points
+ * - Box score grouped by stat type (counting, shooting, etc.)
  * - Season display
  * - Lazy loading support via window.statsTab.load()
  */
@@ -15,7 +20,7 @@ interface Props {
   title?: string;
 }
 
-const { title = 'Statistics' } = Astro.props;
+const { title = 'Stats' } = Astro.props;
 const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 ---
 
@@ -26,30 +31,41 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     <span id="stats-season" class="stats-season"></span>
   </div>
 
-  <!-- Stats Categories -->
+  <!-- Pizza Chart Section -->
+  <div id="stats-chart-container" class="stats-chart-container">
+    <div id="stats-pizza-chart" class="stats-pizza-chart"></div>
+    <div id="stats-chart-loading" class="chart-skeleton">
+      <div class="chart-skeleton-circle"></div>
+    </div>
+  </div>
+
+  <!-- Box Score Section -->
   <div class="stats-body">
     <!-- Loading State -->
     <div id="stats-loading" class="stats-loading">
-      <div class="category-skeleton">
-        <div class="skeleton-header"></div>
-        <div class="skeleton-rows">
-          <div class="skeleton-row"></div>
-          <div class="skeleton-row"></div>
-          <div class="skeleton-row"></div>
+      <div class="box-score-skeleton">
+        <div class="skeleton-row-header"></div>
+        <div class="skeleton-row-cells">
+          <div class="skeleton-cell"></div>
+          <div class="skeleton-cell"></div>
+          <div class="skeleton-cell"></div>
+          <div class="skeleton-cell"></div>
+          <div class="skeleton-cell"></div>
         </div>
       </div>
-      <div class="category-skeleton">
-        <div class="skeleton-header"></div>
-        <div class="skeleton-rows">
-          <div class="skeleton-row"></div>
-          <div class="skeleton-row"></div>
+      <div class="box-score-skeleton">
+        <div class="skeleton-row-header"></div>
+        <div class="skeleton-row-cells">
+          <div class="skeleton-cell"></div>
+          <div class="skeleton-cell"></div>
+          <div class="skeleton-cell"></div>
         </div>
       </div>
     </div>
 
-    <!-- Categories Container -->
-    <div id="stats-categories" class="stats-categories hidden">
-      <!-- Categories populated by JavaScript -->
+    <!-- Box Score Container -->
+    <div id="stats-box-score" class="stats-box-score hidden">
+      <!-- Box score groups populated by JavaScript -->
     </div>
 
     <!-- Empty State -->
@@ -100,48 +116,104 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     color: var(--text-secondary-dark);
   }
 
+  /* Chart Container */
+  .stats-chart-container {
+    padding: 1.5rem 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    min-height: 280px;
+  }
+
+  :global(.dark) .stats-chart-container {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .stats-pizza-chart {
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .stats-pizza-chart :global(.pizza-chart-svg) {
+    display: block;
+  }
+
+  .stats-pizza-chart :global(.chart-no-data) {
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+    text-align: center;
+    margin: 0;
+  }
+
+  :global(.dark) .stats-pizza-chart :global(.chart-no-data) {
+    color: var(--text-tertiary-dark);
+  }
+
+  /* Chart Skeleton */
+  .chart-skeleton {
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .chart-skeleton-circle {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: var(--border);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  :global(.dark) .chart-skeleton-circle {
+    background: var(--border-dark);
+  }
+
   /* Stats Body */
   .stats-body {
-    padding: 0 1.5rem 1.25rem;
+    padding: 1rem 1.5rem 1.25rem;
   }
 
   /* Loading Skeleton */
   .stats-loading {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
-    padding-top: 1rem;
+    gap: 1rem;
   }
 
-  .category-skeleton {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .skeleton-header {
-    width: 30%;
-    height: 14px;
-    background: var(--border);
-    border-radius: 3px;
-    animation: pulse 1.5s ease-in-out infinite;
-  }
-
-  .skeleton-rows {
+  .box-score-skeleton {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
   }
 
-  .skeleton-row {
-    height: 28px;
+  .skeleton-row-header {
+    width: 80px;
+    height: 12px;
     background: var(--border);
     border-radius: 3px;
     animation: pulse 1.5s ease-in-out infinite;
   }
 
-  :global(.dark) .skeleton-header,
-  :global(.dark) .skeleton-row {
+  .skeleton-row-cells {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .skeleton-cell {
+    width: 48px;
+    height: 44px;
+    background: var(--border);
+    border-radius: 4px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  :global(.dark) .skeleton-row-header,
+  :global(.dark) .skeleton-cell {
     background: var(--border-dark);
   }
 
@@ -155,90 +227,85 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
   }
 
-  /* Categories */
-  .stats-categories {
+  /* Box Score */
+  .stats-box-score {
     display: flex;
     flex-direction: column;
+    gap: 1.25rem;
   }
 
-  .stats-categories :global(.stats-category) {
-    padding: 1rem 0;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .stats-categories :global(.stats-category:first-child) {
-    padding-top: 1.25rem;
-  }
-
-  .stats-categories :global(.stats-category:last-child) {
-    border-bottom: none;
-    padding-bottom: 0;
-  }
-
-  :global(.dark) .stats-categories :global(.stats-category) {
-    border-bottom-color: var(--border-dark);
-  }
-
-  .stats-categories :global(.category-header) {
+  .stats-box-score :global(.box-score-group) {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 0.5rem;
-    margin-bottom: 0.625rem;
   }
 
-  .stats-categories :global(.category-indicator) {
-    width: 3px;
-    height: 14px;
-    border-radius: 2px;
+  .stats-box-score :global(.group-label) {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0;
+  }
+
+  :global(.dark) .stats-box-score :global(.group-label) {
+    color: var(--text-tertiary-dark);
+  }
+
+  .stats-box-score :global(.box-score-row) {
+    display: flex;
+    gap: 0.375rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 2px;
+  }
+
+  .stats-box-score :global(.box-score-row::-webkit-scrollbar) {
+    display: none;
+  }
+
+  .stats-box-score :global(.stat-cell) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 52px;
+    padding: 0.5rem 0.625rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
     flex-shrink: 0;
   }
 
-  .stats-categories :global(.category-title) {
-    margin: 0;
-    font-size: 0.8rem;
+  :global(.dark) .stats-box-score :global(.stat-cell) {
+    background: var(--bg-dark);
+    border-color: var(--border-dark);
+  }
+
+  .stats-box-score :global(.stat-abbrev) {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.125rem;
+  }
+
+  :global(.dark) .stats-box-score :global(.stat-abbrev) {
+    color: var(--text-tertiary-dark);
+  }
+
+  .stats-box-score :global(.stat-value) {
+    font-size: 1rem;
     font-weight: 600;
     color: var(--text);
-    text-transform: uppercase;
-    letter-spacing: 0.025em;
-  }
-
-  :global(.dark) .stats-categories :global(.category-title) {
-    color: var(--text-dark);
-  }
-
-  .stats-categories :global(.category-stats) {
-    display: flex;
-    flex-direction: column;
-    gap: 0.125rem;
-  }
-
-  .stats-categories :global(.stat-row) {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.375rem 0;
-  }
-
-  .stats-categories :global(.stat-label) {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-    flex: 1;
-  }
-
-  :global(.dark) .stats-categories :global(.stat-label) {
-    color: var(--text-secondary-dark);
-  }
-
-  .stats-categories :global(.stat-value) {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text);
     font-variant-numeric: tabular-nums;
-    min-width: 48px;
-    text-align: right;
+    line-height: 1.2;
   }
 
-  :global(.dark) .stats-categories :global(.stat-value) {
+  :global(.dark) .stats-box-score :global(.stat-value) {
     color: var(--text-dark);
   }
 
@@ -283,18 +350,26 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       font-size: 0.75rem;
     }
 
+    .stats-chart-container {
+      padding: 1rem;
+      min-height: 240px;
+    }
+
+    .stats-pizza-chart {
+      max-width: 280px;
+    }
+
     .stats-body {
-      padding: 0 1rem 1rem;
+      padding: 1rem;
     }
 
-    .stats-categories :global(.stat-row) {
-      flex-wrap: wrap;
-      gap: 0.25rem;
+    .stats-box-score :global(.stat-cell) {
+      min-width: 48px;
+      padding: 0.375rem 0.5rem;
     }
 
-    .stats-categories :global(.stat-value) {
-      font-size: 0.8rem;
-      min-width: 40px;
+    .stats-box-score :global(.stat-value) {
+      font-size: 0.9rem;
     }
   }
 
@@ -305,7 +380,28 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     .stats-body {
-      padding: 0 0.75rem 0.75rem;
+      padding: 0.75rem;
+    }
+
+    .stats-chart-container {
+      min-height: 200px;
+    }
+
+    .stats-pizza-chart {
+      max-width: 220px;
+    }
+
+    .stats-box-score :global(.stat-cell) {
+      min-width: 44px;
+      padding: 0.25rem 0.375rem;
+    }
+
+    .stats-box-score :global(.stat-abbrev) {
+      font-size: 0.6rem;
+    }
+
+    .stats-box-score :global(.stat-value) {
+      font-size: 0.85rem;
     }
   }
 </style>
@@ -313,7 +409,13 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 <script>
   import { escapeHtml, parseEntityParams } from '../../lib/utils/dom';
   import { swrFetch, setPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
-  import { categorizeStats, type StatItem, type Category } from '../../lib/utils/stats-categorizer';
+  import { PizzaChart, type PizzaChartStat } from '../../lib/charts/pizza-chart';
+  import {
+    categorizeStats,
+    getBoxScoreGroups,
+    type Category,
+    type BoxScoreGroup,
+  } from '../../lib/utils/stats-categorizer';
 
   // API Response types matching scoracle-data backend
   interface StatsResponse {
@@ -337,12 +439,13 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   /**
    * Stats Tab Manager
    *
-   * Handles loading stats from the backend API and populating
-   * category tables with raw stat values.
+   * Handles loading stats + percentiles from the backend API,
+   * rendering the pizza chart and box score table.
    */
   class StatsTabManager {
     private container: HTMLElement | null;
     private apiUrl: string;
+    private pizzaChart: PizzaChart | null = null;
     private loaded = false;
 
     constructor() {
@@ -373,7 +476,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private async loadStats(sport: string, type: string, id: string) {
-      const url = `${this.apiUrl}/stats/${type}/${id}?sport=${sport.toUpperCase()}`;
+      // Use percentiles endpoint which includes both stats and percentiles
+      const url = `${this.apiUrl}/widget/percentiles/${type}/${id}?sport=${sport.toUpperCase()}`;
 
       const { data } = await swrFetch<StatsResponse>(url, CACHE_PRESETS.stats);
 
@@ -382,10 +486,23 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         return;
       }
 
-      // Transform flat stats into categorized format (no percentiles needed for raw stats)
-      const categories = categorizeStats(data.stats, {}, sport);
+      // Convert percentiles array to object if needed
+      let percentilesObj: Record<string, number> = {};
+      if (Array.isArray(data.percentiles)) {
+        for (const p of data.percentiles) {
+          percentilesObj[p.stat_key] = p.percentile;
+        }
+      } else if (data.percentiles && typeof data.percentiles === 'object') {
+        percentilesObj = data.percentiles as Record<string, number>;
+      }
 
-      if (categories.length === 0) {
+      // Get categorized stats for the pizza chart
+      const categories = categorizeStats(data.stats || {}, percentilesObj, sport);
+
+      // Get box score groups
+      const boxScoreGroups = getBoxScoreGroups(data.stats || {}, sport);
+
+      if (categories.length === 0 && boxScoreGroups.length === 0) {
         this.showEmpty();
         return;
       }
@@ -399,6 +516,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
           type: data.entity_type,
         },
         categories: categories,
+        boxScoreGroups: boxScoreGroups,
       });
 
       // Update season display
@@ -407,24 +525,85 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         seasonEl.textContent = `${data.season} Season`;
       }
 
-      // Render category tables
-      this.renderCategories(categories);
+      // Render pizza chart with percentiles
+      this.renderChart(categories);
+
+      // Render box score
+      this.renderBoxScore(boxScoreGroups);
     }
 
-    private renderCategories(categories: Category[]) {
-      const container = this.container?.querySelector('#stats-categories');
+    private renderChart(categories: Category[]) {
+      const chartContainer = this.container?.querySelector('#stats-pizza-chart') as HTMLElement;
+      const chartLoading = this.container?.querySelector('#stats-chart-loading');
+
+      if (!chartContainer) return;
+
+      // Collect all stats with percentiles for the chart
+      const chartStats: PizzaChartStat[] = [];
+
+      categories.forEach((category) => {
+        category.stats.forEach((stat) => {
+          if (stat.percentile !== undefined && stat.percentile !== null) {
+            chartStats.push({
+              key: stat.key,
+              label: stat.label,
+              value: stat.value ?? '-',
+              percentile: stat.percentile,
+              categoryId: category.id,
+            });
+          }
+        });
+      });
+
+      // Hide loading skeleton
+      chartLoading?.classList.add('hidden');
+
+      if (chartStats.length < 3) {
+        // Not enough percentile data - hide chart section
+        const chartSection = this.container?.querySelector('#stats-chart-container');
+        chartSection?.classList.add('hidden');
+        return;
+      }
+
+      // Create and render chart
+      this.pizzaChart = new PizzaChart(chartContainer, {
+        width: 360,
+        height: 360,
+        innerRadius: 35,
+        outerRadius: 120,
+        labelOffset: 30,
+      });
+
+      this.pizzaChart.render(chartStats);
+    }
+
+    private renderBoxScore(groups: BoxScoreGroup[]) {
+      const container = this.container?.querySelector('#stats-box-score');
       if (!container) return;
 
-      container.innerHTML = categories
+      if (groups.length === 0) {
+        // No box score data, but might have chart
+        const loadingEl = this.container?.querySelector('#stats-loading');
+        loadingEl?.classList.add('hidden');
+        return;
+      }
+
+      container.innerHTML = groups
         .map(
-          (category) => `
-        <div class="stats-category" data-category="${category.id}">
-          <div class="category-header">
-            <div class="category-indicator" style="background: var(--category-${category.id}, var(--accent))"></div>
-            <h4 class="category-title">${escapeHtml(category.label)}</h4>
-          </div>
-          <div class="category-stats">
-            ${category.stats.map((stat) => this.renderStatRow(stat)).join('')}
+          (group) => `
+        <div class="box-score-group" data-group="${group.id}">
+          <p class="group-label">${escapeHtml(group.label)}</p>
+          <div class="box-score-row">
+            ${group.stats
+              .map(
+                (stat) => `
+              <div class="stat-cell">
+                <span class="stat-abbrev">${escapeHtml(stat.abbrev)}</span>
+                <span class="stat-value">${escapeHtml(String(stat.value))}</span>
+              </div>
+            `
+              )
+              .join('')}
           </div>
         </div>
       `
@@ -434,36 +613,40 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.showContent();
     }
 
-    private renderStatRow(stat: StatItem): string {
-      const displayValue = stat.value !== null ? String(stat.value) : '-';
-
-      return `
-        <div class="stat-row">
-          <span class="stat-label">${escapeHtml(stat.label)}</span>
-          <span class="stat-value">${escapeHtml(displayValue)}</span>
-        </div>
-      `;
-    }
-
     private showContent() {
       this.container?.querySelector('#stats-loading')?.classList.add('hidden');
-      this.container?.querySelector('#stats-categories')?.classList.remove('hidden');
+      this.container?.querySelector('#stats-box-score')?.classList.remove('hidden');
       this.container?.querySelector('#stats-empty')?.classList.add('hidden');
       this.container?.querySelector('#stats-error')?.classList.add('hidden');
     }
 
     private showEmpty() {
       this.container?.querySelector('#stats-loading')?.classList.add('hidden');
-      this.container?.querySelector('#stats-categories')?.classList.add('hidden');
+      this.container?.querySelector('#stats-box-score')?.classList.add('hidden');
       this.container?.querySelector('#stats-empty')?.classList.remove('hidden');
       this.container?.querySelector('#stats-error')?.classList.add('hidden');
+
+      // Hide chart if no data
+      const chartContainer = this.container?.querySelector('#stats-chart-container');
+      chartContainer?.classList.add('hidden');
     }
 
     private showError() {
       this.container?.querySelector('#stats-loading')?.classList.add('hidden');
-      this.container?.querySelector('#stats-categories')?.classList.add('hidden');
+      this.container?.querySelector('#stats-box-score')?.classList.add('hidden');
       this.container?.querySelector('#stats-empty')?.classList.add('hidden');
       this.container?.querySelector('#stats-error')?.classList.remove('hidden');
+
+      // Hide chart on error
+      const chartContainer = this.container?.querySelector('#stats-chart-container');
+      chartContainer?.classList.add('hidden');
+    }
+
+    /**
+     * Refresh the chart (e.g., on theme change).
+     */
+    public refreshChart(): void {
+      this.pizzaChart?.refresh();
     }
   }
 
@@ -471,9 +654,20 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   const manager = new StatsTabManager();
   (window as any).statsTab = {
     load: () => manager.load(),
+    refreshChart: () => manager.refreshChart(),
   };
 
-  // Auto-load if this is the active tab (stats tab is default)
-  // This maintains backward compatibility
+  // Auto-load since Stats is the default tab
   manager.load();
+
+  // Listen for theme changes to refresh chart colors
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.attributeName === 'class') {
+        manager.refreshChart();
+      }
+    });
+  });
+
+  observer.observe(document.documentElement, { attributes: true });
 </script>

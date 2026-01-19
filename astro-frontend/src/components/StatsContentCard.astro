@@ -17,7 +17,6 @@
  */
 
 import StatsTab from './tabs/StatsTab.astro';
-import PercentilesTab from './tabs/PercentilesTab.astro';
 import SimilarityTab from './tabs/SimilarityTab.astro';
 import TransfersTab from './tabs/TransfersTab.astro';
 import PredictionsTab from './tabs/PredictionsTab.astro';
@@ -33,7 +32,6 @@ const { title = 'Statistics' } = Astro.props;
   <!-- Tab Navigation -->
   <div class="tabs-nav">
     <button class="tab-btn active" data-tab="stats">Stats</button>
-    <button class="tab-btn" data-tab="percentiles">Percentiles</button>
     <button class="tab-btn" data-tab="similarity">Similarity</button>
     <button class="tab-btn" data-tab="transfers">Transfers</button>
     <button class="tab-btn" data-tab="predictions">Predictions</button>
@@ -44,11 +42,6 @@ const { title = 'Statistics' } = Astro.props;
     <!-- Stats Tab -->
     <div id="stats-tab" class="tab-content active">
       <StatsTab title={title} />
-    </div>
-
-    <!-- Percentiles Tab -->
-    <div id="percentiles-tab" class="tab-content">
-      <PercentilesTab />
     </div>
 
     <!-- Similarity Tab -->
@@ -190,9 +183,6 @@ const { title = 'Statistics' } = Astro.props;
           // Lazy-load tab content
           if (tab === 'stats') {
             (window as any).statsTab?.load();
-          }
-          if (tab === 'percentiles') {
-            (window as any).percentilesTab?.load();
           }
           if (tab === 'similarity') {
             (window as any).similarityTab?.load();
