@@ -3,7 +3,7 @@
  * News Tab Component
  *
  * Displays news articles for an entity from RSS feeds.
- * Fetches: GET /api/v1/news/{entity_name}?sport={sport}&team={team}
+ * Fetches: GET /api/v1/rss-news/{entity_name}?sport={sport}&team={team}
  *
  * Features:
  * - News articles from Google News RSS
@@ -190,7 +190,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         try {
           profileData = await waitForPageData('widget', 1000) as ProfileResponse;
         } catch {
-          const url = `${this.apiUrl}/widget/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
+          const url = `${this.apiUrl}/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
           const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);
           profileData = data;
           if (data) setPageData('widget', data);
@@ -220,7 +220,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       params.set('sport', sport.toUpperCase());
       if (team) params.set('team', team);
 
-      const url = `${this.apiUrl}/news/${encodeURIComponent(entityName)}?${params.toString()}`;
+      const url = `${this.apiUrl}/rss-news/${encodeURIComponent(entityName)}?${params.toString()}`;
       const { data } = await swrFetch<NewsData>(url, CACHE_PRESETS.news);
 
       const articles = data?.articles || [];
@@ -244,7 +244,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         const title = escapeHtml(article.title || 'Untitled');
         const link = article.link || '#';
         const source = escapeHtml(article.source || '');
-        const date = formatDate(article.pub_date);
+        const date = formatDate(article.pub_date ?? undefined);
 
         return `<div class="content-item">
           <h3 class="content-title">

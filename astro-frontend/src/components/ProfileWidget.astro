@@ -3,7 +3,7 @@
  * Profile Widget
  *
  * Displays entity profile information from the backend.
- * Fetches: GET /api/v1/widget/profile/{entity_type}/{entity_id}?sport={sport}
+ * Fetches: GET /api/v1/profile/{entity_type}/{entity_id}?sport={sport}
  *
  * Response structure:
  * {
@@ -473,7 +473,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private async fetchData() {
-      const url = `${this.apiUrl}/widget/profile/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
+      const url = `${this.apiUrl}/profile/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
 
       try {
         const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);

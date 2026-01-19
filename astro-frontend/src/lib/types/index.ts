@@ -160,7 +160,6 @@ export interface VibeScoreResponse {
 export interface VibeBreakdown {
   twitter?: number;
   news?: number;
-  reddit?: number;
 }
 
 export interface VibeTrend {

@@ -2,8 +2,8 @@
 /**
  * Twitter Tab Component
  *
- * Displays tweets about an entity.
- * Fetches: GET /api/v1/intel/twitter?query={entity_name}&sport={sport}&limit=10
+ * Displays tweets about an entity from trusted sports journalists.
+ * Fetches: GET /api/v1/twitter/journalist-feed?q={entity_name}&sport={sport}&limit=10
  *
  * Features:
  * - Tweets with engagement metrics
@@ -139,12 +139,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     tweets?: Tweet[];
   }
 
-  interface IntelStatusResponse {
-    services: {
-      twitter: { configured: boolean };
-      news: { configured: boolean };
-      reddit: { configured: boolean };
-    };
+  interface TwitterStatusResponse {
+    configured: boolean;
   }
 
   interface ProfileResponse {
@@ -207,8 +203,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
     private async checkTwitterEnabled(): Promise<boolean> {
       try {
-        const { data } = await swrFetch<IntelStatusResponse>(`${this.apiUrl}/intel/status`, CACHE_PRESETS.intel);
-        return data?.services?.twitter?.configured ?? false;
+        const { data } = await swrFetch<TwitterStatusResponse>(`${this.apiUrl}/twitter/status`, CACHE_PRESETS.twitter);
+        return data?.configured ?? false;
       } catch {
         return false;
       }
@@ -221,7 +217,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         try {
           profileData = await waitForPageData('widget', 1000) as ProfileResponse;
         } catch {
-          const url = `${this.apiUrl}/widget/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
+          const url = `${this.apiUrl}/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
           const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);
           profileData = data;
           if (data) setPageData('widget', data);
@@ -239,12 +235,12 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
     private async fetchTwitter(entityName: string, sport: string): Promise<void> {
       const params = new URLSearchParams();
-      params.set('query', entityName);
+      params.set('q', entityName);
       params.set('sport', sport.toUpperCase());
       params.set('limit', '10');
 
-      const url = `${this.apiUrl}/intel/twitter?${params.toString()}`;
-      const { data } = await swrFetch<TwitterResponse>(url, CACHE_PRESETS.intel);
+      const url = `${this.apiUrl}/twitter/journalist-feed?${params.toString()}`;
+      const { data } = await swrFetch<TwitterResponse>(url, CACHE_PRESETS.twitter);
 
       const tweets = data?.tweets || [];
       if (tweets.length === 0) {

@@ -10,14 +10,12 @@
  * - Co-mentions: Entities mentioned together
  * - Twitter: Tweets about the entity
  * - Vibes: Sentiment analysis
- * - Reddit: Reddit posts about the entity
  */
 
 import NewsTab from './tabs/NewsTab.astro';
 import CoMentionsTab from './tabs/CoMentionsTab.astro';
 import VibesTab from './tabs/VibesTab.astro';
 import TwitterTab from './tabs/TwitterTab.astro';
-import RedditTab from './tabs/RedditTab.astro';
 
 const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 ---
@@ -29,7 +27,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     <button class="tab-btn" data-tab="comentions">Co-mentions</button>
     <button class="tab-btn" data-tab="twitter">Twitter</button>
     <button class="tab-btn" data-tab="vibes">Vibes</button>
-    <button class="tab-btn" data-tab="reddit">Reddit</button>
   </div>
 
   <!-- Tab Content -->
@@ -52,11 +49,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     <!-- Vibes Tab -->
     <div id="vibes-tab" class="tab-content">
       <VibesTab />
-    </div>
-
-    <!-- Reddit Tab -->
-    <div id="reddit-tab" class="tab-content">
-      <RedditTab />
     </div>
   </div>
 </div>
@@ -272,7 +264,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         comentions: () => (window as any).coMentionsTab?.load(),
         twitter: () => (window as any).twitterTab?.load(),
         vibes: () => (window as any).vibesTab?.load(),
-        reddit: () => (window as any).redditTab?.load(),
       };
 
       tabLoaders[tab]?.();

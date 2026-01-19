@@ -283,10 +283,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     };
   }
 
-  interface IntelStatusResponse {
-    services: {
-      twitter: { configured: boolean };
-    };
+  interface TwitterStatusResponse {
+    configured: boolean;
   }
 
   class SharedContentCard {
@@ -413,7 +411,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         if (this.params.sport) newsParams.set('sport', this.params.sport.toUpperCase());
         newsParams.set('limit', '20');
 
-        const newsUrl = `${this.apiUrl}/news/${encodeURIComponent(this.primaryName)}?${newsParams.toString()}`;
+        const newsUrl = `${this.apiUrl}/rss-news/${encodeURIComponent(this.primaryName)}?${newsParams.toString()}`;
         const { data } = await swrFetch<NewsResponse>(newsUrl, CACHE_PRESETS.news);
 
         // Transform API response
@@ -479,12 +477,12 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
         // Fetch tweets for primary entity
         const params = new URLSearchParams();
-        params.set('query', this.primaryName);
+        params.set('q', this.primaryName);
         params.set('sport', this.params.sport!.toUpperCase());
         params.set('limit', '20');
 
-        const url = `${this.apiUrl}/intel/twitter?${params.toString()}`;
-        const { data } = await swrFetch<TwitterResponse>(url, CACHE_PRESETS.intel);
+        const url = `${this.apiUrl}/twitter/journalist-feed?${params.toString()}`;
+        const { data } = await swrFetch<TwitterResponse>(url, CACHE_PRESETS.twitter);
 
         const tweets = data?.tweets || [];
 
@@ -510,8 +508,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
     private async checkTwitterEnabled(): Promise<boolean> {
       try {
-        const { data } = await swrFetch<IntelStatusResponse>(`${this.apiUrl}/intel/status`, CACHE_PRESETS.intel);
-        return data?.services?.twitter?.configured ?? false;
+        const { data } = await swrFetch<TwitterStatusResponse>(`${this.apiUrl}/twitter/status`, CACHE_PRESETS.twitter);
+        return data?.configured ?? false;
       } catch {
         return false;
       }

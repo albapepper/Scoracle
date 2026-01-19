@@ -377,7 +377,7 @@ export async function fetchArticles(
   if (team) params.set('team', team);
 
   const response = await fetch(
-    `${apiUrl}/news/${encodeURIComponent(entityName)}?${params.toString()}`
+    `${apiUrl}/rss-news/${encodeURIComponent(entityName)}?${params.toString()}`
   );
 
   if (!response.ok) {

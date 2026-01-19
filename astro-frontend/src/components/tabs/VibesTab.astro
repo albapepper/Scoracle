@@ -288,10 +288,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     background: #6366f1;
   }
 
-  #vibes-tab-content :global(.bar-fill.reddit) {
-    background: #ff4500;
-  }
-
   #vibes-tab-content :global(.bar-value) {
     font-size: 0.75rem;
     font-weight: 500;
@@ -429,7 +425,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       const sources = [
         { key: 'twitter', label: 'Twitter', value: breakdown.twitter },
         { key: 'news', label: 'News', value: breakdown.news },
-        { key: 'reddit', label: 'Reddit', value: breakdown.reddit },
       ].filter(s => s.value !== undefined);
 
       if (sources.length === 0) {

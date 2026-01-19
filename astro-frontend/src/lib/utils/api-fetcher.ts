@@ -53,8 +53,8 @@ export const CACHE_PRESETS = {
   stats: { staleTime: 5 * 60 * 1000, cacheTime: 30 * 60 * 1000 }, // 5min stale, 30min cache
   /** News articles - backend caches 10min */
   news: { staleTime: 2 * 60 * 1000, cacheTime: 10 * 60 * 1000 }, // 2min stale, 10min cache
-  /** Intel (Twitter/Reddit) - backend caches 5min */
-  intel: { staleTime: 60 * 1000, cacheTime: 5 * 60 * 1000 }, // 1min stale, 5min cache
+  /** Twitter - backend caches 1hr */
+  twitter: { staleTime: 60 * 1000, cacheTime: 5 * 60 * 1000 }, // 1min stale, 5min cache
   /** ML predictions - moderate caching */
   ml: { staleTime: 10 * 60 * 1000, cacheTime: 30 * 60 * 1000 }, // 10min stale, 30min cache
 } as const;
@@ -114,7 +114,7 @@ export async function swrFetch<T>(
     staleTime = DEFAULT_STALE_TIME,
     cacheTime = DEFAULT_CACHE_TIME,
     forceRefresh = false,
-    useEtag = url.includes('/widget/'),
+    useEtag = url.includes('/profile/') || url.includes('/stats/'),
   } = options;
 
   const now = Date.now();
@@ -276,7 +276,7 @@ export function prefetch(url: string, cacheTime = DEFAULT_CACHE_TIME): void {
   // Don't prefetch if already cached or in-flight
   if (cache.has(url) || inFlight.has(url)) return;
 
-  dedupedFetch(url, cacheTime, url.includes('/widget/')).catch(() => {
+  dedupedFetch(url, cacheTime, url.includes('/profile/') || url.includes('/stats/')).catch(() => {
     // Silently fail prefetch
   });
 }
@@ -305,7 +305,7 @@ export interface PageData {
   stats?: unknown;
   percentiles?: unknown;
   comparisonWidget?: unknown;
-  intelStatus?: IntelStatus;
+  twitterStatus?: TwitterStatus;
   ml?: {
     transfer?: unknown;
     vibe?: unknown;
@@ -314,10 +314,8 @@ export interface PageData {
   };
 }
 
-export interface IntelStatus {
-  twitter: boolean;
-  news: boolean;
-  reddit: boolean;
+export interface TwitterStatus {
+  configured: boolean;
 }
 
 const pageDataStore: PageData = {};
@@ -390,24 +388,24 @@ export function clearPageData(): void {
 }
 
 /**
- * Fetch Intel API status (which external APIs are configured)
+ * Fetch Twitter API status (whether Twitter is configured)
  * Results are cached for the page session
  */
-export async function fetchIntelStatus(apiUrl: string): Promise<IntelStatus> {
+export async function fetchTwitterStatus(apiUrl: string): Promise<TwitterStatus> {
   // Check if already fetched
-  const cached = getPageData('intelStatus');
+  const cached = getPageData('twitterStatus');
   if (cached) return cached;
 
   try {
-    const { data } = await swrFetch<IntelStatus>(`${apiUrl}/intel/status`, {
-      ...CACHE_PRESETS.intel,
+    const { data } = await swrFetch<TwitterStatus>(`${apiUrl}/twitter/status`, {
+      ...CACHE_PRESETS.twitter,
     });
-    setPageData('intelStatus', data);
+    setPageData('twitterStatus', data);
     return data;
   } catch {
-    // Default to all disabled if status check fails
-    const defaultStatus: IntelStatus = { twitter: false, news: false, reddit: false };
-    setPageData('intelStatus', defaultStatus);
+    // Default to disabled if status check fails
+    const defaultStatus: TwitterStatus = { configured: false };
+    setPageData('twitterStatus', defaultStatus);
     return defaultStatus;
   }
 }
