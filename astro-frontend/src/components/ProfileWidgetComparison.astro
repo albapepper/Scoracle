@@ -340,36 +340,20 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 <script>
   import { swrFetch, setPageData, CACHE_PRESETS } from '../lib/utils/api-fetcher';
-
-  interface ProfileInfo {
-    id: number;
-    first_name?: string;
-    last_name?: string;
-    full_name?: string;
-    name?: string;
-    position?: string;
-    photo_url?: string;
-    logo_url?: string;
-    team?: { name: string; logo_url?: string };
-    venue_name?: string;
-    city?: string;
-    country?: string;
-  }
-
-  interface ProfileResponse {
-    entity_id: number;
-    entity_type: 'player' | 'team';
-    sport: string;
-    info: ProfileInfo;
-  }
+  import {
+    isValidProfileResponse,
+    normalizeProfileResponse,
+    type RawProfileResponse,
+    type NormalizedProfileResponse,
+  } from '../lib/adapters';
 
   class ProfileWidgetComparisonManager {
     private container: HTMLElement | null = null;
     private apiUrl: string = '';
     private removeBtn: HTMLElement | null = null;
 
-    private primaryData: ProfileResponse | null = null;
-    private secondaryData: ProfileResponse | null = null;
+    private primaryData: NormalizedProfileResponse | null = null;
+    private secondaryData: NormalizedProfileResponse | null = null;
 
     constructor() {
       this.container = document.getElementById('profile-widget-comparison');
@@ -440,17 +424,19 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       type: string,
       id: string,
       sport: string
-    ): Promise<ProfileResponse | null> {
+    ): Promise<NormalizedProfileResponse | null> {
       const url = `${this.apiUrl}/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
 
       try {
-        const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);
+        const { data: rawData } = await swrFetch<RawProfileResponse>(url, CACHE_PRESETS.widget);
 
-        if (!data || !data.info) {
+        if (!isValidProfileResponse(rawData)) {
           this.showError(prefix);
           return null;
         }
 
+        // Transform raw data using adapter
+        const data = normalizeProfileResponse(rawData, type as 'player' | 'team', sport);
         this.renderProfile(prefix, data);
         return data;
       } catch {
@@ -459,7 +445,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       }
     }
 
-    private renderProfile(prefix: string, data: ProfileResponse) {
+    private renderProfile(prefix: string, data: NormalizedProfileResponse) {
       const info = data.info;
       let name = '';
       let logo = '';

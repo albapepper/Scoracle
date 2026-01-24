@@ -12,20 +12,17 @@
  */
 
 import { swrFetch, waitForPageData, getPageData, setPageData, CACHE_PRESETS, type PageData } from './api-fetcher';
+import {
+  isValidProfileResponse,
+  normalizeProfileResponse,
+  type RawProfileResponse,
+  type NormalizedProfileResponse,
+} from '../adapters';
 
-export interface ProfileInfo {
-  full_name?: string;
-  first_name?: string;
-  last_name?: string;
-  name?: string;
-  team?: { name: string };
-}
-
-export interface ProfileResponse {
-  entity_id: number;
-  entity_type: 'player' | 'team';
-  info: ProfileInfo;
-}
+// Re-export types for backwards compatibility
+// ProfileInfo uses RawProfileResponse since that's what's stored in the info field
+export type ProfileInfo = RawProfileResponse;
+export type ProfileResponse = NormalizedProfileResponse;
 
 export interface EntityInfo {
   name: string | null;
@@ -35,8 +32,9 @@ export interface EntityInfo {
 
 /**
  * Extract entity name and team from profile info
+ * Works with normalized profile response (after adapter transformation)
  */
-export function extractEntityInfo(data: ProfileResponse | null | undefined): EntityInfo {
+export function extractEntityInfo(data: NormalizedProfileResponse | null | undefined): EntityInfo {
   if (!data?.info) {
     return { name: null, team: null, entityType: null };
   }
@@ -78,20 +76,22 @@ export async function resolveEntityInfo(
 ): Promise<EntityInfo> {
   const { waitTimeout = 1000, pageDataKey = 'widget' } = options;
 
-  // Try to get from cached page data first
-  let profileData = getPageData(pageDataKey) as ProfileResponse | undefined;
+  // Try to get from cached page data first (already normalized)
+  let profileData = getPageData(pageDataKey) as NormalizedProfileResponse | undefined;
 
   if (!profileData) {
     try {
       // Wait for another component to load the data
-      profileData = await waitForPageData(pageDataKey, waitTimeout) as ProfileResponse;
+      profileData = await waitForPageData(pageDataKey, waitTimeout) as NormalizedProfileResponse;
     } catch {
       // Fetch it ourselves
       const url = `${apiUrl}/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
-      const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);
-      profileData = data;
-      if (data) {
-        setPageData(pageDataKey, data);
+      const { data: rawData } = await swrFetch<RawProfileResponse>(url, CACHE_PRESETS.widget);
+      
+      // Transform raw data using adapter
+      if (isValidProfileResponse(rawData)) {
+        profileData = normalizeProfileResponse(rawData, type as 'player' | 'team', sport);
+        setPageData(pageDataKey, profileData);
       }
     }
   }
@@ -103,7 +103,7 @@ export async function resolveEntityInfo(
  * Format a display name from profile info
  * Useful for creating consistent name displays
  */
-export function formatDisplayName(info: ProfileInfo | null | undefined, entityType: 'player' | 'team'): string {
+export function formatDisplayName(info: RawProfileResponse | null | undefined, entityType: 'player' | 'team'): string {
   if (!info) return 'Unknown';
 
   if (entityType === 'team') {

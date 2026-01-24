@@ -328,56 +328,12 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 <script>
   import { escapeHtml, parseEntityParams } from '../lib/utils/dom';
   import { swrFetch, setPageData, CACHE_PRESETS } from '../lib/utils/api-fetcher';
-
-  // API Response types matching scoracle-data backend
-  interface TeamInfo {
-    id: number;
-    name: string;
-    abbreviation?: string;
-    logo_url?: string;
-    conference?: string;
-    division?: string;
-    city?: string;
-  }
-
-  interface ProfileInfo {
-    id: number;
-    sport_id?: string;
-    first_name?: string;
-    last_name?: string;
-    full_name?: string;
-    name?: string; // For teams
-    position?: string;
-    position_group?: string;
-    nationality?: string;
-    birth_date?: string;
-    birth_place?: string;
-    birth_country?: string;
-    height_inches?: number;
-    weight_lbs?: number;
-    photo_url?: string;
-    logo_url?: string; // For teams
-    current_team_id?: number;
-    jersey_number?: number;
-    college?: string;
-    experience_years?: number;
-    is_active?: boolean;
-    team?: TeamInfo;
-    // Team-specific fields
-    venue_name?: string;
-    venue_capacity?: number;
-    founded?: number;
-    country?: string;
-    city?: string;
-  }
-
-  interface ProfileResponse {
-    entity_id: number;
-    entity_type: 'player' | 'team';
-    sport: string;
-    season: number;
-    info: ProfileInfo;
-  }
+  import {
+    isValidProfileResponse,
+    normalizeProfileResponse,
+    type RawProfileResponse,
+    type NormalizedProfileResponse,
+  } from '../lib/adapters';
 
   class ProfileWidget {
     private widget: HTMLElement | null = null;
@@ -476,12 +432,19 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       const url = `${this.apiUrl}/profile/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
 
       try {
-        const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);
+        const { data: rawData } = await swrFetch<RawProfileResponse>(url, CACHE_PRESETS.widget);
 
-        if (!data || !data.info) {
+        if (!isValidProfileResponse(rawData)) {
           this.showError();
           return;
         }
+
+        // Transform raw data using adapter
+        const data = normalizeProfileResponse(
+          rawData,
+          this.type as 'player' | 'team',
+          this.sport!
+        );
 
         // Share widget data with other components
         setPageData('widget', data);
@@ -492,7 +455,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       }
     }
 
-    private renderData(data: ProfileResponse) {
+    private renderData(data: NormalizedProfileResponse) {
       const info = data.info;
       let name = '';
       let logo = '';

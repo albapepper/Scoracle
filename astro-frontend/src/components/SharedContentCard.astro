@@ -239,6 +239,11 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   import { escapeHtml, parseCoMentionsParams } from '../lib/utils/dom';
   import { formatDate } from '../lib/utils/date';
   import { swrFetch, CACHE_PRESETS } from '../lib/utils/api-fetcher';
+  import {
+    isValidProfileResponse,
+    normalizeProfileResponse,
+    type RawProfileResponse,
+  } from '../lib/adapters';
 
   interface Article {
     title: string;
@@ -272,16 +277,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     tweets?: Tweet[];
   }
 
-  interface ProfileResponse {
-    entity_id: number;
-    entity_type: string;
-    info: {
-      full_name?: string;
-      first_name?: string;
-      last_name?: string;
-      name?: string;
-    };
-  }
+
 
   interface TwitterStatusResponse {
     configured: boolean;
@@ -362,14 +358,18 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     private async getEntityName(type: string, id: string): Promise<string | null> {
       try {
         const url = `${this.apiUrl}/profile/${type}/${id}?sport=${this.params.sport!.toUpperCase()}`;
-        const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);
+        const { data: rawData } = await swrFetch<RawProfileResponse>(url, CACHE_PRESETS.widget);
 
-        if (!data?.info) return null;
+        if (!isValidProfileResponse(rawData)) return null;
+
+        // Transform raw data using adapter
+        const data = normalizeProfileResponse(rawData, type as 'player' | 'team', this.params.sport!);
+        const info = data.info;
 
         if (type === 'team') {
-          return data.info.name || data.info.full_name || null;
+          return info.name || info.full_name || null;
         }
-        return data.info.full_name || `${data.info.first_name || ''} ${data.info.last_name || ''}`.trim() || null;
+        return info.full_name || `${info.first_name || ''} ${info.last_name || ''}`.trim() || null;
       } catch {
         return null;
       }

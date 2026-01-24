@@ -243,28 +243,12 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 <script>
   import { parseCoMentionsParams } from '../lib/utils/dom';
   import { swrFetch, CACHE_PRESETS } from '../lib/utils/api-fetcher';
-
-  interface ProfileInfo {
-    id: number;
-    first_name?: string;
-    last_name?: string;
-    full_name?: string;
-    name?: string;
-    position?: string;
-    photo_url?: string;
-    logo_url?: string;
-    team?: { name: string; logo_url?: string };
-    venue_name?: string;
-    city?: string;
-    country?: string;
-  }
-
-  interface ProfileResponse {
-    entity_id: number;
-    entity_type: 'player' | 'team';
-    sport: string;
-    info: ProfileInfo;
-  }
+  import {
+    isValidProfileResponse,
+    normalizeProfileResponse,
+    type RawProfileResponse,
+    type NormalizedProfileResponse,
+  } from '../lib/adapters';
 
   class EntityWidgetPair {
     private apiUrl!: string;
@@ -326,20 +310,22 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       const url = `${this.apiUrl}/profile/${type}/${id}?sport=${this.params.sport!.toUpperCase()}`;
 
       try {
-        const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);
+        const { data: rawData } = await swrFetch<RawProfileResponse>(url, CACHE_PRESETS.widget);
 
-        if (!data || !data.info) {
+        if (!isValidProfileResponse(rawData)) {
           this.showError(prefix);
           return;
         }
 
+        // Transform raw data using adapter
+        const data = normalizeProfileResponse(rawData, type as 'player' | 'team', this.params.sport!);
         this.renderEntity(prefix, data);
       } catch {
         this.showError(prefix);
       }
     }
 
-    private renderEntity(prefix: string, data: ProfileResponse) {
+    private renderEntity(prefix: string, data: NormalizedProfileResponse) {
       const info = data.info;
       let name = '';
       let logo = '';

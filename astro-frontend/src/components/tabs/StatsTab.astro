@@ -408,7 +408,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 <script>
   import { escapeHtml, parseEntityParams } from '../../lib/utils/dom';
-  import { swrFetch, setPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
+  import { swrFetch, setPageData, getPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
   import { PizzaChart, type PizzaChartStat } from '../../lib/charts/pizza-chart';
   import {
     categorizeStats,
@@ -416,25 +416,13 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     type Category,
     type BoxScoreGroup,
   } from '../../lib/utils/stats-categorizer';
-
-  // API Response types matching scoracle-data backend
-  interface StatsResponse {
-    entity_id: number;
-    entity_type: 'player' | 'team';
-    sport: string;
-    season: number;
-    info: {
-      id: number;
-      first_name?: string;
-      last_name?: string;
-      full_name?: string;
-      name?: string;
-      position?: string;
-      team?: { name: string };
-    };
-    stats: Record<string, unknown>;
-    percentiles: Array<{ stat_key: string; percentile: number }> | Record<string, number>;
-  }
+  import {
+    isValidStatsResponse,
+    normalizeStatsResponse,
+    type RawStatsResponse,
+    type NormalizedStatsResponse,
+    type NormalizedProfileResponse,
+  } from '../../lib/adapters';
 
   /**
    * Stats Tab Manager
@@ -479,25 +467,18 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       // Fetch stats and percentiles from the stats endpoint
       const url = `${this.apiUrl}/stats/${type}/${id}?sport=${sport.toUpperCase()}`;
 
-      const { data } = await swrFetch<StatsResponse>(url, CACHE_PRESETS.stats);
+      const { data: rawData } = await swrFetch<RawStatsResponse>(url, CACHE_PRESETS.stats);
 
-      if (!data || !data.stats) {
+      if (!isValidStatsResponse(rawData)) {
         this.showEmpty();
         return;
       }
 
-      // Convert percentiles array to object if needed
-      let percentilesObj: Record<string, number> = {};
-      if (Array.isArray(data.percentiles)) {
-        for (const p of data.percentiles) {
-          percentilesObj[p.stat_key] = p.percentile;
-        }
-      } else if (data.percentiles && typeof data.percentiles === 'object') {
-        percentilesObj = data.percentiles as Record<string, number>;
-      }
+      // Transform raw data using adapter (normalizes percentiles to object)
+      const data = normalizeStatsResponse(rawData);
 
       // Get categorized stats for the pizza chart
-      const categories = categorizeStats(data.stats || {}, percentilesObj, sport);
+      const categories = categorizeStats(data.stats || {}, data.percentiles, sport);
 
       // Get box score groups
       const boxScoreGroups = getBoxScoreGroups(data.stats || {}, sport);
@@ -507,12 +488,16 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         return;
       }
 
+      // Get entity name from profile widget (already loaded on page)
+      const widgetData = getPageData('widget') as NormalizedProfileResponse | undefined;
+      const entityName = widgetData?.info?.full_name || widgetData?.info?.name || '';
+
       // Share data with other components
       setPageData('stats', {
         season: data.season,
         entity: {
           id: String(data.entity_id),
-          name: data.info?.full_name || data.info?.name || '',
+          name: entityName,
           type: data.entity_type,
         },
         categories: categories,
