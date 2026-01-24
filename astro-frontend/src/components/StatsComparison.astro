@@ -3,7 +3,7 @@
  * Stats Comparison
  *
  * Displays statistics for two entities side-by-side for comparison.
- * Fetches: GET /api/v1/widget/stats/{entity_type}/{entity_id}?sport={sport}
+ * Fetches: GET /api/v1/stats/{entity_type}/{entity_id}?sport={sport}
  * Shows colored bars for visual differentiation and a legend.
  * Used on the stats page when comparison mode is active.
  */
@@ -472,8 +472,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       type: string,
       id: string
     ): Promise<{ stats: Array<{ label: string; value: string | number }>; season?: string } | null> {
-      // Use widget/stats endpoint
-      const url = `${this.apiUrl}/widget/stats/${type}/${id}?sport=${sport.toUpperCase()}`;
+      // Fetch stats from the stats endpoint
+      const url = `${this.apiUrl}/stats/${type}/${id}?sport=${sport.toUpperCase()}`;
 
       try {
         const { data } = await swrFetch<{

@@ -87,7 +87,7 @@ export async function resolveEntityInfo(
       profileData = await waitForPageData(pageDataKey, waitTimeout) as ProfileResponse;
     } catch {
       // Fetch it ourselves
-      const url = `${apiUrl}/widget/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
+      const url = `${apiUrl}/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
       const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);
       profileData = data;
       if (data) {

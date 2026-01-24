@@ -291,8 +291,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
     private async getEntityName(type: string, id: string): Promise<string | null> {
       try {
-        // Use widget/profile endpoint
-        const url = `${this.apiUrl}/widget/profile/${type}/${id}?sport=${this.params.sport!.toUpperCase()}`;
+        // Fetch profile data
+        const url = `${this.apiUrl}/profile/${type}/${id}?sport=${this.params.sport!.toUpperCase()}`;
 
         // Use SWR fetch for widget data
         const { data } = await swrFetch<Record<string, unknown>>(url, {

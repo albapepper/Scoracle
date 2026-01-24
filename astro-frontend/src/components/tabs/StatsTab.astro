@@ -6,7 +6,7 @@
  * - Pizza chart for percentile visualization (color-coded: red=low, green=high)
  * - Box score table with raw per-game stats in horizontal format
  *
- * Fetches: GET /api/v1/widget/percentiles/{entity_type}/{entity_id}
+ * Fetches: GET /api/v1/stats/{entity_type}/{entity_id}
  * (This endpoint returns both raw stats and percentiles)
  *
  * Features:
@@ -476,8 +476,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private async loadStats(sport: string, type: string, id: string) {
-      // Use percentiles endpoint which includes both stats and percentiles
-      const url = `${this.apiUrl}/widget/percentiles/${type}/${id}?sport=${sport.toUpperCase()}`;
+      // Fetch stats and percentiles from the stats endpoint
+      const url = `${this.apiUrl}/stats/${type}/${id}?sport=${sport.toUpperCase()}`;
 
       const { data } = await swrFetch<StatsResponse>(url, CACHE_PRESETS.stats);
 

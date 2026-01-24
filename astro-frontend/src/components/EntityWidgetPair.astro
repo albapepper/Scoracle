@@ -323,7 +323,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private async fetchEntity(prefix: string, type: string, id: string): Promise<void> {
-      const url = `${this.apiUrl}/widget/profile/${type}/${id}?sport=${this.params.sport!.toUpperCase()}`;
+      const url = `${this.apiUrl}/profile/${type}/${id}?sport=${this.params.sport!.toUpperCase()}`;
 
       try {
         const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);
