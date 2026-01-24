@@ -1,0 +1,1021 @@
+---
+/**
+ * Team Stats Tab Component
+ *
+ * Displays team statistics with:
+ * - Pizza chart for percentile visualization
+ * - Form display (FOOTBALL teams: W/D/L badges)
+ * - Box score table with team stats
+ * - Collapsible home/away breakdown
+ *
+ * Fetches: GET /api/v1/stats/team/{team_id}?sport={sport}
+ */
+
+interface Props {
+  title?: string;
+}
+
+const { title = 'Statistics' } = Astro.props;
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+---
+
+<div id="team-stats-tab-content" data-api-url={apiUrl}>
+  <!-- Header -->
+  <div class="stats-header">
+    <h3 class="stats-title">{title}</h3>
+    <span id="team-stats-season" class="stats-season"></span>
+  </div>
+
+  <!-- Pizza Chart Section -->
+  <div id="team-stats-chart-container" class="stats-chart-container">
+    <div id="team-stats-pizza-chart" class="stats-pizza-chart"></div>
+    <div id="team-stats-chart-loading" class="chart-skeleton">
+      <div class="chart-skeleton-circle"></div>
+    </div>
+  </div>
+
+  <!-- Form Display (FOOTBALL teams only) -->
+  <div id="team-form-section" class="form-section hidden">
+    <p class="form-label">Recent Form</p>
+    <div id="team-form-display" class="form-display"></div>
+  </div>
+
+  <!-- Box Score Section -->
+  <div class="stats-body">
+    <!-- Loading State -->
+    <div id="team-stats-loading" class="stats-loading">
+      <div class="box-score-skeleton">
+        <div class="skeleton-row-header"></div>
+        <div class="skeleton-row-cells">
+          <div class="skeleton-cell"></div>
+          <div class="skeleton-cell"></div>
+          <div class="skeleton-cell"></div>
+          <div class="skeleton-cell"></div>
+          <div class="skeleton-cell"></div>
+        </div>
+      </div>
+      <div class="box-score-skeleton">
+        <div class="skeleton-row-header"></div>
+        <div class="skeleton-row-cells">
+          <div class="skeleton-cell"></div>
+          <div class="skeleton-cell"></div>
+          <div class="skeleton-cell"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Box Score Container -->
+    <div id="team-stats-box-score" class="stats-box-score hidden">
+      <!-- Box score groups populated by JavaScript -->
+    </div>
+
+    <!-- Home/Away Breakdown (Collapsible) -->
+    <details id="team-home-away-section" class="home-away-section hidden">
+      <summary class="home-away-summary">Home/Away Breakdown</summary>
+      <div id="team-home-away-content" class="home-away-content">
+        <!-- Populated by JavaScript -->
+      </div>
+    </details>
+
+    <!-- Empty State -->
+    <div id="team-stats-empty" class="stats-empty hidden">
+      <p>No statistics available</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="team-stats-error" class="stats-error hidden">
+      <p>Unable to load statistics</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Stats Header */
+  .stats-header {
+    padding: 1.25rem 1.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  :global(.dark) .stats-header {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .stats-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  :global(.dark) .stats-title {
+    color: var(--text-dark);
+  }
+
+  .stats-season {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  :global(.dark) .stats-season {
+    color: var(--text-secondary-dark);
+  }
+
+  /* Chart Container */
+  .stats-chart-container {
+    padding: 1.5rem 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    min-height: 280px;
+  }
+
+  :global(.dark) .stats-chart-container {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .stats-pizza-chart {
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .stats-pizza-chart :global(.pizza-chart-svg) {
+    display: block;
+  }
+
+  .stats-pizza-chart :global(.chart-no-data) {
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+    text-align: center;
+    margin: 0;
+  }
+
+  :global(.dark) .stats-pizza-chart :global(.chart-no-data) {
+    color: var(--text-tertiary-dark);
+  }
+
+  /* Chart Skeleton */
+  .chart-skeleton {
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .chart-skeleton-circle {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: var(--border);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  :global(.dark) .chart-skeleton-circle {
+    background: var(--border-dark);
+  }
+
+  /* Form Section (FOOTBALL teams) */
+  .form-section {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  :global(.dark) .form-section {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .form-label {
+    margin: 0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  :global(.dark) .form-label {
+    color: var(--text-tertiary-dark);
+  }
+
+  .form-display {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .form-display :global(.form-badge) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+  }
+
+  .form-display :global(.form-badge.win) {
+    background-color: #22c55e;
+  }
+
+  .form-display :global(.form-badge.draw) {
+    background-color: #9ca3af;
+  }
+
+  .form-display :global(.form-badge.loss) {
+    background-color: #ef4444;
+  }
+
+  /* Stats Body */
+  .stats-body {
+    padding: 1rem 1.5rem 1.25rem;
+  }
+
+  /* Loading Skeleton */
+  .stats-loading {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .box-score-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .skeleton-row-header {
+    width: 80px;
+    height: 12px;
+    background: var(--border);
+    border-radius: 3px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .skeleton-row-cells {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .skeleton-cell {
+    width: 48px;
+    height: 44px;
+    background: var(--border);
+    border-radius: 4px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  :global(.dark) .skeleton-row-header,
+  :global(.dark) .skeleton-cell {
+    background: var(--border-dark);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Box Score */
+  .stats-box-score {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .stats-box-score :global(.box-score-group) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .stats-box-score :global(.group-label) {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0;
+  }
+
+  :global(.dark) .stats-box-score :global(.group-label) {
+    color: var(--text-tertiary-dark);
+  }
+
+  .stats-box-score :global(.box-score-row) {
+    display: flex;
+    gap: 0.375rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 2px;
+  }
+
+  .stats-box-score :global(.box-score-row::-webkit-scrollbar) {
+    display: none;
+  }
+
+  .stats-box-score :global(.stat-cell) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 52px;
+    padding: 0.5rem 0.625rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+
+  :global(.dark) .stats-box-score :global(.stat-cell) {
+    background: var(--bg-dark);
+    border-color: var(--border-dark);
+  }
+
+  .stats-box-score :global(.stat-abbrev) {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.125rem;
+  }
+
+  :global(.dark) .stats-box-score :global(.stat-abbrev) {
+    color: var(--text-tertiary-dark);
+  }
+
+  .stats-box-score :global(.stat-value) {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+  }
+
+  :global(.dark) .stats-box-score :global(.stat-value) {
+    color: var(--text-dark);
+  }
+
+  /* Home/Away Section */
+  .home-away-section {
+    margin-top: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  :global(.dark) .home-away-section {
+    border-color: var(--border-dark);
+  }
+
+  .home-away-summary {
+    padding: 0.75rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    background: var(--bg);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .home-away-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .home-away-summary::before {
+    content: '';
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-left: 5px solid currentColor;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    transition: transform 0.2s;
+  }
+
+  .home-away-section[open] .home-away-summary::before {
+    transform: rotate(90deg);
+  }
+
+  :global(.dark) .home-away-summary {
+    color: var(--text-secondary-dark);
+    background: var(--bg-dark);
+  }
+
+  .home-away-content {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  :global(.dark) .home-away-content {
+    border-top-color: var(--border-dark);
+    background: var(--surface-dark);
+  }
+
+  .home-away-content :global(.split-row) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .home-away-content :global(.split-label) {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  :global(.dark) .home-away-content :global(.split-label) {
+    color: var(--text-tertiary-dark);
+  }
+
+  .home-away-content :global(.split-stats) {
+    display: flex;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+  }
+
+  .home-away-content :global(.split-stat) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 44px;
+    padding: 0.375rem 0.5rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+
+  :global(.dark) .home-away-content :global(.split-stat) {
+    background: var(--bg-dark);
+    border-color: var(--border-dark);
+  }
+
+  .home-away-content :global(.split-stat-abbrev) {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+  }
+
+  :global(.dark) .home-away-content :global(.split-stat-abbrev) {
+    color: var(--text-tertiary-dark);
+  }
+
+  .home-away-content :global(.split-stat-value) {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  :global(.dark) .home-away-content :global(.split-stat-value) {
+    color: var(--text-dark);
+  }
+
+  /* Empty & Error States */
+  .stats-empty,
+  .stats-error {
+    padding: 2rem 0;
+    text-align: center;
+  }
+
+  .stats-empty p,
+  .stats-error p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-tertiary);
+  }
+
+  :global(.dark) .stats-empty p,
+  :global(.dark) .stats-error p {
+    color: var(--text-tertiary-dark);
+  }
+
+  /* Utility */
+  .hidden {
+    display: none !important;
+  }
+
+  /* Responsive - Mobile */
+  @media (max-width: 480px) {
+    .stats-header {
+      padding: 1rem;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.25rem;
+    }
+
+    .stats-title {
+      font-size: 0.9rem;
+    }
+
+    .stats-season {
+      font-size: 0.75rem;
+    }
+
+    .stats-chart-container {
+      padding: 1rem;
+      min-height: 240px;
+    }
+
+    .stats-pizza-chart {
+      max-width: 280px;
+    }
+
+    .form-section {
+      padding: 0.75rem 1rem;
+    }
+
+    .form-display :global(.form-badge) {
+      width: 22px;
+      height: 22px;
+      font-size: 0.65rem;
+    }
+
+    .stats-body {
+      padding: 1rem;
+    }
+
+    .stats-box-score :global(.stat-cell) {
+      min-width: 48px;
+      padding: 0.375rem 0.5rem;
+    }
+
+    .stats-box-score :global(.stat-value) {
+      font-size: 0.9rem;
+    }
+
+    .home-away-summary {
+      padding: 0.625rem 0.75rem;
+      font-size: 0.75rem;
+    }
+
+    .home-away-content {
+      padding: 0.75rem;
+    }
+  }
+
+  /* Extra small screens */
+  @media (max-width: 320px) {
+    .stats-header {
+      padding: 0.75rem;
+    }
+
+    .stats-body {
+      padding: 0.75rem;
+    }
+
+    .stats-chart-container {
+      min-height: 200px;
+    }
+
+    .stats-pizza-chart {
+      max-width: 220px;
+    }
+
+    .stats-box-score :global(.stat-cell) {
+      min-width: 44px;
+      padding: 0.25rem 0.375rem;
+    }
+
+    .stats-box-score :global(.stat-abbrev) {
+      font-size: 0.6rem;
+    }
+
+    .stats-box-score :global(.stat-value) {
+      font-size: 0.85rem;
+    }
+  }
+</style>
+
+<script>
+  import { escapeHtml, parseEntityParams } from '../../lib/utils/dom';
+  import { swrFetch, setPageData, getPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
+  import { PizzaChart, type PizzaChartStat } from '../../lib/charts/pizza-chart';
+  import {
+    categorizeStats,
+    getBoxScoreGroups,
+    getStatAbbrev,
+    type Category,
+    type BoxScoreGroup,
+  } from '../../lib/utils/stats-categorizer';
+
+  /**
+   * Team stats response shape from backend
+   */
+  interface TeamStatsResponse {
+    entity_id: number;
+    entity_type: 'team';
+    sport: string;
+    season: number;
+    stats: Record<string, number | string>;
+    percentiles: Record<string, number> | Array<{ stat_key: string; percentile: number }>;
+    percentile_metadata?: unknown;
+  }
+
+  /**
+   * Team Stats Tab Manager
+   *
+   * Handles loading team stats from the backend API,
+   * rendering the pizza chart, form display, box score, and home/away breakdown.
+   */
+  class TeamStatsTabManager {
+    private container: HTMLElement | null;
+    private apiUrl: string;
+    private pizzaChart: PizzaChart | null = null;
+    private loaded = false;
+    private sport: string = '';
+
+    constructor() {
+      this.container = document.getElementById('team-stats-tab-content');
+      this.apiUrl = this.container?.dataset.apiUrl || '';
+    }
+
+    async load(): Promise<void> {
+      if (this.loaded || !this.container) return;
+      this.loaded = true;
+
+      const params = parseEntityParams();
+      const { sport, type, id } = params;
+
+      // Only proceed if this is a team entity
+      if (type !== 'team') return;
+
+      if (!sport || !id) {
+        this.showError();
+        return;
+      }
+
+      this.sport = sport;
+
+      try {
+        await this.loadStats(sport, id);
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.error('Failed to load team stats:', error);
+        }
+        this.showError();
+      }
+    }
+
+    private async loadStats(sport: string, id: string) {
+      const url = `${this.apiUrl}/stats/team/${id}?sport=${sport.toUpperCase()}`;
+
+      const { data } = await swrFetch<TeamStatsResponse>(url, CACHE_PRESETS.stats);
+
+      if (!data || !data.stats) {
+        this.showEmpty();
+        return;
+      }
+
+      // Normalize percentiles to object format
+      const percentiles = this.normalizePercentiles(data.percentiles);
+
+      // Get categorized stats for the pizza chart (using 'team' entity type)
+      const categories = categorizeStats(data.stats, percentiles, sport, 'team');
+
+      // Get box score groups (using 'team' entity type)
+      const boxScoreGroups = getBoxScoreGroups(data.stats, sport, 'team');
+
+      if (categories.length === 0 && boxScoreGroups.length === 0) {
+        this.showEmpty();
+        return;
+      }
+
+      // Get entity name from team profile widget
+      const widgetData = getPageData('widget') as { info?: { name?: string; full_name?: string } } | undefined;
+      const entityName = widgetData?.info?.name || widgetData?.info?.full_name || '';
+
+      // Share data with other components
+      setPageData('stats', {
+        season: data.season,
+        entity: {
+          id: String(data.entity_id),
+          name: entityName,
+          type: 'team',
+        },
+        categories: categories,
+        boxScoreGroups: boxScoreGroups,
+      });
+
+      // Update season display
+      const seasonEl = this.container?.querySelector('#team-stats-season');
+      if (seasonEl) {
+        seasonEl.textContent = `${data.season} Season`;
+      }
+
+      // Render pizza chart with percentiles
+      this.renderChart(categories);
+
+      // Render form display (FOOTBALL teams only)
+      if (sport.toUpperCase() === 'FOOTBALL' && data.stats.form) {
+        this.renderForm(String(data.stats.form));
+      }
+
+      // Render box score
+      this.renderBoxScore(boxScoreGroups);
+
+      // Render home/away breakdown
+      this.renderHomeAway(data.stats, sport);
+    }
+
+    private normalizePercentiles(
+      percentiles: Record<string, number> | Array<{ stat_key: string; percentile: number }> | undefined
+    ): Record<string, number> {
+      if (!percentiles) return {};
+
+      if (Array.isArray(percentiles)) {
+        const result: Record<string, number> = {};
+        for (const p of percentiles) {
+          if (p.stat_key && typeof p.percentile === 'number') {
+            result[p.stat_key] = p.percentile;
+          }
+        }
+        return result;
+      }
+
+      return percentiles as Record<string, number>;
+    }
+
+    private renderChart(categories: Category[]) {
+      const chartContainer = this.container?.querySelector('#team-stats-pizza-chart') as HTMLElement;
+      const chartLoading = this.container?.querySelector('#team-stats-chart-loading');
+
+      if (!chartContainer) return;
+
+      // Collect all stats with percentiles for the chart
+      const chartStats: PizzaChartStat[] = [];
+
+      categories.forEach((category) => {
+        category.stats.forEach((stat) => {
+          if (stat.percentile !== undefined && stat.percentile !== null) {
+            chartStats.push({
+              key: stat.key,
+              label: stat.label,
+              value: stat.value ?? '-',
+              percentile: stat.percentile,
+              categoryId: category.id,
+            });
+          }
+        });
+      });
+
+      // Hide loading skeleton
+      chartLoading?.classList.add('hidden');
+
+      if (chartStats.length < 3) {
+        // Not enough percentile data - hide chart section
+        const chartSection = this.container?.querySelector('#team-stats-chart-container');
+        chartSection?.classList.add('hidden');
+        return;
+      }
+
+      // Create and render chart
+      this.pizzaChart = new PizzaChart(chartContainer, {
+        width: 360,
+        height: 360,
+        innerRadius: 35,
+        outerRadius: 120,
+        labelOffset: 30,
+      });
+
+      this.pizzaChart.render(chartStats);
+    }
+
+    private renderForm(form: string) {
+      const formSection = this.container?.querySelector('#team-form-section');
+      const formDisplay = this.container?.querySelector('#team-form-display');
+
+      if (!formSection || !formDisplay) return;
+
+      // Parse form string (e.g., "WWWDLWWD") into badges
+      const badges = form.split('').map(char => {
+        const upperChar = char.toUpperCase();
+        let className = '';
+        let label = '';
+
+        switch (upperChar) {
+          case 'W':
+            className = 'win';
+            label = 'W';
+            break;
+          case 'D':
+            className = 'draw';
+            label = 'D';
+            break;
+          case 'L':
+            className = 'loss';
+            label = 'L';
+            break;
+          default:
+            return '';
+        }
+
+        return `<span class="form-badge ${className}" title="${label === 'W' ? 'Win' : label === 'D' ? 'Draw' : 'Loss'}">${label}</span>`;
+      }).filter(Boolean);
+
+      if (badges.length > 0) {
+        formDisplay.innerHTML = badges.join('');
+        formSection.classList.remove('hidden');
+      }
+    }
+
+    private renderBoxScore(groups: BoxScoreGroup[]) {
+      const container = this.container?.querySelector('#team-stats-box-score');
+      if (!container) return;
+
+      if (groups.length === 0) {
+        const loadingEl = this.container?.querySelector('#team-stats-loading');
+        loadingEl?.classList.add('hidden');
+        return;
+      }
+
+      container.innerHTML = groups
+        .map(
+          (group) => `
+        <div class="box-score-group" data-group="${group.id}">
+          <p class="group-label">${escapeHtml(group.label)}</p>
+          <div class="box-score-row">
+            ${group.stats
+              .map(
+                (stat) => `
+              <div class="stat-cell">
+                <span class="stat-abbrev">${escapeHtml(stat.abbrev)}</span>
+                <span class="stat-value">${escapeHtml(String(stat.value))}</span>
+              </div>
+            `
+              )
+              .join('')}
+          </div>
+        </div>
+      `
+        )
+        .join('');
+
+      this.showContent();
+    }
+
+    private renderHomeAway(stats: Record<string, number | string>, sport: string) {
+      const section = this.container?.querySelector('#team-home-away-section');
+      const content = this.container?.querySelector('#team-home-away-content');
+
+      if (!section || !content) return;
+
+      // Define home/away stat keys based on sport
+      let homeStats: { key: string; abbrev: string }[] = [];
+      let awayStats: { key: string; abbrev: string }[] = [];
+
+      if (sport.toUpperCase() === 'FOOTBALL') {
+        homeStats = [
+          { key: 'home_played', abbrev: 'MP' },
+          { key: 'home_wins', abbrev: 'W' },
+          { key: 'home_draws', abbrev: 'D' },
+          { key: 'home_losses', abbrev: 'L' },
+          { key: 'home_goals_for', abbrev: 'GF' },
+          { key: 'home_goals_against', abbrev: 'GA' },
+        ];
+        awayStats = [
+          { key: 'away_played', abbrev: 'MP' },
+          { key: 'away_wins', abbrev: 'W' },
+          { key: 'away_draws', abbrev: 'D' },
+          { key: 'away_losses', abbrev: 'L' },
+          { key: 'away_goals_for', abbrev: 'GF' },
+          { key: 'away_goals_against', abbrev: 'GA' },
+        ];
+      } else if (sport.toUpperCase() === 'NBA') {
+        homeStats = [
+          { key: 'home_wins', abbrev: 'W' },
+          { key: 'home_losses', abbrev: 'L' },
+        ];
+        awayStats = [
+          { key: 'away_wins', abbrev: 'W' },
+          { key: 'away_losses', abbrev: 'L' },
+        ];
+      } else if (sport.toUpperCase() === 'NFL') {
+        homeStats = [
+          { key: 'home_wins', abbrev: 'W' },
+          { key: 'home_losses', abbrev: 'L' },
+          { key: 'home_ties', abbrev: 'T' },
+        ];
+        awayStats = [
+          { key: 'away_wins', abbrev: 'W' },
+          { key: 'away_losses', abbrev: 'L' },
+          { key: 'away_ties', abbrev: 'T' },
+        ];
+      }
+
+      // Check if we have any home/away data
+      const hasHomeData = homeStats.some(s => stats[s.key] !== undefined && stats[s.key] !== null);
+      const hasAwayData = awayStats.some(s => stats[s.key] !== undefined && stats[s.key] !== null);
+
+      if (!hasHomeData && !hasAwayData) return;
+
+      const renderStatRow = (label: string, statDefs: { key: string; abbrev: string }[]) => {
+        const statCells = statDefs
+          .filter(s => stats[s.key] !== undefined && stats[s.key] !== null)
+          .map(s => `
+            <div class="split-stat">
+              <span class="split-stat-abbrev">${escapeHtml(s.abbrev)}</span>
+              <span class="split-stat-value">${escapeHtml(String(stats[s.key]))}</span>
+            </div>
+          `)
+          .join('');
+
+        if (!statCells) return '';
+
+        return `
+          <div class="split-row">
+            <span class="split-label">${escapeHtml(label)}</span>
+            <div class="split-stats">${statCells}</div>
+          </div>
+        `;
+      };
+
+      const homeHtml = renderStatRow('Home', homeStats);
+      const awayHtml = renderStatRow('Away', awayStats);
+
+      if (homeHtml || awayHtml) {
+        content.innerHTML = homeHtml + awayHtml;
+        section.classList.remove('hidden');
+      }
+    }
+
+    private showContent() {
+      this.container?.querySelector('#team-stats-loading')?.classList.add('hidden');
+      this.container?.querySelector('#team-stats-box-score')?.classList.remove('hidden');
+      this.container?.querySelector('#team-stats-empty')?.classList.add('hidden');
+      this.container?.querySelector('#team-stats-error')?.classList.add('hidden');
+    }
+
+    private showEmpty() {
+      this.container?.querySelector('#team-stats-loading')?.classList.add('hidden');
+      this.container?.querySelector('#team-stats-box-score')?.classList.add('hidden');
+      this.container?.querySelector('#team-stats-empty')?.classList.remove('hidden');
+      this.container?.querySelector('#team-stats-error')?.classList.add('hidden');
+
+      // Hide chart if no data
+      const chartContainer = this.container?.querySelector('#team-stats-chart-container');
+      chartContainer?.classList.add('hidden');
+    }
+
+    private showError() {
+      this.container?.querySelector('#team-stats-loading')?.classList.add('hidden');
+      this.container?.querySelector('#team-stats-box-score')?.classList.add('hidden');
+      this.container?.querySelector('#team-stats-empty')?.classList.add('hidden');
+      this.container?.querySelector('#team-stats-error')?.classList.remove('hidden');
+
+      // Hide chart on error
+      const chartContainer = this.container?.querySelector('#team-stats-chart-container');
+      chartContainer?.classList.add('hidden');
+    }
+
+    public refreshChart(): void {
+      this.pizzaChart?.refresh();
+    }
+  }
+
+  // Initialize manager and expose on window
+  const manager = new TeamStatsTabManager();
+  (window as any).teamStatsTab = {
+    load: () => manager.load(),
+    refreshChart: () => manager.refreshChart(),
+  };
+
+  // Auto-load since Stats is the default tab
+  manager.load();
+
+  // Listen for theme changes to refresh chart colors
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.attributeName === 'class') {
+        manager.refreshChart();
+      }
+    });
+  });
+
+  observer.observe(document.documentElement, { attributes: true });
+</script>

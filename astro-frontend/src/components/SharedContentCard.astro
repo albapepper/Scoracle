@@ -239,11 +239,21 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   import { escapeHtml, parseCoMentionsParams } from '../lib/utils/dom';
   import { formatDate } from '../lib/utils/date';
   import { swrFetch, CACHE_PRESETS } from '../lib/utils/api-fetcher';
-  import {
-    isValidProfileResponse,
-    normalizeProfileResponse,
-    type RawProfileResponse,
-  } from '../lib/adapters';
+
+  // Raw API response types (no adapter transformation needed)
+  interface PlayerProfileResponse {
+    id?: string | number;
+    name?: string;
+    firstname?: string;
+    lastname?: string;
+  }
+
+  interface TeamProfileResponse {
+    id?: string | number;
+    name?: string;
+  }
+
+  type ProfileResponse = PlayerProfileResponse | TeamProfileResponse;
 
   interface Article {
     title: string;
@@ -276,8 +286,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   interface TwitterResponse {
     tweets?: Tweet[];
   }
-
-
 
   interface TwitterStatusResponse {
     configured: boolean;
@@ -358,18 +366,17 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     private async getEntityName(type: string, id: string): Promise<string | null> {
       try {
         const url = `${this.apiUrl}/profile/${type}/${id}?sport=${this.params.sport!.toUpperCase()}`;
-        const { data: rawData } = await swrFetch<RawProfileResponse>(url, CACHE_PRESETS.widget);
+        const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);
 
-        if (!isValidProfileResponse(rawData)) return null;
-
-        // Transform raw data using adapter
-        const data = normalizeProfileResponse(rawData, type as 'player' | 'team', this.params.sport!);
-        const info = data.info;
+        if (!data || typeof data !== 'object') return null;
 
         if (type === 'team') {
-          return info.name || info.full_name || null;
+          const teamData = data as TeamProfileResponse;
+          return teamData.name || null;
         }
-        return info.full_name || `${info.first_name || ''} ${info.last_name || ''}`.trim() || null;
+
+        const playerData = data as PlayerProfileResponse;
+        return playerData.name || `${playerData.firstname || ''} ${playerData.lastname || ''}`.trim() || null;
       } catch {
         return null;
       }

@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import ProfileWidget from '../components/ProfileWidget.astro';
+import PlayerProfileWidget from '../components/PlayerProfileWidget.astro';
+import TeamProfileWidget from '../components/TeamProfileWidget.astro';
 import NewsContentCard from '../components/NewsContentCard.astro';
 ---
 
@@ -9,8 +10,17 @@ import NewsContentCard from '../components/NewsContentCard.astro';
   description="View recent news, social media mentions, and updates about sports players and teams"
 >
   <main class="news-main">
-    <ProfileWidget page="news" />
-    <NewsContentCard />
+    <!-- Player View -->
+    <div id="player-entity-view" class="entity-view hidden" data-entity-type="player">
+      <PlayerProfileWidget page="news" />
+      <NewsContentCard />
+    </div>
+
+    <!-- Team View -->
+    <div id="team-entity-view" class="entity-view hidden" data-entity-type="team">
+      <TeamProfileWidget page="news" />
+      <NewsContentCard />
+    </div>
   </main>
 </Layout>
 
@@ -32,4 +42,50 @@ import NewsContentCard from '../components/NewsContentCard.astro';
   :global(.dark) .news-main {
     background-color: var(--bg-dark);
   }
+
+  .entity-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    width: 100%;
+  }
+
+  .entity-view.hidden {
+    display: none;
+  }
 </style>
+
+<script>
+  /**
+   * News Page Entity View Manager
+   * Shows the correct entity view (player vs team) based on URL params
+   */
+  class NewsPageManager {
+    private playerView: HTMLElement | null = null;
+    private teamView: HTMLElement | null = null;
+
+    constructor() {
+      this.playerView = document.getElementById('player-entity-view');
+      this.teamView = document.getElementById('team-entity-view');
+      this.init();
+    }
+
+    private init() {
+      const params = new URLSearchParams(window.location.search);
+      const type = params.get('type');
+      const entityType = type === 'team' ? 'team' : 'player';
+
+      if (entityType === 'team') {
+        this.playerView?.classList.add('hidden');
+        this.teamView?.classList.remove('hidden');
+      } else {
+        this.playerView?.classList.remove('hidden');
+        this.teamView?.classList.add('hidden');
+      }
+    }
+  }
+
+  // Initialize
+  new NewsPageManager();
+</script>

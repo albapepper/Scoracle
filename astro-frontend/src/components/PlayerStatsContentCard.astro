@@ -1,22 +1,19 @@
 ---
 /**
- * Stats Content Card
+ * Player Stats Content Card
  *
- * Primary content card for the stats page. Displays entity statistics
- * and related features in a tabbed interface.
+ * Content card for the stats page when viewing a player entity.
+ * Displays player statistics and related features in a tabbed interface.
  *
  * Tabs:
  * - Stats: Pizza chart + box score statistics
  * - Strengths: Strengths & weaknesses based on percentiles
- * - Similarity: Similar players/teams based on embeddings
+ * - Similarity: Similar players based on embeddings
  * - Transfers: Transfer predictions
  * - Predictions: LSTM-based performance predictions
- *
- * Props:
- * - title: Card title for the stats tab (defaults to "Statistics")
  */
 
-import StatsTab from './tabs/StatsTab.astro';
+import PlayerStatsTab from './tabs/PlayerStatsTab.astro';
 import StrengthsWeaknessesTab from './tabs/StrengthsWeaknessesTab.astro';
 import SimilarityTab from './tabs/SimilarityTab.astro';
 import TransfersTab from './tabs/TransfersTab.astro';
@@ -29,47 +26,47 @@ interface Props {
 const { title = 'Statistics' } = Astro.props;
 ---
 
-<div class="stats-content-card card">
+<div class="player-stats-content-card card" data-entity-type="player">
   <!-- Tab Navigation -->
   <div class="tabs-nav">
-    <button class="tab-btn active" data-tab="stats">Stats</button>
-    <button class="tab-btn" data-tab="strengths">Strengths</button>
-    <button class="tab-btn" data-tab="similarity">Similarity</button>
-    <button class="tab-btn" data-tab="transfers">Transfers</button>
-    <button class="tab-btn" data-tab="predictions">Predictions</button>
+    <button class="tab-btn active" data-tab="player-stats">Stats</button>
+    <button class="tab-btn" data-tab="player-strengths">Strengths</button>
+    <button class="tab-btn" data-tab="player-similarity">Similarity</button>
+    <button class="tab-btn" data-tab="player-transfers">Transfers</button>
+    <button class="tab-btn" data-tab="player-predictions">Predictions</button>
   </div>
 
   <!-- Tab Content -->
   <div class="tabs-content">
     <!-- Stats Tab -->
-    <div id="stats-tab" class="tab-content active">
-      <StatsTab title={title} />
+    <div id="player-stats-tab" class="tab-content active">
+      <PlayerStatsTab title={title} />
     </div>
 
     <!-- Strengths & Weaknesses Tab -->
-    <div id="strengths-tab" class="tab-content">
+    <div id="player-strengths-tab" class="tab-content">
       <StrengthsWeaknessesTab />
     </div>
 
     <!-- Similarity Tab -->
-    <div id="similarity-tab" class="tab-content">
+    <div id="player-similarity-tab" class="tab-content">
       <SimilarityTab />
     </div>
 
     <!-- Transfers Tab -->
-    <div id="transfers-tab" class="tab-content">
+    <div id="player-transfers-tab" class="tab-content">
       <TransfersTab />
     </div>
 
     <!-- Predictions Tab -->
-    <div id="predictions-tab" class="tab-content">
+    <div id="player-predictions-tab" class="tab-content">
       <PredictionsTab />
     </div>
   </div>
 </div>
 
 <style>
-  .stats-content-card {
+  .player-stats-content-card {
     width: 100%;
     max-width: 600px;
     display: flex;
@@ -160,11 +157,9 @@ const { title = 'Statistics' } = Astro.props;
 
 <script>
   /**
-   * Tab Navigation Handler
-   *
-   * Manages tab switching and lazy loading of tab content.
+   * Player Stats Content Card Tab Manager
    */
-  class StatsContentCardManager {
+  class PlayerStatsContentCardManager {
     private card: HTMLElement;
 
     constructor(card: HTMLElement) {
@@ -188,19 +183,19 @@ const { title = 'Statistics' } = Astro.props;
           if (panel) panel.classList.add('active');
 
           // Lazy-load tab content
-          if (tab === 'stats') {
-            (window as any).statsTab?.load();
+          if (tab === 'player-stats') {
+            (window as any).playerStatsTab?.load();
           }
-          if (tab === 'strengths') {
+          if (tab === 'player-strengths') {
             (window as any).strengthsTab?.load();
           }
-          if (tab === 'similarity') {
+          if (tab === 'player-similarity') {
             (window as any).similarityTab?.load();
           }
-          if (tab === 'transfers') {
+          if (tab === 'player-transfers') {
             (window as any).transfersTab?.load();
           }
-          if (tab === 'predictions') {
+          if (tab === 'player-predictions') {
             (window as any).predictionsTab?.load();
           }
         });
@@ -209,8 +204,8 @@ const { title = 'Statistics' } = Astro.props;
   }
 
   // Initialize on page load
-  const statsContentCard = document.querySelector<HTMLElement>('.stats-content-card');
-  if (statsContentCard) {
-    new StatsContentCardManager(statsContentCard);
+  const playerStatsContentCard = document.querySelector<HTMLElement>('.player-stats-content-card');
+  if (playerStatsContentCard) {
+    new PlayerStatsContentCardManager(playerStatsContentCard);
   }
 </script>

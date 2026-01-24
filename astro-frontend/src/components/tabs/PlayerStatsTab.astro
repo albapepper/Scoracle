@@ -1,40 +1,33 @@
 ---
 /**
- * Stats Tab Component
+ * Player Stats Tab Component
  *
- * Unified stats view with:
+ * Displays player statistics with:
  * - Pizza chart for percentile visualization (color-coded: red=low, green=high)
  * - Box score table with raw per-game stats in horizontal format
  *
- * Fetches: GET /api/v1/stats/{entity_type}/{entity_id}
- * (This endpoint returns both raw stats and percentiles)
- *
- * Features:
- * - Pizza chart showing all percentile data points
- * - Box score grouped by stat type (counting, shooting, etc.)
- * - Season display
- * - Lazy loading support via window.statsTab.load()
+ * Fetches: GET /api/v1/stats/player/{player_id}?sport={sport}
  */
 
 interface Props {
   title?: string;
 }
 
-const { title = 'Stats' } = Astro.props;
+const { title = 'Statistics' } = Astro.props;
 const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 ---
 
-<div id="stats-tab-content" data-api-url={apiUrl}>
+<div id="player-stats-tab-content" data-api-url={apiUrl}>
   <!-- Header -->
   <div class="stats-header">
     <h3 class="stats-title">{title}</h3>
-    <span id="stats-season" class="stats-season"></span>
+    <span id="player-stats-season" class="stats-season"></span>
   </div>
 
   <!-- Pizza Chart Section -->
-  <div id="stats-chart-container" class="stats-chart-container">
-    <div id="stats-pizza-chart" class="stats-pizza-chart"></div>
-    <div id="stats-chart-loading" class="chart-skeleton">
+  <div id="player-stats-chart-container" class="stats-chart-container">
+    <div id="player-stats-pizza-chart" class="stats-pizza-chart"></div>
+    <div id="player-stats-chart-loading" class="chart-skeleton">
       <div class="chart-skeleton-circle"></div>
     </div>
   </div>
@@ -42,7 +35,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   <!-- Box Score Section -->
   <div class="stats-body">
     <!-- Loading State -->
-    <div id="stats-loading" class="stats-loading">
+    <div id="player-stats-loading" class="stats-loading">
       <div class="box-score-skeleton">
         <div class="skeleton-row-header"></div>
         <div class="skeleton-row-cells">
@@ -64,17 +57,17 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     </div>
 
     <!-- Box Score Container -->
-    <div id="stats-box-score" class="stats-box-score hidden">
+    <div id="player-stats-box-score" class="stats-box-score hidden">
       <!-- Box score groups populated by JavaScript -->
     </div>
 
     <!-- Empty State -->
-    <div id="stats-empty" class="stats-empty hidden">
+    <div id="player-stats-empty" class="stats-empty hidden">
       <p>No statistics available</p>
     </div>
 
     <!-- Error State -->
-    <div id="stats-error" class="stats-error hidden">
+    <div id="player-stats-error" class="stats-error hidden">
       <p>Unable to load statistics</p>
     </div>
   </div>
@@ -218,13 +211,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   }
 
   @keyframes pulse {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.5;
-    }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
   }
 
   /* Box Score */
@@ -416,28 +404,34 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     type Category,
     type BoxScoreGroup,
   } from '../../lib/utils/stats-categorizer';
-  import {
-    isValidStatsResponse,
-    normalizeStatsResponse,
-    type RawStatsResponse,
-    type NormalizedStatsResponse,
-    type NormalizedProfileResponse,
-  } from '../../lib/adapters';
 
   /**
-   * Stats Tab Manager
+   * Player stats response shape from backend
+   */
+  interface PlayerStatsResponse {
+    entity_id: number;
+    entity_type: 'player';
+    sport: string;
+    season: number;
+    stats: Record<string, number | string>;
+    percentiles: Record<string, number> | Array<{ stat_key: string; percentile: number }>;
+    percentile_metadata?: unknown;
+  }
+
+  /**
+   * Player Stats Tab Manager
    *
-   * Handles loading stats + percentiles from the backend API,
+   * Handles loading player stats from the backend API,
    * rendering the pizza chart and box score table.
    */
-  class StatsTabManager {
+  class PlayerStatsTabManager {
     private container: HTMLElement | null;
     private apiUrl: string;
     private pizzaChart: PizzaChart | null = null;
     private loaded = false;
 
     constructor() {
-      this.container = document.getElementById('stats-tab-content');
+      this.container = document.getElementById('player-stats-tab-content');
       this.apiUrl = this.container?.dataset.apiUrl || '';
     }
 
@@ -448,49 +442,52 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       const params = parseEntityParams();
       const { sport, type, id } = params;
 
-      if (!sport || !type || !id) {
+      // Only proceed if this is a player entity
+      if (type !== 'player') return;
+
+      if (!sport || !id) {
         this.showError();
         return;
       }
 
       try {
-        await this.loadStats(sport, type, id);
+        await this.loadStats(sport, id);
       } catch (error) {
         if (import.meta.env.DEV) {
-          console.error('Failed to load stats:', error);
+          console.error('Failed to load player stats:', error);
         }
         this.showError();
       }
     }
 
-    private async loadStats(sport: string, type: string, id: string) {
-      // Fetch stats and percentiles from the stats endpoint
-      const url = `${this.apiUrl}/stats/${type}/${id}?sport=${sport.toUpperCase()}`;
+    private async loadStats(sport: string, id: string) {
+      const url = `${this.apiUrl}/stats/player/${id}?sport=${sport.toUpperCase()}`;
 
-      const { data: rawData } = await swrFetch<RawStatsResponse>(url, CACHE_PRESETS.stats);
+      const { data } = await swrFetch<PlayerStatsResponse>(url, CACHE_PRESETS.stats);
 
-      if (!isValidStatsResponse(rawData)) {
+      if (!data || !data.stats) {
         this.showEmpty();
         return;
       }
 
-      // Transform raw data using adapter (normalizes percentiles to object)
-      const data = normalizeStatsResponse(rawData);
+      // Normalize percentiles to object format
+      const percentiles = this.normalizePercentiles(data.percentiles);
 
-      // Get categorized stats for the pizza chart
-      const categories = categorizeStats(data.stats || {}, data.percentiles, sport);
+      // Get categorized stats for the pizza chart (using 'player' entity type)
+      const categories = categorizeStats(data.stats, percentiles, sport, 'player');
 
-      // Get box score groups
-      const boxScoreGroups = getBoxScoreGroups(data.stats || {}, sport);
+      // Get box score groups (using 'player' entity type)
+      const boxScoreGroups = getBoxScoreGroups(data.stats, sport, 'player');
 
       if (categories.length === 0 && boxScoreGroups.length === 0) {
         this.showEmpty();
         return;
       }
 
-      // Get entity name from profile widget (already loaded on page)
-      const widgetData = getPageData('widget') as NormalizedProfileResponse | undefined;
-      const entityName = widgetData?.info?.full_name || widgetData?.info?.name || '';
+      // Get entity name from player profile widget
+      const widgetData = getPageData('widget') as { info?: { full_name?: string; first_name?: string; last_name?: string } } | undefined;
+      const entityName = widgetData?.info?.full_name || 
+        `${widgetData?.info?.first_name || ''} ${widgetData?.info?.last_name || ''}`.trim() || '';
 
       // Share data with other components
       setPageData('stats', {
@@ -498,14 +495,14 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         entity: {
           id: String(data.entity_id),
           name: entityName,
-          type: data.entity_type,
+          type: 'player',
         },
         categories: categories,
         boxScoreGroups: boxScoreGroups,
       });
 
       // Update season display
-      const seasonEl = this.container?.querySelector('#stats-season');
+      const seasonEl = this.container?.querySelector('#player-stats-season');
       if (seasonEl) {
         seasonEl.textContent = `${data.season} Season`;
       }
@@ -517,9 +514,27 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.renderBoxScore(boxScoreGroups);
     }
 
+    private normalizePercentiles(
+      percentiles: Record<string, number> | Array<{ stat_key: string; percentile: number }> | undefined
+    ): Record<string, number> {
+      if (!percentiles) return {};
+
+      if (Array.isArray(percentiles)) {
+        const result: Record<string, number> = {};
+        for (const p of percentiles) {
+          if (p.stat_key && typeof p.percentile === 'number') {
+            result[p.stat_key] = p.percentile;
+          }
+        }
+        return result;
+      }
+
+      return percentiles as Record<string, number>;
+    }
+
     private renderChart(categories: Category[]) {
-      const chartContainer = this.container?.querySelector('#stats-pizza-chart') as HTMLElement;
-      const chartLoading = this.container?.querySelector('#stats-chart-loading');
+      const chartContainer = this.container?.querySelector('#player-stats-pizza-chart') as HTMLElement;
+      const chartLoading = this.container?.querySelector('#player-stats-chart-loading');
 
       if (!chartContainer) return;
 
@@ -545,7 +560,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
       if (chartStats.length < 3) {
         // Not enough percentile data - hide chart section
-        const chartSection = this.container?.querySelector('#stats-chart-container');
+        const chartSection = this.container?.querySelector('#player-stats-chart-container');
         chartSection?.classList.add('hidden');
         return;
       }
@@ -563,12 +578,11 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private renderBoxScore(groups: BoxScoreGroup[]) {
-      const container = this.container?.querySelector('#stats-box-score');
+      const container = this.container?.querySelector('#player-stats-box-score');
       if (!container) return;
 
       if (groups.length === 0) {
-        // No box score data, but might have chart
-        const loadingEl = this.container?.querySelector('#stats-loading');
+        const loadingEl = this.container?.querySelector('#player-stats-loading');
         loadingEl?.classList.add('hidden');
         return;
       }
@@ -599,45 +613,42 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private showContent() {
-      this.container?.querySelector('#stats-loading')?.classList.add('hidden');
-      this.container?.querySelector('#stats-box-score')?.classList.remove('hidden');
-      this.container?.querySelector('#stats-empty')?.classList.add('hidden');
-      this.container?.querySelector('#stats-error')?.classList.add('hidden');
+      this.container?.querySelector('#player-stats-loading')?.classList.add('hidden');
+      this.container?.querySelector('#player-stats-box-score')?.classList.remove('hidden');
+      this.container?.querySelector('#player-stats-empty')?.classList.add('hidden');
+      this.container?.querySelector('#player-stats-error')?.classList.add('hidden');
     }
 
     private showEmpty() {
-      this.container?.querySelector('#stats-loading')?.classList.add('hidden');
-      this.container?.querySelector('#stats-box-score')?.classList.add('hidden');
-      this.container?.querySelector('#stats-empty')?.classList.remove('hidden');
-      this.container?.querySelector('#stats-error')?.classList.add('hidden');
+      this.container?.querySelector('#player-stats-loading')?.classList.add('hidden');
+      this.container?.querySelector('#player-stats-box-score')?.classList.add('hidden');
+      this.container?.querySelector('#player-stats-empty')?.classList.remove('hidden');
+      this.container?.querySelector('#player-stats-error')?.classList.add('hidden');
 
       // Hide chart if no data
-      const chartContainer = this.container?.querySelector('#stats-chart-container');
+      const chartContainer = this.container?.querySelector('#player-stats-chart-container');
       chartContainer?.classList.add('hidden');
     }
 
     private showError() {
-      this.container?.querySelector('#stats-loading')?.classList.add('hidden');
-      this.container?.querySelector('#stats-box-score')?.classList.add('hidden');
-      this.container?.querySelector('#stats-empty')?.classList.add('hidden');
-      this.container?.querySelector('#stats-error')?.classList.remove('hidden');
+      this.container?.querySelector('#player-stats-loading')?.classList.add('hidden');
+      this.container?.querySelector('#player-stats-box-score')?.classList.add('hidden');
+      this.container?.querySelector('#player-stats-empty')?.classList.add('hidden');
+      this.container?.querySelector('#player-stats-error')?.classList.remove('hidden');
 
       // Hide chart on error
-      const chartContainer = this.container?.querySelector('#stats-chart-container');
+      const chartContainer = this.container?.querySelector('#player-stats-chart-container');
       chartContainer?.classList.add('hidden');
     }
 
-    /**
-     * Refresh the chart (e.g., on theme change).
-     */
     public refreshChart(): void {
       this.pizzaChart?.refresh();
     }
   }
 
   // Initialize manager and expose on window
-  const manager = new StatsTabManager();
-  (window as any).statsTab = {
+  const manager = new PlayerStatsTabManager();
+  (window as any).playerStatsTab = {
     load: () => manager.load(),
     refreshChart: () => manager.refreshChart(),
   };

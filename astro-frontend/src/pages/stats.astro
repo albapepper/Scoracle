@@ -1,7 +1,9 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import ProfileWidget from '../components/ProfileWidget.astro';
-import StatsContentCard from '../components/StatsContentCard.astro';
+import PlayerProfileWidget from '../components/PlayerProfileWidget.astro';
+import TeamProfileWidget from '../components/TeamProfileWidget.astro';
+import PlayerStatsContentCard from '../components/PlayerStatsContentCard.astro';
+import TeamStatsContentCard from '../components/TeamStatsContentCard.astro';
 import ComparisonSearchModal from '../components/ComparisonSearchModal.astro';
 import ProfileWidgetComparison from '../components/ProfileWidgetComparison.astro';
 import StatsComparison from '../components/StatsComparison.astro';
@@ -12,10 +14,16 @@ import StatsComparison from '../components/StatsComparison.astro';
   description="View detailed statistics, comparisons, and predictions for sports players and teams"
 >
   <main class="stats-main">
-    <!-- Single Entity View (default) -->
-    <div id="single-entity-view">
-      <ProfileWidget page="stats" showCompareButton={true} />
-      <StatsContentCard title="Statistics" />
+    <!-- Single Entity View - Player -->
+    <div id="player-entity-view" class="entity-view hidden" data-entity-type="player">
+      <PlayerProfileWidget page="stats" showCompareButton={true} />
+      <PlayerStatsContentCard title="Statistics" />
+    </div>
+
+    <!-- Single Entity View - Team -->
+    <div id="team-entity-view" class="entity-view hidden" data-entity-type="team">
+      <TeamProfileWidget page="stats" showCompareButton={true} />
+      <TeamStatsContentCard title="Statistics" />
     </div>
 
     <!-- Comparison View (hidden by default) -->
@@ -44,7 +52,7 @@ import StatsComparison from '../components/StatsComparison.astro';
     background-color: var(--bg-dark);
   }
 
-  #single-entity-view {
+  .entity-view {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -52,7 +60,7 @@ import StatsComparison from '../components/StatsComparison.astro';
     width: 100%;
   }
 
-  #single-entity-view.hidden {
+  .entity-view.hidden {
     display: none;
   }
 
@@ -73,15 +81,18 @@ import StatsComparison from '../components/StatsComparison.astro';
   import type { AutocompleteEntity } from '../lib/utils/autocomplete';
 
   /**
-   * Entity Page Comparison Manager
+   * Entity Page Manager
    *
-   * Orchestrates the comparison feature on the entity page.
-   * Handles switching between single and comparison views.
+   * Handles:
+   * - Showing the correct entity view (player vs team) based on URL params
+   * - Managing comparison mode
    */
   class EntityPageManager {
-    private singleView: HTMLElement | null = null;
+    private playerView: HTMLElement | null = null;
+    private teamView: HTMLElement | null = null;
     private comparisonView: HTMLElement | null = null;
 
+    private entityType: 'player' | 'team' = 'player';
     private primarySport: string = '';
     private primaryType: string = '';
     private primaryId: string = '';
@@ -92,14 +103,36 @@ import StatsComparison from '../components/StatsComparison.astro';
     private secondaryName: string = '';
 
     constructor() {
-      this.singleView = document.getElementById('single-entity-view');
+      this.playerView = document.getElementById('player-entity-view');
+      this.teamView = document.getElementById('team-entity-view');
       this.comparisonView = document.getElementById('comparison-view');
 
+      this.init();
       this.bindEvents();
     }
 
+    private init() {
+      // Read entity type from URL params
+      const params = new URLSearchParams(window.location.search);
+      const type = params.get('type');
+      this.entityType = type === 'team' ? 'team' : 'player';
+
+      // Show the appropriate view
+      this.showEntityView();
+    }
+
+    private showEntityView() {
+      if (this.entityType === 'team') {
+        this.playerView?.classList.add('hidden');
+        this.teamView?.classList.remove('hidden');
+      } else {
+        this.playerView?.classList.remove('hidden');
+        this.teamView?.classList.add('hidden');
+      }
+    }
+
     private bindEvents() {
-      // Listen for comparison add request (from ProfileWidget + button)
+      // Listen for comparison add request
       window.addEventListener('comparison:add', ((event: CustomEvent) => {
         const { sport, type, id, name } = event.detail;
         this.primarySport = sport;
@@ -117,7 +150,6 @@ import StatsComparison from '../components/StatsComparison.astro';
     }
 
     private openComparisonModal() {
-      // Use the global comparison modal API
       const modal = (window as any).comparisonModal;
       if (modal) {
         modal.open(
@@ -140,8 +172,9 @@ import StatsComparison from '../components/StatsComparison.astro';
     }
 
     private enterComparisonMode() {
-      // Hide single view
-      this.singleView?.classList.add('hidden');
+      // Hide both single entity views
+      this.playerView?.classList.add('hidden');
+      this.teamView?.classList.add('hidden');
 
       // Show comparison view
       this.comparisonView?.classList.remove('hidden');
@@ -172,16 +205,16 @@ import StatsComparison from '../components/StatsComparison.astro';
         );
       }
 
-      // Update URL with comparison params (for sharing/bookmarking)
+      // Update URL with comparison params
       this.updateURL();
     }
 
     private exitComparisonMode() {
-      // Show single view
-      this.singleView?.classList.remove('hidden');
-
       // Hide comparison view
       this.comparisonView?.classList.add('hidden');
+
+      // Show the appropriate single entity view
+      this.showEntityView();
 
       // Hide comparison components
       const widgetComparison = (window as any).profileWidgetComparison;
@@ -216,7 +249,7 @@ import StatsComparison from '../components/StatsComparison.astro';
     /**
      * Check if comparison params exist in URL and restore comparison mode
      */
-    private checkURLForComparison() {
+    public checkURLForComparison() {
       const params = new URLSearchParams(window.location.search);
       const compareType = params.get('compareType');
       const compareId = params.get('compareId');
@@ -224,8 +257,11 @@ import StatsComparison from '../components/StatsComparison.astro';
       if (compareType && compareId) {
         // Wait for profile widget to load and provide primary entity info
         const checkWidget = () => {
-          const widget = (window as any).profileWidget;
-          if (widget && widget.getSport()) {
+          const widget = this.entityType === 'team'
+            ? (window as any).teamProfileWidget
+            : (window as any).playerProfileWidget;
+
+          if (widget && widget.getSport && widget.getSport()) {
             this.primarySport = widget.getSport();
             this.primaryType = widget.getType();
             this.primaryId = widget.getId();
@@ -252,6 +288,6 @@ import StatsComparison from '../components/StatsComparison.astro';
 
   // Check for comparison in URL after page load
   document.addEventListener('DOMContentLoaded', () => {
-    (manager as any).checkURLForComparison();
+    manager.checkURLForComparison();
   });
 </script>

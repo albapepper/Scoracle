@@ -340,20 +340,40 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 <script>
   import { swrFetch, setPageData, CACHE_PRESETS } from '../lib/utils/api-fetcher';
-  import {
-    isValidProfileResponse,
-    normalizeProfileResponse,
-    type RawProfileResponse,
-    type NormalizedProfileResponse,
-  } from '../lib/adapters';
+
+  // Raw API response types (no adapter transformation needed)
+  interface PlayerProfileResponse {
+    id?: string | number;
+    name?: string;
+    firstname?: string;
+    lastname?: string;
+    photo?: string;
+    position?: string;
+    team?: { name?: string };
+  }
+
+  interface TeamProfileResponse {
+    id?: string | number;
+    name?: string;
+    logo?: string;
+    venue?: { name?: string; city?: string };
+    country?: { name?: string };
+  }
+
+  type ProfileResponse = PlayerProfileResponse | TeamProfileResponse;
+
+  interface ProfileDataWithMeta {
+    entityType: 'player' | 'team';
+    data: ProfileResponse;
+  }
 
   class ProfileWidgetComparisonManager {
     private container: HTMLElement | null = null;
     private apiUrl: string = '';
     private removeBtn: HTMLElement | null = null;
 
-    private primaryData: NormalizedProfileResponse | null = null;
-    private secondaryData: NormalizedProfileResponse | null = null;
+    private primaryData: ProfileDataWithMeta | null = null;
+    private secondaryData: ProfileDataWithMeta | null = null;
 
     constructor() {
       this.container = document.getElementById('profile-widget-comparison');
@@ -424,41 +444,40 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       type: string,
       id: string,
       sport: string
-    ): Promise<NormalizedProfileResponse | null> {
+    ): Promise<ProfileDataWithMeta | null> {
       const url = `${this.apiUrl}/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
 
       try {
-        const { data: rawData } = await swrFetch<RawProfileResponse>(url, CACHE_PRESETS.widget);
+        const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);
 
-        if (!isValidProfileResponse(rawData)) {
+        if (!data || typeof data !== 'object') {
           this.showError(prefix);
           return null;
         }
 
-        // Transform raw data using adapter
-        const data = normalizeProfileResponse(rawData, type as 'player' | 'team', sport);
-        this.renderProfile(prefix, data);
-        return data;
+        this.renderProfile(prefix, type, data);
+        return { entityType: type as 'player' | 'team', data };
       } catch {
         this.showError(prefix);
         return null;
       }
     }
 
-    private renderProfile(prefix: string, data: NormalizedProfileResponse) {
-      const info = data.info;
+    private renderProfile(prefix: string, type: string, data: ProfileResponse) {
       let name = '';
       let logo = '';
       let subtitle = '';
 
-      if (data.entity_type === 'team') {
-        name = info.name || info.full_name || 'Unknown';
-        logo = info.logo_url || '';
-        subtitle = info.venue_name || info.city || info.country || '';
+      if (type === 'team') {
+        const teamData = data as TeamProfileResponse;
+        name = teamData.name || 'Unknown';
+        logo = teamData.logo || '';
+        subtitle = teamData.venue?.name || teamData.venue?.city || teamData.country?.name || '';
       } else {
-        name = info.full_name || `${info.first_name || ''} ${info.last_name || ''}`.trim() || 'Unknown';
-        logo = info.photo_url || '';
-        subtitle = info.team?.name || info.position || '';
+        const playerData = data as PlayerProfileResponse;
+        name = playerData.name || `${playerData.firstname || ''} ${playerData.lastname || ''}`.trim() || 'Unknown';
+        logo = playerData.photo || '';
+        subtitle = playerData.team?.name || playerData.position || '';
       }
 
       const nameEl = document.getElementById(`${prefix}-name`);
@@ -481,17 +500,27 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       const primaryNameEl = document.getElementById('legend-primary-name');
       const secondaryNameEl = document.getElementById('legend-secondary-name');
 
-      if (primaryNameEl && this.primaryData?.info) {
-        const info = this.primaryData.info;
-        const name = info.full_name || info.name ||
-          `${info.first_name || ''} ${info.last_name || ''}`.trim() || 'Primary';
+      if (primaryNameEl && this.primaryData?.data) {
+        const data = this.primaryData.data;
+        let name = 'Primary';
+        if (this.primaryData.entityType === 'team') {
+          name = (data as TeamProfileResponse).name || 'Primary';
+        } else {
+          const playerData = data as PlayerProfileResponse;
+          name = playerData.name || `${playerData.firstname || ''} ${playerData.lastname || ''}`.trim() || 'Primary';
+        }
         primaryNameEl.textContent = name;
       }
 
-      if (secondaryNameEl && this.secondaryData?.info) {
-        const info = this.secondaryData.info;
-        const name = info.full_name || info.name ||
-          `${info.first_name || ''} ${info.last_name || ''}`.trim() || 'Comparison';
+      if (secondaryNameEl && this.secondaryData?.data) {
+        const data = this.secondaryData.data;
+        let name = 'Comparison';
+        if (this.secondaryData.entityType === 'team') {
+          name = (data as TeamProfileResponse).name || 'Comparison';
+        } else {
+          const playerData = data as PlayerProfileResponse;
+          name = playerData.name || `${playerData.firstname || ''} ${playerData.lastname || ''}`.trim() || 'Comparison';
+        }
         secondaryNameEl.textContent = name;
       }
     }

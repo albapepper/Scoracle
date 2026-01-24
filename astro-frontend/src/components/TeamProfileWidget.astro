@@ -1,14 +1,15 @@
 ---
 /**
- * Profile Widget
+ * Team Profile Widget
  *
- * Displays entity profile information from the backend.
- * Fetches: GET /api/v1/profile/{entity_type}/{entity_id}?sport={sport}
+ * Displays team profile information from the backend.
+ * Fetches: GET /api/v1/profile/team/{team_id}?sport={sport}
  *
- * Response structure:
+ * Expected response structure (raw from backend):
  * {
- *   entity_id, entity_type, sport, season,
- *   info: { id, first_name, last_name, full_name, position, photo_url, team: { name, logo_url }, ... }
+ *   id, name, full_name, abbreviation, logo_url,
+ *   city, country, venue_name, venue_capacity, founded,
+ *   league: { id, name, country }
  * }
  */
 
@@ -24,7 +25,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 ---
 
 <div
-  id="profile-widget"
+  id="team-profile-widget"
   class="profile-widget card"
   data-api={apiUrl}
   data-dest={buttonDest}
@@ -32,32 +33,32 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 >
   <div class="pw-body">
     <!-- Loading -->
-    <div id="pw-loading" class="pw-loading">
+    <div id="team-pw-loading" class="pw-loading">
       <div class="skeleton-circle"></div>
       <div class="skeleton-line"></div>
       <div class="skeleton-line short"></div>
     </div>
 
     <!-- Content -->
-    <div id="pw-content" class="pw-content">
-      <img id="pw-logo" class="pw-logo" src="" alt="" style="display: none;" />
-      <h2 id="pw-name" class="pw-name"></h2>
-      <p id="pw-subtitle" class="pw-subtitle"></p>
-      <div id="pw-details" class="pw-details"></div>
+    <div id="team-pw-content" class="pw-content">
+      <img id="team-pw-logo" class="pw-logo" src="" alt="" style="display: none;" />
+      <h2 id="team-pw-name" class="pw-name"></h2>
+      <p id="team-pw-subtitle" class="pw-subtitle"></p>
+      <div id="team-pw-details" class="pw-details"></div>
     </div>
 
     <!-- Error -->
-    <div id="pw-error" class="pw-error">
-      <p>Unable to load profile</p>
+    <div id="team-pw-error" class="pw-error">
+      <p>Unable to load team profile</p>
     </div>
   </div>
 
   <!-- Compare Button (+ icon) -->
   <button
-    id="pw-compare-btn"
+    id="team-pw-compare-btn"
     class="pw-compare-btn hidden"
     type="button"
-    title="Compare with another entity"
+    title="Compare with another team"
     aria-label="Add comparison"
   >
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -66,7 +67,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   </button>
 
   <!-- Navigation Button -->
-  <a id="pw-button" href="#" class="pw-button">{buttonText}</a>
+  <a id="team-pw-button" href="#" class="pw-button">{buttonText}</a>
 </div>
 
 <style>
@@ -217,30 +218,30 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     color: var(--text-secondary-dark);
   }
 
-  .pw-detail-item {
+  .profile-widget :global(.pw-detail-item) {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.125rem;
   }
 
-  .pw-detail-label {
+  .profile-widget :global(.pw-detail-label) {
     font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--text-tertiary);
   }
 
-  :global(.dark) .pw-detail-label {
+  :global(.dark) .profile-widget :global(.pw-detail-label) {
     color: var(--text-tertiary-dark);
   }
 
-  .pw-detail-value {
+  .profile-widget :global(.pw-detail-value) {
     font-weight: 500;
     color: var(--text);
   }
 
-  :global(.dark) .pw-detail-value {
+  :global(.dark) .profile-widget :global(.pw-detail-value) {
     color: var(--text-dark);
   }
 
@@ -293,7 +294,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       font-size: 0.8rem;
     }
 
-    .pw-detail-label {
+    .profile-widget :global(.pw-detail-label) {
       font-size: 0.65rem;
     }
 
@@ -328,20 +329,34 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 <script>
   import { escapeHtml, parseEntityParams } from '../lib/utils/dom';
   import { swrFetch, setPageData, CACHE_PRESETS } from '../lib/utils/api-fetcher';
-  import {
-    isValidProfileResponse,
-    normalizeProfileResponse,
-    type RawProfileResponse,
-    type NormalizedProfileResponse,
-  } from '../lib/adapters';
 
-  class ProfileWidget {
+  /**
+   * Team profile data shape from backend
+   */
+  interface TeamProfileData {
+    id: number;
+    name?: string;
+    full_name?: string;
+    abbreviation?: string;
+    logo_url?: string;
+    city?: string;
+    country?: string;
+    venue_name?: string;
+    venue_capacity?: number;
+    founded?: number;
+    league?: {
+      id: number;
+      name: string;
+      country: string;
+    };
+  }
+
+  class TeamProfileWidget {
     private widget: HTMLElement | null = null;
     private apiUrl = '';
     private buttonDest = '';
     private showCompare = false;
     private sport: string | null = null;
-    private type: string | null = null;
     private id: string | null = null;
 
     private loadingEl: HTMLElement | null = null;
@@ -357,36 +372,38 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     private entityName: string = '';
 
     constructor() {
-      const widget = document.getElementById('profile-widget');
+      const widget = document.getElementById('team-profile-widget');
       if (!widget) return;
 
       this.widget = widget;
       this.apiUrl = widget.dataset.api || 'http://localhost:8000/api/v1';
-      this.buttonDest = widget.dataset.dest || 'mentions';
+      this.buttonDest = widget.dataset.dest || 'news';
       this.showCompare = widget.dataset.showCompare === 'true';
 
       const params = parseEntityParams();
       this.sport = params.sport;
-      this.type = params.type;
       this.id = params.id;
 
-      this.loadingEl = document.getElementById('pw-loading');
-      this.contentEl = document.getElementById('pw-content');
-      this.errorEl = document.getElementById('pw-error');
-      this.nameEl = document.getElementById('pw-name');
-      this.subtitleEl = document.getElementById('pw-subtitle');
-      this.detailsEl = document.getElementById('pw-details');
-      this.logoEl = document.getElementById('pw-logo') as HTMLImageElement;
-      this.buttonEl = document.getElementById('pw-button') as HTMLAnchorElement;
-      this.compareBtnEl = document.getElementById('pw-compare-btn') as HTMLButtonElement;
+      // Only proceed if this is a team entity
+      if (params.type !== 'team') return;
+
+      this.loadingEl = document.getElementById('team-pw-loading');
+      this.contentEl = document.getElementById('team-pw-content');
+      this.errorEl = document.getElementById('team-pw-error');
+      this.nameEl = document.getElementById('team-pw-name');
+      this.subtitleEl = document.getElementById('team-pw-subtitle');
+      this.detailsEl = document.getElementById('team-pw-details');
+      this.logoEl = document.getElementById('team-pw-logo') as HTMLImageElement;
+      this.buttonEl = document.getElementById('team-pw-button') as HTMLAnchorElement;
+      this.compareBtnEl = document.getElementById('team-pw-compare-btn') as HTMLButtonElement;
 
       this.init();
       this.exposeAPI();
     }
 
     private init() {
-      if (this.sport && this.type && this.id && this.buttonEl) {
-        this.buttonEl.href = `/${this.buttonDest}?sport=${this.sport}&type=${this.type}&id=${this.id}`;
+      if (this.sport && this.id && this.buttonEl) {
+        this.buttonEl.href = `/${this.buttonDest}?sport=${this.sport}&type=team&id=${this.id}`;
       }
 
       // Setup compare button click handler
@@ -396,7 +413,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         });
       }
 
-      if (!this.sport || !this.type || !this.id) {
+      if (!this.sport || !this.id) {
         this.showError();
         return;
       }
@@ -406,9 +423,9 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
     private exposeAPI() {
       // Expose widget API for other components
-      (window as any).profileWidget = {
+      (window as any).teamProfileWidget = {
         getSport: () => this.sport,
-        getType: () => this.type,
+        getType: () => 'team',
         getId: () => this.id,
         getName: () => this.entityName,
         hide: () => this.hide(),
@@ -417,11 +434,10 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private onCompareClick() {
-      // Dispatch event with entity info for the comparison modal
       window.dispatchEvent(new CustomEvent('comparison:add', {
         detail: {
           sport: this.sport,
-          type: this.type,
+          type: 'team',
           id: this.id,
           name: this.entityName,
         },
@@ -429,25 +445,23 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private async fetchData() {
-      const url = `${this.apiUrl}/profile/${this.type}/${this.id}?sport=${this.sport!.toUpperCase()}`;
+      const url = `${this.apiUrl}/profile/team/${this.id}?sport=${this.sport!.toUpperCase()}`;
 
       try {
-        const { data: rawData } = await swrFetch<RawProfileResponse>(url, CACHE_PRESETS.widget);
+        const { data } = await swrFetch<TeamProfileData>(url, CACHE_PRESETS.widget);
 
-        if (!isValidProfileResponse(rawData)) {
+        if (!data || !data.id) {
           this.showError();
           return;
         }
 
-        // Transform raw data using adapter
-        const data = normalizeProfileResponse(
-          rawData,
-          this.type as 'player' | 'team',
-          this.sport!
-        );
-
-        // Share widget data with other components
-        setPageData('widget', data);
+        // Share widget data with other components (raw data with entity metadata)
+        setPageData('widget', {
+          entity_id: data.id,
+          entity_type: 'team',
+          sport: this.sport,
+          info: data,
+        });
 
         this.renderData(data);
       } catch {
@@ -455,59 +469,26 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       }
     }
 
-    private renderData(data: NormalizedProfileResponse) {
-      const info = data.info;
-      let name = '';
-      let logo = '';
-      let subtitle = '';
-      let details: { label: string; value: string }[] = [];
+    private renderData(data: TeamProfileData) {
+      // Extract team-specific fields
+      const name = data.name || data.full_name || 'Unknown Team';
+      const logo = data.logo_url || '';
+      const subtitle = data.venue_name || data.city || '';
 
-      if (data.entity_type === 'team') {
-        // Team profile
-        name = info.name || info.full_name || 'Unknown';
-        logo = info.logo_url || '';
-        subtitle = info.venue_name || info.city || '';
+      // Build details array for team
+      const details: { label: string; value: string }[] = [];
 
-        if (info.country) {
-          details.push({ label: 'Country', value: info.country });
-        }
-        if (info.founded) {
-          details.push({ label: 'Founded', value: String(info.founded) });
-        }
-        if (info.venue_capacity) {
-          details.push({ label: 'Capacity', value: info.venue_capacity.toLocaleString() });
-        }
-      } else {
-        // Player profile
-        name = info.full_name || `${info.first_name || ''} ${info.last_name || ''}`.trim() || 'Unknown';
-        logo = info.photo_url || '';
-        subtitle = info.team?.name || '';
-
-        if (info.position) {
-          details.push({ label: 'Position', value: info.position });
-        }
-        if (info.jersey_number) {
-          details.push({ label: 'Number', value: `#${info.jersey_number}` });
-        }
-        if (info.height_inches) {
-          const feet = Math.floor(info.height_inches / 12);
-          const inches = info.height_inches % 12;
-          details.push({ label: 'Height', value: `${feet}'${inches}"` });
-        }
-        if (info.weight_lbs) {
-          details.push({ label: 'Weight', value: `${info.weight_lbs} lbs` });
-        }
-        if (info.college) {
-          details.push({ label: 'College', value: info.college });
-        }
-        if (info.experience_years) {
-          details.push({ label: 'Experience', value: `${info.experience_years} yrs` });
-        }
-        if (info.birth_country) {
-          details.push({ label: 'Country', value: info.birth_country });
-        } else if (info.nationality) {
-          details.push({ label: 'Nationality', value: info.nationality });
-        }
+      if (data.country) {
+        details.push({ label: 'Country', value: data.country });
+      }
+      if (data.founded) {
+        details.push({ label: 'Founded', value: String(data.founded) });
+      }
+      if (data.venue_capacity) {
+        details.push({ label: 'Capacity', value: data.venue_capacity.toLocaleString() });
+      }
+      if (data.league?.name) {
+        details.push({ label: 'League', value: data.league.name });
       }
 
       // Store entity name for API
@@ -561,5 +542,5 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
   }
 
-  new ProfileWidget();
+  new TeamProfileWidget();
 </script>

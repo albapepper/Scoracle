@@ -3,6 +3,7 @@
  *
  * Transforms flat stats from the API into categorized format for display.
  * Handles NBA, NFL, and Football (soccer) sports with appropriate stat groupings.
+ * Supports both player and team entity types with dedicated configurations.
  */
 
 export interface StatItem {
@@ -34,9 +35,13 @@ export interface BoxScoreStat {
 }
 
 /**
- * Category configurations for each sport
+ * Category configurations for each sport and entity type
+ * Keys: NBA, NFL, FOOTBALL (players), NBA_TEAM, NFL_TEAM, FOOTBALL_TEAM (teams)
  */
 const CATEGORY_CONFIG: Record<string, { id: string; label: string; keys: string[] }[]> = {
+  // =============================================================================
+  // PLAYER CONFIGS
+  // =============================================================================
   NBA: [
     { id: 'scoring', label: 'Scoring', keys: ['points', 'fgm', 'fga', 'fgp', 'ftm', 'fta', 'ftp', 'tpm', 'tpa', 'tpp'] },
     { id: 'rebounds', label: 'Rebounds', keys: ['totReb', 'offReb', 'defReb'] },
@@ -57,13 +62,42 @@ const CATEGORY_CONFIG: Record<string, { id: string; label: string; keys: string[
     { id: 'discipline', label: 'Discipline', keys: ['yellow_cards', 'red_cards', 'fouls_committed', 'fouls_drawn'] },
     { id: 'general', label: 'General', keys: ['games', 'minutes', 'rating'] },
   ],
+
+  // =============================================================================
+  // TEAM CONFIGS
+  // =============================================================================
+  NBA_TEAM: [
+    { id: 'record', label: 'Record', keys: ['games_played', 'wins', 'losses', 'win_pct', 'current_streak'] },
+    { id: 'scoring', label: 'Scoring', keys: ['points_per_game', 'opponent_ppg', 'point_differential'] },
+    { id: 'shooting', label: 'Shooting', keys: ['fg_pct', 'tp_pct', 'ft_pct', 'effective_fg_pct', 'true_shooting_pct'] },
+    { id: 'rebounds', label: 'Rebounds', keys: ['total_rebounds_per_game', 'offensive_rebounds_per_game', 'defensive_rebounds_per_game'] },
+    { id: 'other', label: 'Other', keys: ['assists_per_game', 'steals_per_game', 'blocks_per_game', 'turnovers_per_game'] },
+    { id: 'advanced', label: 'Advanced', keys: ['offensive_rating', 'defensive_rating', 'net_rating', 'pace'] },
+  ],
+  NFL_TEAM: [
+    { id: 'record', label: 'Record', keys: ['games_played', 'wins', 'losses', 'ties', 'win_pct', 'point_differential'] },
+    { id: 'scoring', label: 'Scoring', keys: ['points_per_game', 'opponent_ppg', 'points_for', 'points_against'] },
+    { id: 'offense', label: 'Offense', keys: ['yards_per_game', 'yards_per_play', 'third_down_pct', 'red_zone_pct'] },
+    { id: 'passing', label: 'Passing', keys: ['pass_yards_per_game', 'completion_pct', 'pass_touchdowns', 'team_passer_rating'] },
+    { id: 'rushing', label: 'Rushing', keys: ['rush_yards_per_game', 'yards_per_carry', 'rush_touchdowns'] },
+    { id: 'turnovers', label: 'Turnovers', keys: ['takeaways', 'turnovers', 'turnover_differential'] },
+  ],
+  FOOTBALL_TEAM: [
+    { id: 'record', label: 'Record', keys: ['matches_played', 'wins', 'draws', 'losses', 'points', 'league_position'] },
+    { id: 'goals', label: 'Goals', keys: ['goals_for', 'goals_against', 'goal_difference', 'goals_per_game', 'goals_conceded_per_game', 'clean_sheets', 'failed_to_score'] },
+    { id: 'attack', label: 'Attack', keys: ['shots_total', 'shots_on_target', 'shot_accuracy', 'expected_goals'] },
+    { id: 'defense', label: 'Defense', keys: ['tackles_per_game', 'interceptions_per_game', 'clearances_per_game', 'expected_goals_against'] },
+    { id: 'discipline', label: 'Discipline', keys: ['yellow_cards', 'red_cards', 'fouls_per_game'] },
+  ],
 };
 
 /**
  * Human-readable labels for stat keys
  */
 const STAT_LABELS: Record<string, string> = {
-  // NBA
+  // =============================================================================
+  // NBA PLAYER
+  // =============================================================================
   points: 'Points',
   fgm: 'FG Made',
   fga: 'FG Attempted',
@@ -86,7 +120,9 @@ const STAT_LABELS: Record<string, string> = {
   plusMinus: '+/-',
   minutes: 'Minutes',
 
-  // NFL
+  // =============================================================================
+  // NFL PLAYER
+  // =============================================================================
   passing_yards: 'Pass Yards',
   passing_tds: 'Pass TDs',
   interceptions: 'Interceptions',
@@ -108,7 +144,9 @@ const STAT_LABELS: Record<string, string> = {
   forced_fumbles: 'Forced Fumbles',
   passes_defended: 'Passes Defended',
 
-  // Football (Soccer)
+  // =============================================================================
+  // FOOTBALL PLAYER
+  // =============================================================================
   goals: 'Goals',
   shots: 'Shots',
   shots_on: 'Shots on Target',
@@ -126,13 +164,99 @@ const STAT_LABELS: Record<string, string> = {
   fouls_committed: 'Fouls Committed',
   fouls_drawn: 'Fouls Drawn',
   rating: 'Rating',
+
+  // =============================================================================
+  // NBA TEAM
+  // =============================================================================
+  games_played: 'Games Played',
+  wins: 'Wins',
+  losses: 'Losses',
+  win_pct: 'Win %',
+  current_streak: 'Streak',
+  points_per_game: 'Points/Game',
+  opponent_ppg: 'Opp Points/Game',
+  point_differential: 'Point Diff',
+  fg_pct: 'FG %',
+  tp_pct: '3PT %',
+  ft_pct: 'FT %',
+  effective_fg_pct: 'Eff FG %',
+  true_shooting_pct: 'True Shooting %',
+  total_rebounds_per_game: 'Rebounds/Game',
+  offensive_rebounds_per_game: 'Off Reb/Game',
+  defensive_rebounds_per_game: 'Def Reb/Game',
+  assists_per_game: 'Assists/Game',
+  steals_per_game: 'Steals/Game',
+  blocks_per_game: 'Blocks/Game',
+  turnovers_per_game: 'Turnovers/Game',
+  offensive_rating: 'Off Rating',
+  defensive_rating: 'Def Rating',
+  net_rating: 'Net Rating',
+  pace: 'Pace',
+
+  // =============================================================================
+  // NFL TEAM
+  // =============================================================================
+  ties: 'Ties',
+  points_for: 'Points For',
+  points_against: 'Points Against',
+  yards_per_game: 'Yards/Game',
+  yards_per_play: 'Yards/Play',
+  third_down_pct: '3rd Down %',
+  red_zone_pct: 'Red Zone %',
+  pass_yards_per_game: 'Pass Yards/Game',
+  completion_pct: 'Completion %',
+  pass_touchdowns: 'Pass TDs',
+  team_passer_rating: 'Team Passer Rating',
+  rush_yards_per_game: 'Rush Yards/Game',
+  rush_touchdowns: 'Rush TDs',
+  takeaways: 'Takeaways',
+  turnover_differential: 'Turnover Diff',
+
+  // =============================================================================
+  // FOOTBALL TEAM
+  // =============================================================================
+  matches_played: 'Matches Played',
+  draws: 'Draws',
+  // points already defined above in NBA Player section
+  league_position: 'League Position',
+  goals_for: 'Goals For',
+  goals_against: 'Goals Against',
+  goal_difference: 'Goal Diff',
+  goals_per_game: 'Goals/Game',
+  goals_conceded_per_game: 'Conceded/Game',
+  clean_sheets: 'Clean Sheets',
+  failed_to_score: 'Failed to Score',
+  form: 'Form',
+  shots_total: 'Total Shots',
+  shots_on_target: 'Shots on Target',
+  shot_accuracy: 'Shot Accuracy',
+  expected_goals: 'xG',
+  expected_goals_against: 'xGA',
+  tackles_per_game: 'Tackles/Game',
+  interceptions_per_game: 'Interceptions/Game',
+  clearances_per_game: 'Clearances/Game',
+  fouls_per_game: 'Fouls/Game',
+  home_played: 'Home Matches',
+  home_wins: 'Home Wins',
+  home_draws: 'Home Draws',
+  home_losses: 'Home Losses',
+  home_goals_for: 'Home Goals For',
+  home_goals_against: 'Home Goals Against',
+  away_played: 'Away Matches',
+  away_wins: 'Away Wins',
+  away_draws: 'Away Draws',
+  away_losses: 'Away Losses',
+  away_goals_for: 'Away Goals For',
+  away_goals_against: 'Away Goals Against',
 };
 
 /**
  * Short abbreviations for box score display
  */
 const STAT_ABBREVS: Record<string, string> = {
-  // NBA
+  // =============================================================================
+  // NBA PLAYER
+  // =============================================================================
   points: 'PTS',
   totReb: 'REB',
   offReb: 'OREB',
@@ -155,7 +279,9 @@ const STAT_ABBREVS: Record<string, string> = {
   minutes: 'MIN',
   plusMinus: '+/-',
 
-  // NFL
+  // =============================================================================
+  // NFL PLAYER
+  // =============================================================================
   passing_yards: 'YDS',
   passing_tds: 'TD',
   interceptions: 'INT',
@@ -177,7 +303,9 @@ const STAT_ABBREVS: Record<string, string> = {
   forced_fumbles: 'FF',
   passes_defended: 'PD',
 
-  // Football (Soccer)
+  // =============================================================================
+  // FOOTBALL PLAYER
+  // =============================================================================
   goals: 'G',
   shots: 'SH',
   shots_on: 'SOT',
@@ -195,6 +323,89 @@ const STAT_ABBREVS: Record<string, string> = {
   fouls_committed: 'FC',
   fouls_drawn: 'FD',
   rating: 'RTG',
+
+  // =============================================================================
+  // NBA TEAM
+  // =============================================================================
+  games_played: 'GP',
+  wins: 'W',
+  losses: 'L',
+  win_pct: 'PCT',
+  current_streak: 'STK',
+  points_per_game: 'PPG',
+  opponent_ppg: 'OPP',
+  point_differential: 'DIFF',
+  fg_pct: 'FG%',
+  tp_pct: '3P%',
+  ft_pct: 'FT%',
+  effective_fg_pct: 'eFG%',
+  true_shooting_pct: 'TS%',
+  total_rebounds_per_game: 'RPG',
+  offensive_rebounds_per_game: 'ORPG',
+  defensive_rebounds_per_game: 'DRPG',
+  assists_per_game: 'APG',
+  steals_per_game: 'SPG',
+  blocks_per_game: 'BPG',
+  turnovers_per_game: 'TOPG',
+  offensive_rating: 'ORTG',
+  defensive_rating: 'DRTG',
+  net_rating: 'NET',
+  pace: 'PACE',
+
+  // =============================================================================
+  // NFL TEAM
+  // =============================================================================
+  ties: 'T',
+  points_for: 'PF',
+  points_against: 'PA',
+  yards_per_game: 'YPG',
+  yards_per_play: 'Y/P',
+  third_down_pct: '3D%',
+  red_zone_pct: 'RZ%',
+  pass_yards_per_game: 'PYPG',
+  completion_pct: 'CMP%',
+  pass_touchdowns: 'PTD',
+  team_passer_rating: 'TRTG',
+  rush_yards_per_game: 'RYPG',
+  rush_touchdowns: 'RTD',
+  takeaways: 'TK',
+  turnover_differential: 'TO±',
+
+  // =============================================================================
+  // FOOTBALL TEAM
+  // =============================================================================
+  matches_played: 'MP',
+  draws: 'D',
+  // points already defined above in NBA Player section
+  league_position: 'POS',
+  goals_for: 'GF',
+  goals_against: 'GA',
+  goal_difference: 'GD',
+  goals_per_game: 'G/G',
+  goals_conceded_per_game: 'GA/G',
+  clean_sheets: 'CS',
+  failed_to_score: 'FTS',
+  shots_total: 'SH',
+  shots_on_target: 'SOT',
+  shot_accuracy: 'SH%',
+  expected_goals: 'xG',
+  expected_goals_against: 'xGA',
+  tackles_per_game: 'TKL',
+  interceptions_per_game: 'INT',
+  clearances_per_game: 'CLR',
+  fouls_per_game: 'FPG',
+  home_played: 'HP',
+  home_wins: 'HW',
+  home_draws: 'HD',
+  home_losses: 'HL',
+  home_goals_for: 'HGF',
+  home_goals_against: 'HGA',
+  away_played: 'AP',
+  away_wins: 'AW',
+  away_draws: 'AD',
+  away_losses: 'AL',
+  away_goals_for: 'AGF',
+  away_goals_against: 'AGA',
 };
 
 /**
@@ -202,6 +413,9 @@ const STAT_ABBREVS: Record<string, string> = {
  * Each group becomes a row in the box score table
  */
 const BOX_SCORE_CONFIG: Record<string, { id: string; label: string; keys: string[] }[]> = {
+  // =============================================================================
+  // PLAYER CONFIGS
+  // =============================================================================
   NBA: [
     { id: 'counting', label: 'Per Game', keys: ['points', 'totReb', 'assists', 'steals', 'blocks', 'turnovers'] },
     { id: 'shooting', label: 'Shooting', keys: ['fgp', 'tpp', 'ftp'] },
@@ -219,7 +433,39 @@ const BOX_SCORE_CONFIG: Record<string, { id: string; label: string; keys: string
     { id: 'defense', label: 'Defense', keys: ['tackles', 'duels_won', 'fouls_committed'] },
     { id: 'general', label: 'General', keys: ['games', 'minutes', 'rating'] },
   ],
+
+  // =============================================================================
+  // TEAM CONFIGS
+  // =============================================================================
+  NBA_TEAM: [
+    { id: 'record', label: 'Record', keys: ['wins', 'losses', 'win_pct'] },
+    { id: 'scoring', label: 'Scoring', keys: ['points_per_game', 'opponent_ppg', 'point_differential'] },
+    { id: 'shooting', label: 'Shooting', keys: ['fg_pct', 'tp_pct', 'ft_pct'] },
+    { id: 'other', label: 'Other', keys: ['total_rebounds_per_game', 'assists_per_game', 'turnovers_per_game'] },
+  ],
+  NFL_TEAM: [
+    { id: 'record', label: 'Record', keys: ['wins', 'losses', 'win_pct'] },
+    { id: 'scoring', label: 'Scoring', keys: ['points_per_game', 'opponent_ppg'] },
+    { id: 'offense', label: 'Offense', keys: ['yards_per_game', 'pass_yards_per_game', 'rush_yards_per_game'] },
+    { id: 'turnovers', label: 'Turnovers', keys: ['takeaways', 'turnovers', 'turnover_differential'] },
+  ],
+  FOOTBALL_TEAM: [
+    { id: 'record', label: 'Record', keys: ['matches_played', 'wins', 'draws', 'losses', 'points'] },
+    { id: 'goals', label: 'Goals', keys: ['goals_for', 'goals_against', 'goal_difference', 'clean_sheets'] },
+    { id: 'performance', label: 'Performance', keys: ['goals_per_game', 'goals_conceded_per_game'] },
+  ],
 };
+
+/**
+ * Get the config key based on sport and entity type
+ */
+function getConfigKey(sport: string, entityType?: 'player' | 'team'): string {
+  const sportUpper = sport.toUpperCase();
+  if (entityType === 'team') {
+    return `${sportUpper}_TEAM`;
+  }
+  return sportUpper;
+}
 
 /**
  * Transform flat stats from API into categorized format
@@ -227,14 +473,17 @@ const BOX_SCORE_CONFIG: Record<string, { id: string; label: string; keys: string
  * @param stats - Flat stats object from API
  * @param percentiles - Optional percentile values for each stat
  * @param sport - Sport identifier (NBA, NFL, FOOTBALL)
+ * @param entityType - Entity type ('player' or 'team')
  * @returns Array of categories with their stats, sorted by volume
  */
 export function categorizeStats(
   stats: Record<string, unknown>,
   percentiles: Record<string, number> = {},
-  sport: string
+  sport: string,
+  entityType: 'player' | 'team' = 'player'
 ): Category[] {
-  const config = CATEGORY_CONFIG[sport.toUpperCase()] || CATEGORY_CONFIG.NBA;
+  const configKey = getConfigKey(sport, entityType);
+  const config = CATEGORY_CONFIG[configKey] || CATEGORY_CONFIG[sport.toUpperCase()] || CATEGORY_CONFIG.NBA;
   const categories: Category[] = [];
 
   for (const cat of config) {
@@ -288,17 +537,19 @@ export function getStatLabel(key: string): string {
  */
 export function flattenStats(
   stats: Record<string, unknown>,
-  sport?: string
+  sport?: string,
+  entityType: 'player' | 'team' = 'player'
 ): Array<{ label: string; value: string | number }> {
   const result: Array<{ label: string; value: string | number }> = [];
 
   // Keys to exclude from display
-  const excludeKeys = new Set(['season', 'player_id', 'team_id', 'id']);
+  const excludeKeys = new Set(['season', 'player_id', 'team_id', 'id', 'form']);
 
   // Get ordered keys if sport is specified
   let orderedKeys: string[] = [];
   if (sport) {
-    const config = CATEGORY_CONFIG[sport.toUpperCase()] || CATEGORY_CONFIG.NBA;
+    const configKey = getConfigKey(sport, entityType);
+    const config = CATEGORY_CONFIG[configKey] || CATEGORY_CONFIG[sport.toUpperCase()] || CATEGORY_CONFIG.NBA;
     orderedKeys = config.flatMap(cat => cat.keys);
   }
 
@@ -334,13 +585,16 @@ export function flattenStats(
  *
  * @param stats - Flat stats object from API
  * @param sport - Sport identifier (NBA, NFL, FOOTBALL)
+ * @param entityType - Entity type ('player' or 'team')
  * @returns Array of groups, each containing stats for a row in the box score
  */
 export function getBoxScoreGroups(
   stats: Record<string, unknown>,
-  sport: string
+  sport: string,
+  entityType: 'player' | 'team' = 'player'
 ): BoxScoreGroup[] {
-  const config = BOX_SCORE_CONFIG[sport.toUpperCase()] || BOX_SCORE_CONFIG.NBA;
+  const configKey = getConfigKey(sport, entityType);
+  const config = BOX_SCORE_CONFIG[configKey] || BOX_SCORE_CONFIG[sport.toUpperCase()] || BOX_SCORE_CONFIG.NBA;
   const groups: BoxScoreGroup[] = [];
 
   for (const groupConfig of config) {
