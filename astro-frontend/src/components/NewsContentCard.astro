@@ -229,8 +229,10 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.card = card;
       this.bindTabEvents();
 
-      // Load News tab immediately (first tab)
-      (window as any).newsTab?.load();
+      // Defer news load to allow first paint
+      requestAnimationFrame(() => {
+        (window as any).newsTab?.load();
+      });
     }
 
     private bindTabEvents() {

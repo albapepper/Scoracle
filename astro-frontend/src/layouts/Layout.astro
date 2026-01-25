@@ -2,9 +2,6 @@
 import Header from '../components/Header.astro';
 import '../styles/global.css';
 
-// Preload all entity data early for instant search
-const preloadDataFiles = ['/data/nba.json', '/data/nfl.json', '/data/football.json'];
-
 interface Props {
   title: string;
   description?: string;
@@ -47,11 +44,6 @@ const structuredData = {
     <link rel="dns-prefetch" href={import.meta.env.PUBLIC_API_URL || 'https://scoracle-data-production.up.railway.app/api/v1'} />
     <link rel="preconnect" href={import.meta.env.PUBLIC_API_URL || 'https://scoracle-data-production.up.railway.app/api/v1'} />
 
-    <!-- Preload entity data files for instant search -->
-    {preloadDataFiles.map(file => (
-      <link rel="preload" href={file} as="fetch" crossorigin="anonymous" />
-    ))}
-    
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content={type} />
     <meta property="og:url" content={canonical} />
@@ -102,12 +94,5 @@ const structuredData = {
     <main>
       <slot />
     </main>
-
-    <!-- Initialize entity data preload early -->
-    <script>
-      import { entityDataStore } from '../lib/utils/entity-data-store';
-      // Start preloading all sport data immediately
-      entityDataStore.preloadAll();
-    </script>
   </body>
 </html>

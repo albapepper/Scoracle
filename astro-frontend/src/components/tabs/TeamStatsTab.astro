@@ -1005,8 +1005,10 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     refreshChart: () => manager.refreshChart(),
   };
 
-  // Auto-load since Stats is the default tab
-  manager.load();
+  // Defer to allow first paint, then load stats
+  requestAnimationFrame(() => {
+    manager.load();
+  });
 
   // Listen for theme changes to refresh chart colors
   const observer = new MutationObserver((mutations) => {
