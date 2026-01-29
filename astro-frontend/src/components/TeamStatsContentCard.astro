@@ -9,15 +9,11 @@
  * - Stats: Pizza chart + box score statistics + form display + home/away breakdown
  * - Strengths: Strengths & weaknesses based on percentiles
  * - Similarity: Similar teams based on embeddings
- * - Transfers: Transfer predictions (may not apply to teams)
- * - Predictions: LSTM-based performance predictions
  */
 
 import TeamStatsTab from './tabs/TeamStatsTab.astro';
 import StrengthsWeaknessesTab from './tabs/StrengthsWeaknessesTab.astro';
 import SimilarityTab from './tabs/SimilarityTab.astro';
-import TransfersTab from './tabs/TransfersTab.astro';
-import PredictionsTab from './tabs/PredictionsTab.astro';
 
 interface Props {
   title?: string;
@@ -32,8 +28,6 @@ const { title = 'Statistics' } = Astro.props;
     <button class="tab-btn active" data-tab="team-stats">Stats</button>
     <button class="tab-btn" data-tab="team-strengths">Strengths</button>
     <button class="tab-btn" data-tab="team-similarity">Similarity</button>
-    <button class="tab-btn" data-tab="team-transfers">Transfers</button>
-    <button class="tab-btn" data-tab="team-predictions">Predictions</button>
   </div>
 
   <!-- Tab Content -->
@@ -52,16 +46,6 @@ const { title = 'Statistics' } = Astro.props;
     <div id="team-similarity-tab" class="tab-content">
       <SimilarityTab />
     </div>
-
-    <!-- Transfers Tab -->
-    <div id="team-transfers-tab" class="tab-content">
-      <TransfersTab />
-    </div>
-
-    <!-- Predictions Tab -->
-    <div id="team-predictions-tab" class="tab-content">
-      <PredictionsTab />
-    </div>
   </div>
 </div>
 
@@ -78,6 +62,7 @@ const { title = 'Statistics' } = Astro.props;
   /* Tab Navigation */
   .tabs-nav {
     display: flex;
+    justify-content: center;
     border-bottom: 1px solid var(--border);
     background-color: transparent;
   }
@@ -88,8 +73,9 @@ const { title = 'Statistics' } = Astro.props;
 
   .tab-btn {
     flex: 1;
-    padding: 0.875rem 0.5rem;
+    padding: 0.875rem 0.75rem;
     min-height: 48px;
+    max-width: 140px;
     background: none;
     border: none;
     color: var(--text-secondary);
@@ -98,6 +84,7 @@ const { title = 'Statistics' } = Astro.props;
     cursor: pointer;
     border-bottom: 2px solid transparent;
     transition: color 0.15s, border-color 0.15s;
+    text-align: center;
   }
 
   :global(.dark) .tab-btn {
@@ -191,12 +178,6 @@ const { title = 'Statistics' } = Astro.props;
           }
           if (tab === 'team-similarity') {
             (window as any).similarityTab?.load();
-          }
-          if (tab === 'team-transfers') {
-            (window as any).transfersTab?.load();
-          }
-          if (tab === 'team-predictions') {
-            (window as any).predictionsTab?.load();
           }
         });
       });

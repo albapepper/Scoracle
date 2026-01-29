@@ -148,6 +148,7 @@
   import { waitForPageData } from '../../lib/utils/api-fetcher';
 
   class CoMentionsTabManager {
+    private container: HTMLElement | null = null;
     private sport: string | null = null;
     private type: string | null = null;
     private id: string | null = null;
@@ -158,13 +159,18 @@
       this.sport = params.sport;
       this.type = params.type;
       this.id = params.id;
+      
+      // Scope query to correct parent view based on entity type from URL
+      const viewId = params.type === 'team' ? 'team-entity-view' : 'player-entity-view';
+      const parentView = document.getElementById(viewId);
+      this.container = parentView?.querySelector('#comentions-tab-content') as HTMLElement | null;
     }
 
     /**
      * Load co-mentions data. Called when the tab becomes active.
      */
     async load(): Promise<void> {
-      if (this.loaded) return;
+      if (this.loaded || !this.container) return;
       this.loaded = true;
 
       if (!this.sport || !this.type || !this.id) {
@@ -208,7 +214,7 @@
     }
 
     private render(coMentions: CoMention[]): void {
-      const listEl = document.getElementById('comentions-list');
+      const listEl = this.container?.querySelector('#comentions-list');
       if (!listEl) return;
 
       const html = coMentions.map(cm => {
@@ -235,15 +241,15 @@
     }
 
     private showContent(): void {
-      document.getElementById('comentions-loading')?.classList.add('hidden');
-      document.getElementById('comentions-content')?.classList.remove('hidden');
-      document.getElementById('comentions-empty')?.classList.add('hidden');
+      this.container?.querySelector('#comentions-loading')?.classList.add('hidden');
+      this.container?.querySelector('#comentions-content')?.classList.remove('hidden');
+      this.container?.querySelector('#comentions-empty')?.classList.add('hidden');
     }
 
     private showEmpty(): void {
-      document.getElementById('comentions-loading')?.classList.add('hidden');
-      document.getElementById('comentions-content')?.classList.add('hidden');
-      document.getElementById('comentions-empty')?.classList.remove('hidden');
+      this.container?.querySelector('#comentions-loading')?.classList.add('hidden');
+      this.container?.querySelector('#comentions-content')?.classList.add('hidden');
+      this.container?.querySelector('#comentions-empty')?.classList.remove('hidden');
     }
   }
 

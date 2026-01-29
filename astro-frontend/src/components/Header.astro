@@ -290,8 +290,12 @@ const { sport = 'nba', showSearch = true } = Astro.props;
   const container = document.querySelector('.header-search-container') as HTMLElement;
 
   if (input && suggestions) {
+    // On inner pages (/news, /stats), use sport from URL params
+    // This ensures we only load the relevant sport's JSON data
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlSport = urlParams.get('sport')?.toLowerCase();
     const stored = localStorage.getItem('activeSport');
-    const initialSport = stored || container?.dataset.sport || 'nba';
+    const initialSport = urlSport || stored || container?.dataset.sport || 'nba';
 
     const autocomplete = new AutocompleteManager({
       inputEl: input,

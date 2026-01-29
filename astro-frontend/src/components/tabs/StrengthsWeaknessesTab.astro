@@ -375,7 +375,7 @@ const { title = 'Strengths & Weaknesses' } = Astro.props;
 </style>
 
 <script>
-  import { escapeHtml } from '../../lib/utils/dom';
+  import { escapeHtml, parseEntityParams } from '../../lib/utils/dom';
   import { waitForPageData } from '../../lib/utils/api-fetcher';
   import type { Category } from '../../lib/utils/stats-categorizer';
 
@@ -476,10 +476,19 @@ const { title = 'Strengths & Weaknesses' } = Astro.props;
    * Strengths & Weaknesses Tab Manager
    */
   class StrengthsWeaknessesTabManager {
+    private container: HTMLElement | null = null;
     private loaded = false;
 
+    constructor() {
+      // Scope query to correct parent view based on entity type from URL
+      const params = parseEntityParams();
+      const viewId = params.type === 'team' ? 'team-entity-view' : 'player-entity-view';
+      const parentView = document.getElementById(viewId);
+      this.container = parentView?.querySelector('#sw-tab-content') as HTMLElement | null;
+    }
+
     async load(): Promise<void> {
-      if (this.loaded) return;
+      if (this.loaded || !this.container) return;
       this.loaded = true;
 
       try {
@@ -505,8 +514,8 @@ const { title = 'Strengths & Weaknesses' } = Astro.props;
     }
 
     private render(strengths: StrengthWeaknessItem[], weaknesses: StrengthWeaknessItem[]): void {
-      const strengthsList = document.getElementById('sw-strengths-list');
-      const weaknessesList = document.getElementById('sw-weaknesses-list');
+      const strengthsList = this.container?.querySelector('#sw-strengths-list');
+      const weaknessesList = this.container?.querySelector('#sw-weaknesses-list');
 
       if (!strengthsList || !weaknessesList) return;
 
@@ -546,24 +555,24 @@ const { title = 'Strengths & Weaknesses' } = Astro.props;
     }
 
     private showContent(): void {
-      document.getElementById('sw-loading')?.classList.add('hidden');
-      document.getElementById('sw-content')?.classList.remove('hidden');
-      document.getElementById('sw-empty')?.classList.add('hidden');
-      document.getElementById('sw-error')?.classList.add('hidden');
+      this.container?.querySelector('#sw-loading')?.classList.add('hidden');
+      this.container?.querySelector('#sw-content')?.classList.remove('hidden');
+      this.container?.querySelector('#sw-empty')?.classList.add('hidden');
+      this.container?.querySelector('#sw-error')?.classList.add('hidden');
     }
 
     private showEmpty(): void {
-      document.getElementById('sw-loading')?.classList.add('hidden');
-      document.getElementById('sw-content')?.classList.add('hidden');
-      document.getElementById('sw-empty')?.classList.remove('hidden');
-      document.getElementById('sw-error')?.classList.add('hidden');
+      this.container?.querySelector('#sw-loading')?.classList.add('hidden');
+      this.container?.querySelector('#sw-content')?.classList.add('hidden');
+      this.container?.querySelector('#sw-empty')?.classList.remove('hidden');
+      this.container?.querySelector('#sw-error')?.classList.add('hidden');
     }
 
     private showError(): void {
-      document.getElementById('sw-loading')?.classList.add('hidden');
-      document.getElementById('sw-content')?.classList.add('hidden');
-      document.getElementById('sw-empty')?.classList.add('hidden');
-      document.getElementById('sw-error')?.classList.remove('hidden');
+      this.container?.querySelector('#sw-loading')?.classList.add('hidden');
+      this.container?.querySelector('#sw-content')?.classList.add('hidden');
+      this.container?.querySelector('#sw-empty')?.classList.add('hidden');
+      this.container?.querySelector('#sw-error')?.classList.remove('hidden');
     }
   }
 

@@ -198,7 +198,11 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     private loaded = false;
 
     constructor() {
-      this.container = document.getElementById('similarity-tab-content');
+      // Scope query to correct parent view based on entity type from URL
+      const params = parseEntityParams();
+      const viewId = params.type === 'team' ? 'team-entity-view' : 'player-entity-view';
+      const parentView = document.getElementById(viewId);
+      this.container = parentView?.querySelector('#similarity-tab-content') as HTMLElement | null;
       this.apiUrl = this.container?.dataset.apiUrl || '';
     }
 
