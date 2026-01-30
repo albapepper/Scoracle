@@ -344,13 +344,25 @@
       onSelect: (entity: AutocompleteEntity) => void,
       positionGroup?: string
     ) {
-      if (!this.modal || !this.inputEl || !this.suggestionsEl) return;
+      console.log('[ComparisonModal] open() called');
+      console.log('[ComparisonModal] Params:', { sport, type, id, positionGroup });
+      console.log('[ComparisonModal] onSelect callback provided?', !!onSelect);
+      
+      if (!this.modal || !this.inputEl || !this.suggestionsEl) {
+        console.log('[ComparisonModal] ERROR: Missing DOM elements', {
+          modal: !!this.modal,
+          inputEl: !!this.inputEl,
+          suggestionsEl: !!this.suggestionsEl
+        });
+        return;
+      }
 
       this.currentSport = sport.toLowerCase();
       this.currentType = type;
       this.currentId = id;
       this.currentPositionGroup = positionGroup;
       this.onSelectCallback = onSelect;
+      console.log('[ComparisonModal] onSelectCallback stored:', !!this.onSelectCallback);
 
       // Update hint text with position info for players
       if (this.hintEl) {
@@ -393,13 +405,22 @@
             `;
           },
           onSelect: (entity) => {
+            console.log('[ComparisonModal] onSelect fired, entity:', entity.name, entity.id);
             // Don't allow comparing with self
             if (entity.id === this.currentId) {
+              console.log('[ComparisonModal] Same entity as current, skipping');
               return;
             }
+            // Save callback reference BEFORE close() clears it
+            const callback = this.onSelectCallback;
             this.close();
-            if (this.onSelectCallback) {
-              this.onSelectCallback(entity);
+            console.log('[ComparisonModal] callback exists?', !!callback);
+            if (callback) {
+              console.log('[ComparisonModal] Calling callback...');
+              callback(entity);
+              console.log('[ComparisonModal] callback completed');
+            } else {
+              console.log('[ComparisonModal] ERROR: callback is null/undefined!');
             }
           },
         });

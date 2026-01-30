@@ -89,8 +89,8 @@ function getComparisonColors(): ComparisonColors {
   return {
     primary: style.getPropertyValue(isDark ? '--compare-primary-dark' : '--compare-primary').trim() || '#2563eb',
     primaryBg: style.getPropertyValue('--compare-primary-bg').trim() || '#dbeafe',
-    secondary: style.getPropertyValue(isDark ? '--compare-secondary-dark' : '--compare-secondary').trim() || '#dc2626',
-    secondaryBg: style.getPropertyValue('--compare-secondary-bg').trim() || '#fee2e2',
+    secondary: style.getPropertyValue(isDark ? '--compare-secondary-dark' : '--compare-secondary').trim() || '#f97316',
+    secondaryBg: style.getPropertyValue('--compare-secondary-bg').trim() || '#ffedd5',
   };
 }
 

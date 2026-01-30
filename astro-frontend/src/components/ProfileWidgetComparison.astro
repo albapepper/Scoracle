@@ -341,21 +341,23 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 <script>
   import { swrFetch, setPageData, CACHE_PRESETS } from '../lib/utils/api-fetcher';
 
-  // Raw API response types (no adapter transformation needed)
+  // Raw API response types matching actual backend response
   interface PlayerProfileResponse {
     id?: string | number;
     name?: string;
-    firstname?: string;
-    lastname?: string;
-    photo?: string;
+    full_name?: string;
+    first_name?: string;
+    last_name?: string;
+    photo_url?: string;
     position?: string;
-    team?: { name?: string };
+    team?: { name?: string; logo_url?: string };
   }
 
   interface TeamProfileResponse {
     id?: string | number;
     name?: string;
-    logo?: string;
+    full_name?: string;
+    logo_url?: string;
     venue?: { name?: string; city?: string };
     country?: { name?: string };
   }
@@ -470,13 +472,13 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
       if (type === 'team') {
         const teamData = data as TeamProfileResponse;
-        name = teamData.name || 'Unknown';
-        logo = teamData.logo || '';
+        name = teamData.full_name || teamData.name || 'Unknown';
+        logo = teamData.logo_url || '';
         subtitle = teamData.venue?.name || teamData.venue?.city || teamData.country?.name || '';
       } else {
         const playerData = data as PlayerProfileResponse;
-        name = playerData.name || `${playerData.firstname || ''} ${playerData.lastname || ''}`.trim() || 'Unknown';
-        logo = playerData.photo || '';
+        name = playerData.full_name || playerData.name || `${playerData.first_name || ''} ${playerData.last_name || ''}`.trim() || 'Unknown';
+        logo = playerData.photo_url || '';
         subtitle = playerData.team?.name || playerData.position || '';
       }
 

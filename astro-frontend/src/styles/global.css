@@ -32,14 +32,14 @@
   /* Comparison colors - subtle, distinguishable */
   --compare-primary: #2563eb;
   --compare-primary-bg: #dbeafe;
-  --compare-secondary: #dc2626;
-  --compare-secondary-bg: #fee2e2;
+  --compare-secondary: #f97316;
+  --compare-secondary-bg: #ffedd5;
 
   /* Comparison colors - dark mode */
   --compare-primary-dark: #60a5fa;
   --compare-primary-bg-dark: #1e3a5f;
-  --compare-secondary-dark: #f87171;
-  --compare-secondary-bg-dark: #5f1e1e;
+  --compare-secondary-dark: #fb923c;
+  --compare-secondary-bg-dark: #5f3a1e;
 
   /* Percentile tier colors (light mode) */
   --percentile-elite: #16a34a;      /* 90-100% - Green */
