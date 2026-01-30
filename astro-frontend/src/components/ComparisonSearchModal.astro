@@ -259,12 +259,16 @@
 <script>
   import { AutocompleteManager, type AutocompleteEntity } from '../lib/utils/autocomplete';
   import { escapeHtml } from '../lib/utils/dom';
+  import { getPositionGroupDisplay } from '../lib/utils/position-groups';
 
   /**
    * ComparisonModalManager
    *
    * Manages the comparison search modal, including opening/closing,
    * entity search, and selection.
+   *
+   * For player comparisons, filters by position group to ensure
+   * meaningful comparisons (e.g., guard vs guard, not guard vs center).
    */
   class ComparisonModalManager {
     private modal: HTMLElement | null = null;
@@ -278,6 +282,7 @@
     private currentSport: string = '';
     private currentType: string = '';
     private currentId: string = '';
+    private currentPositionGroup: string | undefined = undefined;
     private onSelectCallback: ((entity: AutocompleteEntity) => void) | null = null;
 
     constructor() {
@@ -310,26 +315,53 @@
     private exposeAPI() {
       // Expose open/close methods globally for other components
       (window as any).comparisonModal = {
-        open: (sport: string, type: string, id: string, onSelect: (entity: AutocompleteEntity) => void) => {
-          this.open(sport, type, id, onSelect);
+        /**
+         * Open the comparison modal.
+         * @param sport - Current sport (nba, nfl, football)
+         * @param type - Entity type ('player' or 'team')
+         * @param id - Current entity ID
+         * @param onSelect - Callback when entity is selected
+         * @param positionGroup - Optional position group to filter by (for players)
+         */
+        open: (
+          sport: string,
+          type: string,
+          id: string,
+          onSelect: (entity: AutocompleteEntity) => void,
+          positionGroup?: string
+        ) => {
+          this.open(sport, type, id, onSelect, positionGroup);
         },
         close: () => this.close(),
         isOpen: () => this.isOpen(),
       };
     }
 
-    public open(sport: string, type: string, id: string, onSelect: (entity: AutocompleteEntity) => void) {
+    public open(
+      sport: string,
+      type: string,
+      id: string,
+      onSelect: (entity: AutocompleteEntity) => void,
+      positionGroup?: string
+    ) {
       if (!this.modal || !this.inputEl || !this.suggestionsEl) return;
 
       this.currentSport = sport.toLowerCase();
       this.currentType = type;
       this.currentId = id;
+      this.currentPositionGroup = positionGroup;
       this.onSelectCallback = onSelect;
 
-      // Update hint text
-      const typeDisplay = type === 'team' ? 'team' : 'player';
+      // Update hint text with position info for players
       if (this.hintEl) {
-        this.hintEl.textContent = `Search for another ${typeDisplay} to compare`;
+        if (type === 'team') {
+          this.hintEl.textContent = 'Search for another team to compare';
+        } else if (positionGroup) {
+          const positionDisplay = getPositionGroupDisplay(positionGroup);
+          this.hintEl.textContent = `Search for another ${positionDisplay} to compare`;
+        } else {
+          this.hintEl.textContent = 'Search for another player to compare';
+        }
       }
 
       // Initialize autocomplete if needed
@@ -340,17 +372,26 @@
           initialSport: this.currentSport,
           itemClass: 'comparison-suggestion-item',
           typeFilter: this.currentType as 'player' | 'team',
-          renderItem: (entity, index) => `
-            <button
-              type="button"
-              data-index="${index}"
-              class="comparison-suggestion-item"
-              tabindex="-1"
-            >
-              <div class="comparison-suggestion-name">${escapeHtml(entity.name)}</div>
-              <div class="comparison-suggestion-meta">${entity.type === 'player' ? (entity.team || 'Player') : 'Team'}</div>
-            </button>
-          `,
+          positionGroupFilter: type === 'player' ? positionGroup : undefined,
+          renderItem: (entity, index) => {
+            // Build meta text with position info if available
+            let metaText = entity.type === 'team' ? 'Team' : (entity.team || 'Player');
+            if (entity.type === 'player' && entity.position) {
+              metaText = entity.position + (entity.team ? ` - ${entity.team}` : '');
+            }
+
+            return `
+              <button
+                type="button"
+                data-index="${index}"
+                class="comparison-suggestion-item"
+                tabindex="-1"
+              >
+                <div class="comparison-suggestion-name">${escapeHtml(entity.name)}</div>
+                <div class="comparison-suggestion-meta">${escapeHtml(metaText)}</div>
+              </button>
+            `;
+          },
           onSelect: (entity) => {
             // Don't allow comparing with self
             if (entity.id === this.currentId) {
@@ -363,9 +404,11 @@
           },
         });
       } else {
-        // Update sport and type filter if changed
+        // Update sport and filters
         this.autocomplete.setSport(this.currentSport);
         this.autocomplete.setTypeFilter(this.currentType as 'player' | 'team');
+        // Set position group filter for players, clear for teams
+        this.autocomplete.setPositionGroupFilter(type === 'player' ? positionGroup : undefined);
       }
 
       // Clear input

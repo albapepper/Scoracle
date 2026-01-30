@@ -76,6 +76,8 @@ export interface AutocompleteEntity {
   name: string;
   type: 'player' | 'team';
   team?: string;
+  position?: string;        // Raw position from API (e.g., 'PG', 'SF', 'GK')
+  positionGroup?: string;   // Normalized group (e.g., 'Guard', 'Forward', 'Goalkeeper')
 }
 
 // ============================================

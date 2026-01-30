@@ -6,7 +6,7 @@ import PlayerStatsContentCard from '../components/PlayerStatsContentCard.astro';
 import TeamStatsContentCard from '../components/TeamStatsContentCard.astro';
 import ComparisonSearchModal from '../components/ComparisonSearchModal.astro';
 import ProfileWidgetComparison from '../components/ProfileWidgetComparison.astro';
-import StatsComparison from '../components/StatsComparison.astro';
+import StatsComparisonContent from '../components/StatsComparisonContent.astro';
 ---
 
 <Layout
@@ -29,7 +29,7 @@ import StatsComparison from '../components/StatsComparison.astro';
     <!-- Comparison View (hidden by default) -->
     <div id="comparison-view" class="comparison-view hidden">
       <ProfileWidgetComparison />
-      <StatsComparison title="Statistics Comparison" />
+      <StatsComparisonContent />
     </div>
 
     <!-- Comparison Search Modal -->
@@ -97,6 +97,7 @@ import StatsComparison from '../components/StatsComparison.astro';
     private primaryType: string = '';
     private primaryId: string = '';
     private primaryName: string = '';
+    private primaryPositionGroup: string | undefined = undefined;
 
     private secondaryType: string = '';
     private secondaryId: string = '';
@@ -134,11 +135,12 @@ import StatsComparison from '../components/StatsComparison.astro';
     private bindEvents() {
       // Listen for comparison add request
       window.addEventListener('comparison:add', ((event: CustomEvent) => {
-        const { sport, type, id, name } = event.detail;
+        const { sport, type, id, name, positionGroup } = event.detail;
         this.primarySport = sport;
         this.primaryType = type;
         this.primaryId = id;
         this.primaryName = name;
+        this.primaryPositionGroup = positionGroup;
 
         this.openComparisonModal();
       }) as EventListener);
@@ -152,13 +154,16 @@ import StatsComparison from '../components/StatsComparison.astro';
     private openComparisonModal() {
       const modal = (window as any).comparisonModal;
       if (modal) {
+        // For players, pass the position group to filter the search
+        // For teams, positionGroup will be undefined (no filtering)
         modal.open(
           this.primarySport,
           this.primaryType,
           this.primaryId,
           (entity: AutocompleteEntity) => {
             this.onComparisonSelected(entity);
-          }
+          },
+          this.primaryType === 'player' ? this.primaryPositionGroup : undefined
         );
       }
     }
@@ -191,10 +196,10 @@ import StatsComparison from '../components/StatsComparison.astro';
         );
       }
 
-      // Initialize comparison stats widget
-      const statsComparison = (window as any).statsComparison;
-      if (statsComparison) {
-        statsComparison.show(
+      // Initialize comparison stats content (includes pizza chart, S/W, and detailed stats)
+      const statsComparisonContent = (window as any).statsComparisonContent;
+      if (statsComparisonContent) {
+        statsComparisonContent.show(
           this.primarySport,
           this.primaryType,
           this.primaryId,
@@ -220,8 +225,8 @@ import StatsComparison from '../components/StatsComparison.astro';
       const widgetComparison = (window as any).profileWidgetComparison;
       if (widgetComparison) widgetComparison.hide();
 
-      const statsComparison = (window as any).statsComparison;
-      if (statsComparison) statsComparison.hide();
+      const statsComparisonContent = (window as any).statsComparisonContent;
+      if (statsComparisonContent) statsComparisonContent.hide();
 
       // Reset secondary entity
       this.secondaryType = '';

@@ -20,6 +20,8 @@ export interface AutocompleteConfig {
   itemClass?: string;
   /** Filter to only show entities of this type ('player' or 'team') */
   typeFilter?: 'player' | 'team';
+  /** Filter to only show players with this position group (e.g., 'guard', 'forward') */
+  positionGroupFilter?: string;
 }
 
 export class AutocompleteManager {
@@ -29,6 +31,7 @@ export class AutocompleteManager {
   private renderItem!: (entity: AutocompleteEntity, index: number) => string;
   private itemClass!: string;
   private typeFilter?: 'player' | 'team';
+  private positionGroupFilter?: string;
 
   private currentSport!: string;
   private allData: AutocompleteEntity[] = [];
@@ -42,6 +45,7 @@ export class AutocompleteManager {
     this.currentSport = config.initialSport || 'nba';
     this.itemClass = config.itemClass || 'suggestion-item';
     this.typeFilter = config.typeFilter;
+    this.positionGroupFilter = config.positionGroupFilter;
 
     // Default render function
     this.renderItem = config.renderItem || ((entity, index) => `
@@ -99,6 +103,13 @@ export class AutocompleteManager {
         if (!item.name.toLowerCase().includes(query)) return false;
         // Filter by type if typeFilter is set
         if (this.typeFilter && item.type !== this.typeFilter) return false;
+        // Filter by position group if set (only for players)
+        if (this.positionGroupFilter && item.type === 'player') {
+          // If no position group on item, allow it (don't exclude unknowns)
+          if (item.positionGroup && item.positionGroup !== this.positionGroupFilter) {
+            return false;
+          }
+        }
         return true;
       })
       .slice(0, 10);
@@ -230,5 +241,35 @@ export class AutocompleteManager {
    */
   public getTypeFilter(): 'player' | 'team' | undefined {
     return this.typeFilter;
+  }
+
+  /**
+   * Set position group filter to only show players with a specific position group.
+   * Only applies when typeFilter is 'player'.
+   */
+  public setPositionGroupFilter(positionGroup: string | undefined) {
+    this.positionGroupFilter = positionGroup;
+    // Clear current suggestions to apply new filter
+    this.suggestions = [];
+    this.selectedIndex = -1;
+    this.hideSuggestions();
+  }
+
+  /**
+   * Get current position group filter.
+   */
+  public getPositionGroupFilter(): string | undefined {
+    return this.positionGroupFilter;
+  }
+
+  /**
+   * Clear all filters.
+   */
+  public clearFilters() {
+    this.typeFilter = undefined;
+    this.positionGroupFilter = undefined;
+    this.suggestions = [];
+    this.selectedIndex = -1;
+    this.hideSuggestions();
   }
 }

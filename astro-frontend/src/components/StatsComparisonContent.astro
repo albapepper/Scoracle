@@ -1,0 +1,658 @@
+---
+/**
+ * Stats Comparison Content Component
+ *
+ * A wrapper component that contains all comparison visualizations:
+ * - Overlapping pizza chart for percentile comparison
+ * - Side-by-side strengths/weaknesses
+ * - Detailed stats bar comparison
+ *
+ * Uses tabs to organize the different views:
+ * - Overview: Pizza chart + Strengths/Weaknesses
+ * - Detailed: Bar chart comparison of all stats
+ */
+
+import StrengthsWeaknessesComparison from './StrengthsWeaknessesComparison.astro';
+import StatsComparison from './StatsComparison.astro';
+
+interface Props {
+  title?: string;
+}
+
+const { title = 'Statistics Comparison' } = Astro.props;
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+---
+
+<div id="stats-comparison-content" class="stats-comparison-content hidden" data-api-url={apiUrl}>
+  <!-- Tab Navigation -->
+  <div class="comparison-tabs">
+    <button
+      type="button"
+      class="comparison-tab active"
+      data-tab="overview"
+    >
+      Overview
+    </button>
+    <button
+      type="button"
+      class="comparison-tab"
+      data-tab="detailed"
+    >
+      Detailed Stats
+    </button>
+  </div>
+
+  <!-- Tab Content -->
+  <div class="comparison-tab-content">
+    <!-- Overview Tab -->
+    <div id="tab-overview" class="tab-panel active">
+      <!-- Pizza Chart Comparison -->
+      <div class="comparison-section">
+        <div class="comparison-card card">
+          <div class="comparison-card-header">
+            <h3 class="comparison-card-title">Percentile Comparison</h3>
+            <div class="pizza-legend">
+              <div class="legend-item">
+                <span class="legend-bar primary"></span>
+                <span id="pizza-legend-primary" class="legend-name">Primary</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-bar secondary dashed"></span>
+                <span id="pizza-legend-secondary" class="legend-name">Comparison</span>
+              </div>
+            </div>
+          </div>
+          <div class="comparison-card-body">
+            <!-- Loading -->
+            <div id="pizza-comparison-loading" class="pizza-loading">
+              <div class="skeleton-circle large"></div>
+            </div>
+            <!-- Chart Container -->
+            <div id="pizza-comparison-chart" class="pizza-chart-container hidden"></div>
+            <!-- Error -->
+            <div id="pizza-comparison-error" class="pizza-error hidden">
+              <p>Unable to load comparison chart</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Strengths/Weaknesses Comparison -->
+      <div class="comparison-section">
+        <StrengthsWeaknessesComparison />
+      </div>
+    </div>
+
+    <!-- Detailed Stats Tab -->
+    <div id="tab-detailed" class="tab-panel hidden">
+      <StatsComparison title="Detailed Statistics" />
+    </div>
+  </div>
+</div>
+
+<style>
+  .stats-comparison-content {
+    width: 100%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .stats-comparison-content.hidden {
+    display: none;
+  }
+
+  /* Tab Navigation */
+  .comparison-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background-color: var(--bg-card);
+    border-radius: 0.375rem 0.375rem 0 0;
+  }
+
+  :global(.dark) .comparison-tabs {
+    background-color: var(--bg-card-dark);
+    border-bottom-color: var(--border-dark);
+  }
+
+  .comparison-tab {
+    flex: 1;
+    padding: 0.875rem 1rem;
+    background: none;
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .comparison-tab:hover {
+    color: var(--text);
+  }
+
+  .comparison-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  :global(.dark) .comparison-tab {
+    color: var(--text-secondary-dark);
+  }
+
+  :global(.dark) .comparison-tab:hover {
+    color: var(--text-dark);
+  }
+
+  :global(.dark) .comparison-tab.active {
+    color: var(--accent-dark);
+    border-bottom-color: var(--accent-dark);
+  }
+
+  /* Tab Content */
+  .comparison-tab-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tab-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .tab-panel.hidden {
+    display: none;
+  }
+
+  /* Comparison Section */
+  .comparison-section {
+    width: 100%;
+  }
+
+  /* Comparison Card */
+  .comparison-card {
+    width: 100%;
+    border-radius: 0;
+    border-top: none;
+  }
+
+  .comparison-card:first-child {
+    border-radius: 0;
+  }
+
+  .comparison-card-header {
+    padding: 1rem 1.5rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .comparison-card-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  :global(.dark) .comparison-card-title {
+    color: var(--text-dark);
+  }
+
+  .comparison-card-body {
+    padding: 0.5rem 1.5rem 1.5rem;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Pizza Legend */
+  .pizza-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+  }
+
+  .pizza-legend .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .pizza-legend .legend-bar {
+    width: 20px;
+    height: 8px;
+    border-radius: 2px;
+  }
+
+  .pizza-legend .legend-bar.primary {
+    background-color: var(--compare-primary);
+  }
+
+  .pizza-legend .legend-bar.secondary {
+    background-color: var(--compare-secondary);
+    opacity: 0.5;
+  }
+
+  .pizza-legend .legend-bar.dashed {
+    background: repeating-linear-gradient(
+      90deg,
+      var(--compare-secondary) 0px,
+      var(--compare-secondary) 4px,
+      transparent 4px,
+      transparent 6px
+    );
+    opacity: 1;
+  }
+
+  :global(.dark) .pizza-legend .legend-bar.primary {
+    background-color: var(--compare-primary-dark);
+  }
+
+  :global(.dark) .pizza-legend .legend-bar.secondary {
+    background-color: var(--compare-secondary-dark);
+  }
+
+  :global(.dark) .pizza-legend .legend-bar.dashed {
+    background: repeating-linear-gradient(
+      90deg,
+      var(--compare-secondary-dark) 0px,
+      var(--compare-secondary-dark) 4px,
+      transparent 4px,
+      transparent 6px
+    );
+  }
+
+  .pizza-legend .legend-name {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.dark) .pizza-legend .legend-name {
+    color: var(--text-secondary-dark);
+  }
+
+  /* Pizza Loading */
+  .pizza-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 280px;
+  }
+
+  .skeleton-circle.large {
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    background: var(--border);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  :global(.dark) .skeleton-circle.large {
+    background: var(--border-dark);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Pizza Chart Container */
+  .pizza-chart-container {
+    width: 100%;
+    max-width: 360px;
+  }
+
+  /* Pizza Error */
+  .pizza-error {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+  }
+
+  .pizza-error p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-tertiary);
+  }
+
+  :global(.dark) .pizza-error p {
+    color: var(--text-tertiary-dark);
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .comparison-tabs {
+      border-radius: 0;
+    }
+
+    .comparison-tab {
+      padding: 0.75rem 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .comparison-card-header {
+      padding: 0.75rem 1rem 0.5rem;
+    }
+
+    .comparison-card-title {
+      font-size: 0.9rem;
+    }
+
+    .comparison-card-body {
+      padding: 0.5rem 1rem 1rem;
+    }
+
+    .pizza-legend {
+      gap: 1rem;
+    }
+
+    .pizza-legend .legend-bar {
+      width: 16px;
+    }
+  }
+</style>
+
+<script>
+  import { swrFetch } from '../lib/utils/api-fetcher';
+  import { PizzaChart, type PizzaChartStat, type ComparisonEntityData } from '../lib/charts/pizza-chart';
+  import { categorizeStats } from '../lib/utils/stats-categorizer';
+
+  /**
+   * Normalize percentiles from API (handles both Record and Array formats)
+   */
+  function normalizePercentiles(
+    percentiles: Record<string, number> | Array<{ stat_key: string; percentile: number }> | undefined
+  ): Record<string, number> {
+    if (!percentiles) return {};
+
+    if (Array.isArray(percentiles)) {
+      const result: Record<string, number> = {};
+      for (const p of percentiles) {
+        if (p.stat_key && typeof p.percentile === 'number') {
+          result[p.stat_key] = p.percentile;
+        }
+      }
+      return result;
+    }
+
+    return percentiles as Record<string, number>;
+  }
+
+  /**
+   * Stats Comparison Content Manager
+   *
+   * Manages the comparison content component including:
+   * - Tab switching
+   * - Pizza chart comparison rendering
+   * - Coordinating with child components (S/W comparison, stats comparison)
+   */
+  class StatsComparisonContentManager {
+    private container: HTMLElement | null = null;
+    private apiUrl: string = '';
+
+    private pizzaChart: PizzaChart | null = null;
+    private activeTab: 'overview' | 'detailed' = 'overview';
+
+    private primaryName: string = 'Primary';
+    private secondaryName: string = 'Comparison';
+
+    constructor() {
+      this.container = document.getElementById('stats-comparison-content');
+      if (!this.container) return;
+
+      this.apiUrl = this.container.dataset.apiUrl || '';
+      this.bindTabEvents();
+      this.exposeAPI();
+    }
+
+    private bindTabEvents() {
+      const tabs = this.container?.querySelectorAll('.comparison-tab');
+      tabs?.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const tabId = (tab as HTMLElement).dataset.tab as 'overview' | 'detailed';
+          this.switchTab(tabId);
+        });
+      });
+    }
+
+    private switchTab(tabId: 'overview' | 'detailed') {
+      if (this.activeTab === tabId) return;
+      this.activeTab = tabId;
+
+      // Update tab buttons
+      const tabs = this.container?.querySelectorAll('.comparison-tab');
+      tabs?.forEach(tab => {
+        const isActive = (tab as HTMLElement).dataset.tab === tabId;
+        tab.classList.toggle('active', isActive);
+      });
+
+      // Update tab panels
+      const overviewPanel = document.getElementById('tab-overview');
+      const detailedPanel = document.getElementById('tab-detailed');
+
+      if (tabId === 'overview') {
+        overviewPanel?.classList.remove('hidden');
+        detailedPanel?.classList.add('hidden');
+      } else {
+        overviewPanel?.classList.add('hidden');
+        detailedPanel?.classList.remove('hidden');
+      }
+    }
+
+    private exposeAPI() {
+      (window as any).statsComparisonContent = {
+        show: (
+          sport: string,
+          primaryType: string,
+          primaryId: string,
+          secondaryType: string,
+          secondaryId: string,
+          primaryName?: string,
+          secondaryName?: string
+        ) => {
+          this.primaryName = primaryName || 'Primary';
+          this.secondaryName = secondaryName || 'Comparison';
+          this.show(sport, primaryType, primaryId, secondaryType, secondaryId);
+        },
+        hide: () => this.hide(),
+        isVisible: () => this.isVisible(),
+      };
+    }
+
+    public async show(
+      sport: string,
+      primaryType: string,
+      primaryId: string,
+      secondaryType: string,
+      secondaryId: string
+    ) {
+      if (!this.container) return;
+
+      // Show container
+      this.container.classList.remove('hidden');
+
+      // Reset to overview tab
+      this.switchTab('overview');
+
+      // Update legend names
+      const primaryLegendEl = document.getElementById('pizza-legend-primary');
+      const secondaryLegendEl = document.getElementById('pizza-legend-secondary');
+      if (primaryLegendEl) primaryLegendEl.textContent = this.primaryName;
+      if (secondaryLegendEl) secondaryLegendEl.textContent = this.secondaryName;
+
+      // Show loading state for pizza chart
+      this.showPizzaLoading();
+
+      // Trigger child components
+      const swComparison = (window as any).swComparison;
+      if (swComparison) {
+        swComparison.show(
+          sport,
+          primaryType,
+          primaryId,
+          secondaryType,
+          secondaryId,
+          this.primaryName,
+          this.secondaryName
+        );
+      }
+
+      const statsComparison = (window as any).statsComparison;
+      if (statsComparison) {
+        statsComparison.show(
+          sport,
+          primaryType,
+          primaryId,
+          secondaryType,
+          secondaryId,
+          this.primaryName,
+          this.secondaryName
+        );
+      }
+
+      // Fetch and render pizza chart
+      try {
+        const [primaryResult, secondaryResult] = await Promise.all([
+          this.fetchStats(sport, primaryType, primaryId),
+          this.fetchStats(sport, secondaryType, secondaryId),
+        ]);
+
+        if (!primaryResult || !secondaryResult) {
+          this.showPizzaError();
+          return;
+        }
+
+        this.renderPizzaComparison(
+          { name: this.primaryName, stats: primaryResult },
+          { name: this.secondaryName, stats: secondaryResult }
+        );
+      } catch {
+        this.showPizzaError();
+      }
+    }
+
+    private async fetchStats(
+      sport: string,
+      type: string,
+      id: string
+    ): Promise<PizzaChartStat[] | null> {
+      const url = `${this.apiUrl}/stats/${type}/${id}?sport=${sport.toUpperCase()}`;
+
+      try {
+        const { data } = await swrFetch<{
+          stats?: Record<string, unknown>;
+          percentiles?: Record<string, number> | Array<{ stat_key: string; percentile: number }>;
+        }>(url, {
+          staleTime: 5 * 60 * 1000,
+          cacheTime: 30 * 60 * 1000,
+        });
+
+        if (!data || !data.stats) {
+          return null;
+        }
+
+        // Normalize percentiles and categorize stats
+        const entityType = type === 'team' ? 'team' : 'player';
+        const percentiles = normalizePercentiles(data.percentiles);
+        const categories = categorizeStats(data.stats, percentiles, sport.toUpperCase(), entityType);
+
+        // Flatten categories into pizza chart stats (select key stats only)
+        const pizzaStats: PizzaChartStat[] = [];
+        const maxStats = 12; // Limit for readability
+
+        for (const category of categories) {
+          for (const stat of category.stats) {
+            if (stat.percentile !== undefined && stat.percentile !== null && pizzaStats.length < maxStats) {
+              pizzaStats.push({
+                key: stat.key,
+                label: stat.label,
+                value: stat.value ?? 0,
+                percentile: stat.percentile,
+                categoryId: category.id,
+              });
+            }
+          }
+        }
+
+        return pizzaStats;
+      } catch {
+        return null;
+      }
+    }
+
+    private renderPizzaComparison(primary: ComparisonEntityData, secondary: ComparisonEntityData) {
+      const chartContainer = document.getElementById('pizza-comparison-chart');
+      if (!chartContainer) return;
+
+      // Create or update pizza chart
+      if (!this.pizzaChart) {
+        this.pizzaChart = new PizzaChart(chartContainer, {
+          width: 360,
+          height: 360,
+          innerRadius: 35,
+          outerRadius: 120,
+          labelOffset: 30,
+        });
+      }
+
+      // Render comparison
+      this.pizzaChart.renderComparison(primary, secondary);
+      this.showPizzaChart();
+    }
+
+    private showPizzaLoading() {
+      document.getElementById('pizza-comparison-loading')?.classList.remove('hidden');
+      document.getElementById('pizza-comparison-chart')?.classList.add('hidden');
+      document.getElementById('pizza-comparison-error')?.classList.add('hidden');
+    }
+
+    private showPizzaChart() {
+      document.getElementById('pizza-comparison-loading')?.classList.add('hidden');
+      document.getElementById('pizza-comparison-chart')?.classList.remove('hidden');
+      document.getElementById('pizza-comparison-error')?.classList.add('hidden');
+    }
+
+    private showPizzaError() {
+      document.getElementById('pizza-comparison-loading')?.classList.add('hidden');
+      document.getElementById('pizza-comparison-chart')?.classList.add('hidden');
+      document.getElementById('pizza-comparison-error')?.classList.remove('hidden');
+    }
+
+    public hide() {
+      this.container?.classList.add('hidden');
+
+      // Hide child components
+      const swComparison = (window as any).swComparison;
+      if (swComparison) swComparison.hide();
+
+      const statsComparison = (window as any).statsComparison;
+      if (statsComparison) statsComparison.hide();
+
+      // Destroy pizza chart
+      if (this.pizzaChart) {
+        this.pizzaChart.destroy();
+        this.pizzaChart = null;
+      }
+    }
+
+    public isVisible(): boolean {
+      return this.container ? !this.container.classList.contains('hidden') : false;
+    }
+  }
+
+  // Initialize
+  new StatsComparisonContentManager();
+</script>

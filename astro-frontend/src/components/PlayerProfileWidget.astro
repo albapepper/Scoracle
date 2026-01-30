@@ -330,6 +330,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 <script>
   import { escapeHtml, parseEntityParams } from '../lib/utils/dom';
   import { swrFetch, setPageData, CACHE_PRESETS } from '../lib/utils/api-fetcher';
+  import { getPositionGroup } from '../lib/utils/position-groups';
 
   /**
    * Player profile data shape from backend
@@ -375,6 +376,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     private compareBtnEl: HTMLButtonElement | null = null;
 
     private entityName: string = '';
+    private entityPosition: string | undefined = undefined;
+    private entityPositionGroup: string | undefined = undefined;
 
     constructor() {
       const widget = document.getElementById('player-profile-widget');
@@ -433,6 +436,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         getType: () => 'player',
         getId: () => this.id,
         getName: () => this.entityName,
+        getPosition: () => this.entityPosition,
+        getPositionGroup: () => this.entityPositionGroup,
         hide: () => this.hide(),
         show: () => this.showWidget(),
       };
@@ -445,6 +450,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
           type: 'player',
           id: this.id,
           name: this.entityName,
+          position: this.entityPosition,
+          positionGroup: this.entityPositionGroup,
         },
       }));
     }
@@ -509,8 +516,10 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         details.push({ label: 'Nationality', value: data.nationality });
       }
 
-      // Store entity name for API
+      // Store entity name and position for API
       this.entityName = name;
+      this.entityPosition = data.position;
+      this.entityPositionGroup = this.sport ? getPositionGroup(this.sport, data.position) : undefined;
 
       if (this.nameEl) this.nameEl.textContent = name;
       if (this.subtitleEl) this.subtitleEl.textContent = subtitle;

@@ -1,0 +1,705 @@
+---
+/**
+ * Strengths & Weaknesses Comparison Component
+ *
+ * Displays side-by-side strengths and weaknesses for two entities.
+ * Each entity gets its own column with color-coded indicators.
+ *
+ * Thresholds:
+ * - Strengths: percentile >= 70%
+ * - Weaknesses: percentile <= 30%
+ */
+
+interface Props {
+  title?: string;
+}
+
+const { title = 'Strengths & Weaknesses' } = Astro.props;
+const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+---
+
+<div id="sw-comparison" class="sw-comparison card hidden" data-api-url={apiUrl}>
+  <!-- Header -->
+  <div class="sw-comparison-header">
+    <h3 class="sw-comparison-title">{title}</h3>
+  </div>
+
+  <!-- Legend -->
+  <div class="sw-comparison-legend">
+    <div class="legend-item">
+      <span class="legend-dot primary"></span>
+      <span id="sw-legend-primary" class="legend-name">Primary</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-dot secondary"></span>
+      <span id="sw-legend-secondary" class="legend-name">Comparison</span>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="sw-comparison-body">
+    <!-- Loading State -->
+    <div id="sw-comparison-loading" class="sw-loading">
+      <div class="sw-columns">
+        <div class="sw-column">
+          <div class="skeleton-header"></div>
+          <div class="skeleton-item"></div>
+          <div class="skeleton-item"></div>
+        </div>
+        <div class="sw-column">
+          <div class="skeleton-header"></div>
+          <div class="skeleton-item"></div>
+          <div class="skeleton-item"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="sw-comparison-content" class="sw-content hidden">
+      <!-- Strengths Section -->
+      <div class="sw-section">
+        <div class="section-header">
+          <span class="section-icon strength-icon">+</span>
+          <h4 class="section-title">Strengths</h4>
+        </div>
+        <div class="sw-columns">
+          <div class="sw-column primary">
+            <div id="sw-primary-strengths" class="sw-list"></div>
+          </div>
+          <div class="sw-column secondary">
+            <div id="sw-secondary-strengths" class="sw-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Weaknesses Section -->
+      <div class="sw-section">
+        <div class="section-header">
+          <span class="section-icon weakness-icon">-</span>
+          <h4 class="section-title">Weaknesses</h4>
+        </div>
+        <div class="sw-columns">
+          <div class="sw-column primary">
+            <div id="sw-primary-weaknesses" class="sw-list"></div>
+          </div>
+          <div class="sw-column secondary">
+            <div id="sw-secondary-weaknesses" class="sw-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="sw-comparison-empty" class="sw-empty hidden">
+      <p>No statistics data available for comparison</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="sw-comparison-error" class="sw-error hidden">
+      <p>Unable to load strengths and weaknesses</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .sw-comparison {
+    width: 100%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0.375rem;
+    overflow: hidden;
+  }
+
+  .sw-comparison.hidden {
+    display: none;
+  }
+
+  .sw-comparison-header {
+    padding: 1.25rem 1.5rem 0.75rem;
+    border-bottom: none;
+  }
+
+  .sw-comparison-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  :global(.dark) .sw-comparison-title {
+    color: var(--text-dark);
+  }
+
+  /* Legend */
+  .sw-comparison-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 0 1.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  :global(.dark) .sw-comparison-legend {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .legend-dot.primary {
+    background-color: var(--compare-primary);
+  }
+
+  .legend-dot.secondary {
+    background-color: var(--compare-secondary);
+  }
+
+  :global(.dark) .legend-dot.primary {
+    background-color: var(--compare-primary-dark);
+  }
+
+  :global(.dark) .legend-dot.secondary {
+    background-color: var(--compare-secondary-dark);
+  }
+
+  .legend-name {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.dark) .legend-name {
+    color: var(--text-secondary-dark);
+  }
+
+  /* Body */
+  .sw-comparison-body {
+    padding: 1rem 1.5rem 1.25rem;
+  }
+
+  /* Loading */
+  .sw-loading {
+    padding: 0.5rem 0;
+  }
+
+  .skeleton-header {
+    width: 80px;
+    height: 14px;
+    background: var(--border);
+    border-radius: 3px;
+    margin-bottom: 0.5rem;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .skeleton-item {
+    height: 32px;
+    background: var(--border);
+    border-radius: 4px;
+    margin-bottom: 0.25rem;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  :global(.dark) .skeleton-header,
+  :global(.dark) .skeleton-item {
+    background: var(--border-dark);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Content */
+  .sw-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* Section */
+  .sw-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .section-icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: #ffffff;
+  }
+
+  .strength-icon {
+    background-color: var(--percentile-elite);
+  }
+
+  .weakness-icon {
+    background-color: var(--percentile-poor);
+  }
+
+  .section-title {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  :global(.dark) .section-title {
+    color: var(--text-dark);
+  }
+
+  /* Columns */
+  .sw-columns {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .sw-column {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .sw-column.primary {
+    border-left: 3px solid var(--compare-primary);
+    padding-left: 0.5rem;
+  }
+
+  .sw-column.secondary {
+    border-left: 3px solid var(--compare-secondary);
+    padding-left: 0.5rem;
+  }
+
+  :global(.dark) .sw-column.primary {
+    border-left-color: var(--compare-primary-dark);
+  }
+
+  :global(.dark) .sw-column.secondary {
+    border-left-color: var(--compare-secondary-dark);
+  }
+
+  /* List */
+  .sw-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-height: 60px;
+  }
+
+  .sw-list :global(.sw-item) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.375rem 0.5rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    gap: 0.5rem;
+  }
+
+  :global(.dark) .sw-list :global(.sw-item) {
+    background: var(--bg-dark);
+    border-color: var(--border-dark);
+  }
+
+  .sw-list :global(.sw-item-label) {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+  }
+
+  :global(.dark) .sw-list :global(.sw-item-label) {
+    color: var(--text-dark);
+  }
+
+  .sw-list :global(.sw-item-indicator) {
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: -0.05em;
+    flex-shrink: 0;
+  }
+
+  .sw-list :global(.sw-item-indicator.strength) {
+    color: var(--percentile-elite);
+  }
+
+  .sw-list :global(.sw-item-indicator.weakness) {
+    color: var(--percentile-poor);
+  }
+
+  .sw-list :global(.sw-none) {
+    padding: 0.5rem;
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 0.75rem;
+    font-style: italic;
+  }
+
+  :global(.dark) .sw-list :global(.sw-none) {
+    color: var(--text-tertiary-dark);
+  }
+
+  /* Empty & Error States */
+  .sw-empty,
+  .sw-error {
+    padding: 1.5rem 0;
+    text-align: center;
+  }
+
+  .sw-empty p,
+  .sw-error p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-tertiary);
+  }
+
+  :global(.dark) .sw-empty p,
+  :global(.dark) .sw-error p {
+    color: var(--text-tertiary-dark);
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .sw-comparison-header {
+      padding: 1rem;
+    }
+
+    .sw-comparison-title {
+      font-size: 0.9rem;
+    }
+
+    .sw-comparison-legend {
+      padding: 0 1rem 0.75rem;
+      gap: 1rem;
+    }
+
+    .sw-comparison-body {
+      padding: 0.75rem 1rem 1rem;
+    }
+
+    .sw-columns {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .sw-list :global(.sw-item) {
+      padding: 0.25rem 0.375rem;
+    }
+
+    .sw-list :global(.sw-item-label) {
+      font-size: 0.75rem;
+    }
+
+    .sw-list :global(.sw-item-indicator) {
+      font-size: 0.75rem;
+    }
+  }
+</style>
+
+<script>
+  import { escapeHtml } from '../lib/utils/dom';
+  import { swrFetch } from '../lib/utils/api-fetcher';
+  import { categorizeStats, type Category } from '../lib/utils/stats-categorizer';
+
+  /**
+   * Normalize percentiles from API (handles both Record and Array formats)
+   */
+  function normalizePercentiles(
+    percentiles: Record<string, number> | Array<{ stat_key: string; percentile: number }> | undefined
+  ): Record<string, number> {
+    if (!percentiles) return {};
+
+    if (Array.isArray(percentiles)) {
+      const result: Record<string, number> = {};
+      for (const p of percentiles) {
+        if (p.stat_key && typeof p.percentile === 'number') {
+          result[p.stat_key] = p.percentile;
+        }
+      }
+      return result;
+    }
+
+    return percentiles as Record<string, number>;
+  }
+
+  interface StrengthWeaknessItem {
+    label: string;
+    indicator: string;
+    type: 'strength' | 'weakness';
+  }
+
+  interface EntityStrengthsWeaknesses {
+    strengths: StrengthWeaknessItem[];
+    weaknesses: StrengthWeaknessItem[];
+  }
+
+  /**
+   * Get indicator based on percentile bracket
+   */
+  function getIndicator(percentile: number): { symbol: string; count: number; type: 'strength' | 'weakness' } | null {
+    if (percentile >= 90) return { symbol: '+', count: 4, type: 'strength' };
+    if (percentile >= 80) return { symbol: '+', count: 3, type: 'strength' };
+    if (percentile >= 70) return { symbol: '+', count: 2, type: 'strength' };
+    if (percentile <= 10) return { symbol: '-', count: 4, type: 'weakness' };
+    if (percentile <= 20) return { symbol: '-', count: 3, type: 'weakness' };
+    if (percentile <= 30) return { symbol: '-', count: 2, type: 'weakness' };
+    return null;
+  }
+
+  /**
+   * Extract strengths and weaknesses from categories
+   */
+  function extractStrengthsWeaknesses(categories: Category[]): EntityStrengthsWeaknesses {
+    const strengths: StrengthWeaknessItem[] = [];
+    const weaknesses: StrengthWeaknessItem[] = [];
+
+    for (const category of categories) {
+      for (const stat of category.stats) {
+        if (stat.percentile === undefined || stat.percentile === null) continue;
+
+        const indicator = getIndicator(stat.percentile);
+        if (!indicator) continue;
+
+        const item: StrengthWeaknessItem = {
+          label: stat.label,
+          indicator: indicator.symbol.repeat(indicator.count),
+          type: indicator.type,
+        };
+
+        if (indicator.type === 'strength') {
+          strengths.push(item);
+        } else {
+          weaknesses.push(item);
+        }
+      }
+    }
+
+    // Sort by indicator count (strongest/weakest first) - more symbols = more extreme
+    strengths.sort((a, b) => b.indicator.length - a.indicator.length);
+    weaknesses.sort((a, b) => b.indicator.length - a.indicator.length);
+
+    // Limit to top 5 each
+    return {
+      strengths: strengths.slice(0, 5),
+      weaknesses: weaknesses.slice(0, 5),
+    };
+  }
+
+  /**
+   * Strengths & Weaknesses Comparison Manager
+   */
+  class StrengthsWeaknessesComparisonManager {
+    private container: HTMLElement | null = null;
+    private apiUrl: string = '';
+
+    private primaryName: string = 'Primary';
+    private secondaryName: string = 'Comparison';
+
+    constructor() {
+      this.container = document.getElementById('sw-comparison');
+      if (!this.container) return;
+
+      this.apiUrl = this.container.dataset.apiUrl || '';
+      this.exposeAPI();
+    }
+
+    private exposeAPI() {
+      (window as any).swComparison = {
+        show: (
+          sport: string,
+          primaryType: string,
+          primaryId: string,
+          secondaryType: string,
+          secondaryId: string,
+          primaryName?: string,
+          secondaryName?: string
+        ) => {
+          this.primaryName = primaryName || 'Primary';
+          this.secondaryName = secondaryName || 'Comparison';
+          this.show(sport, primaryType, primaryId, secondaryType, secondaryId);
+        },
+        hide: () => this.hide(),
+        isVisible: () => this.isVisible(),
+      };
+    }
+
+    public async show(
+      sport: string,
+      primaryType: string,
+      primaryId: string,
+      secondaryType: string,
+      secondaryId: string
+    ) {
+      if (!this.container) return;
+
+      // Show widget and loading state
+      this.container.classList.remove('hidden');
+      this.showLoading();
+
+      // Update legend names
+      const primaryLegendEl = document.getElementById('sw-legend-primary');
+      const secondaryLegendEl = document.getElementById('sw-legend-secondary');
+      if (primaryLegendEl) primaryLegendEl.textContent = this.primaryName;
+      if (secondaryLegendEl) secondaryLegendEl.textContent = this.secondaryName;
+
+      // Fetch stats for both entities in parallel
+      const [primaryResult, secondaryResult] = await Promise.all([
+        this.fetchStats(sport, primaryType, primaryId),
+        this.fetchStats(sport, secondaryType, secondaryId),
+      ]);
+
+      if (!primaryResult && !secondaryResult) {
+        this.showError();
+        return;
+      }
+
+      // Extract strengths and weaknesses
+      const primarySW = primaryResult ? extractStrengthsWeaknesses(primaryResult) : { strengths: [], weaknesses: [] };
+      const secondarySW = secondaryResult ? extractStrengthsWeaknesses(secondaryResult) : { strengths: [], weaknesses: [] };
+
+      this.render(primarySW, secondarySW);
+    }
+
+    private async fetchStats(
+      sport: string,
+      type: string,
+      id: string
+    ): Promise<Category[] | null> {
+      const url = `${this.apiUrl}/stats/${type}/${id}?sport=${sport.toUpperCase()}`;
+
+      try {
+        const { data } = await swrFetch<{
+          stats?: Record<string, unknown>;
+          percentiles?: Record<string, number> | Array<{ stat_key: string; percentile: number }>;
+        }>(url, {
+          staleTime: 5 * 60 * 1000,
+          cacheTime: 30 * 60 * 1000,
+        });
+
+        if (!data || !data.stats) {
+          return null;
+        }
+
+        // Normalize percentiles and categorize stats
+        const entityType = type === 'team' ? 'team' : 'player';
+        const percentiles = normalizePercentiles(data.percentiles);
+        return categorizeStats(data.stats, percentiles, sport.toUpperCase(), entityType);
+      } catch {
+        return null;
+      }
+    }
+
+    private render(primary: EntityStrengthsWeaknesses, secondary: EntityStrengthsWeaknesses): void {
+      const primaryStrengthsEl = document.getElementById('sw-primary-strengths');
+      const secondaryStrengthsEl = document.getElementById('sw-secondary-strengths');
+      const primaryWeaknessesEl = document.getElementById('sw-primary-weaknesses');
+      const secondaryWeaknessesEl = document.getElementById('sw-secondary-weaknesses');
+
+      if (!primaryStrengthsEl || !secondaryStrengthsEl || !primaryWeaknessesEl || !secondaryWeaknessesEl) {
+        return;
+      }
+
+      // Render primary strengths
+      primaryStrengthsEl.innerHTML = primary.strengths.length > 0
+        ? primary.strengths.map(item => this.renderItem(item)).join('')
+        : '<p class="sw-none">No notable strengths</p>';
+
+      // Render secondary strengths
+      secondaryStrengthsEl.innerHTML = secondary.strengths.length > 0
+        ? secondary.strengths.map(item => this.renderItem(item)).join('')
+        : '<p class="sw-none">No notable strengths</p>';
+
+      // Render primary weaknesses
+      primaryWeaknessesEl.innerHTML = primary.weaknesses.length > 0
+        ? primary.weaknesses.map(item => this.renderItem(item)).join('')
+        : '<p class="sw-none">No notable weaknesses</p>';
+
+      // Render secondary weaknesses
+      secondaryWeaknessesEl.innerHTML = secondary.weaknesses.length > 0
+        ? secondary.weaknesses.map(item => this.renderItem(item)).join('')
+        : '<p class="sw-none">No notable weaknesses</p>';
+
+      this.showContent();
+    }
+
+    private renderItem(item: StrengthWeaknessItem): string {
+      return `
+        <div class="sw-item">
+          <span class="sw-item-label">${escapeHtml(item.label)}</span>
+          <span class="sw-item-indicator ${item.type}">${item.indicator}</span>
+        </div>
+      `;
+    }
+
+    private showLoading() {
+      this.container?.querySelector('#sw-comparison-loading')?.classList.remove('hidden');
+      this.container?.querySelector('#sw-comparison-content')?.classList.add('hidden');
+      this.container?.querySelector('#sw-comparison-empty')?.classList.add('hidden');
+      this.container?.querySelector('#sw-comparison-error')?.classList.add('hidden');
+    }
+
+    private showContent() {
+      this.container?.querySelector('#sw-comparison-loading')?.classList.add('hidden');
+      this.container?.querySelector('#sw-comparison-content')?.classList.remove('hidden');
+      this.container?.querySelector('#sw-comparison-empty')?.classList.add('hidden');
+      this.container?.querySelector('#sw-comparison-error')?.classList.add('hidden');
+    }
+
+    private showError() {
+      this.container?.querySelector('#sw-comparison-loading')?.classList.add('hidden');
+      this.container?.querySelector('#sw-comparison-content')?.classList.add('hidden');
+      this.container?.querySelector('#sw-comparison-empty')?.classList.add('hidden');
+      this.container?.querySelector('#sw-comparison-error')?.classList.remove('hidden');
+    }
+
+    public hide() {
+      this.container?.classList.add('hidden');
+    }
+
+    public isVisible(): boolean {
+      return this.container ? !this.container.classList.contains('hidden') : false;
+    }
+  }
+
+  // Initialize
+  new StrengthsWeaknessesComparisonManager();
+</script>

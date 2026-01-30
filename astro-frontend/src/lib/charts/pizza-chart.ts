@@ -32,6 +32,18 @@ export interface PizzaChartOptions {
   labelOffset?: number;
 }
 
+export interface ComparisonEntityData {
+  name: string;
+  stats: PizzaChartStat[];
+}
+
+export interface ComparisonColors {
+  primary: string;
+  primaryBg: string;
+  secondary: string;
+  secondaryBg: string;
+}
+
 /**
  * Get the color for a percentile tier from CSS variables.
  */
@@ -64,6 +76,21 @@ function getChartColors() {
     label: style.getPropertyValue('--chart-label').trim() || '#1a1a1a',
     sublabel: style.getPropertyValue('--chart-sublabel').trim() || '#666666',
     cardBg: style.getPropertyValue('--bg-card').trim() || '#ffffff',
+  };
+}
+
+/**
+ * Get comparison colors from CSS variables.
+ */
+function getComparisonColors(): ComparisonColors {
+  const style = getComputedStyle(document.documentElement);
+  const isDark = document.documentElement.classList.contains('dark');
+
+  return {
+    primary: style.getPropertyValue(isDark ? '--compare-primary-dark' : '--compare-primary').trim() || '#2563eb',
+    primaryBg: style.getPropertyValue('--compare-primary-bg').trim() || '#dbeafe',
+    secondary: style.getPropertyValue(isDark ? '--compare-secondary-dark' : '--compare-secondary').trim() || '#dc2626',
+    secondaryBg: style.getPropertyValue('--compare-secondary-bg').trim() || '#fee2e2',
   };
 }
 
@@ -269,6 +296,175 @@ export class PizzaChart {
     centerLabel.setAttribute('font-size', '9px');
     centerLabel.setAttribute('font-weight', '500');
     centerLabel.textContent = 'PERCENTILE';
+    g.appendChild(centerLabel);
+
+    this.svg.appendChild(g);
+    this.container.appendChild(this.svg);
+  }
+
+  /**
+   * Render an overlapping comparison chart for two entities.
+   * Primary entity is rendered as filled slices, secondary as outlined.
+   */
+  renderComparison(primary: ComparisonEntityData, secondary: ComparisonEntityData): void {
+    // Build a unified stat list from both entities
+    const allStatKeys = new Set<string>();
+    primary.stats.forEach(s => allStatKeys.add(s.key));
+    secondary.stats.forEach(s => allStatKeys.add(s.key));
+
+    const statKeyArray = Array.from(allStatKeys);
+
+    if (statKeyArray.length < 3) {
+      this.container.innerHTML = '<p class="chart-no-data">Not enough data for comparison chart</p>';
+      return;
+    }
+
+    // Create lookup maps
+    const primaryMap = new Map(primary.stats.map(s => [s.key, s]));
+    const secondaryMap = new Map(secondary.stats.map(s => [s.key, s]));
+
+    const { width, height, innerRadius, outerRadius, labelOffset } = this.options;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const colors = getChartColors();
+    const compareColors = getComparisonColors();
+
+    // Clear previous content
+    this.container.innerHTML = '';
+
+    // Create SVG with viewBox for responsiveness
+    this.svg = createSvgElement('svg');
+    this.svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    this.svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    this.svg.setAttribute('class', 'pizza-chart-svg pizza-chart-comparison');
+    this.svg.style.width = '100%';
+    this.svg.style.maxWidth = `${width}px`;
+    this.svg.style.height = 'auto';
+
+    // Create main group
+    const g = createSvgElement('g');
+    g.setAttribute('transform', `translate(${centerX}, ${centerY})`);
+
+    // Calculate angle for each stat
+    const angleStep = (2 * Math.PI) / statKeyArray.length;
+
+    // Draw background rings
+    this.drawBackgroundRings(g, innerRadius, outerRadius, colors, centerX, centerY);
+
+    // Draw slices for both entities
+    statKeyArray.forEach((key, i) => {
+      const startAngle = i * angleStep - Math.PI / 2; // Start from top
+      const endAngle = startAngle + angleStep;
+      const labelAngle = (startAngle + endAngle) / 2;
+
+      const primaryStat = primaryMap.get(key);
+      const secondaryStat = secondaryMap.get(key);
+
+      // Draw primary entity slice (filled)
+      if (primaryStat) {
+        const percentile = Math.max(0, Math.min(100, primaryStat.percentile));
+        const sliceRadius = innerRadius + ((outerRadius - innerRadius) * percentile) / 100;
+        const arcPath = describeArc(0, 0, innerRadius, sliceRadius, startAngle, endAngle, 0.03);
+
+        const path = createSvgElement('path');
+        path.setAttribute('d', arcPath);
+        path.setAttribute('fill', compareColors.primary);
+        path.setAttribute('fill-opacity', '0.7');
+        path.setAttribute('stroke', compareColors.primary);
+        path.setAttribute('stroke-width', '1');
+        path.setAttribute('class', 'comparison-slice primary');
+        g.appendChild(path);
+      }
+
+      // Draw secondary entity slice (outlined/semi-transparent overlay)
+      if (secondaryStat) {
+        const percentile = Math.max(0, Math.min(100, secondaryStat.percentile));
+        const sliceRadius = innerRadius + ((outerRadius - innerRadius) * percentile) / 100;
+        const arcPath = describeArc(0, 0, innerRadius, sliceRadius, startAngle, endAngle, 0.03);
+
+        const path = createSvgElement('path');
+        path.setAttribute('d', arcPath);
+        path.setAttribute('fill', compareColors.secondary);
+        path.setAttribute('fill-opacity', '0.3');
+        path.setAttribute('stroke', compareColors.secondary);
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('stroke-dasharray', '4,2');
+        path.setAttribute('class', 'comparison-slice secondary');
+        g.appendChild(path);
+      }
+
+      // Draw stat label (use primary stat if available, else secondary)
+      const labelStat = primaryStat || secondaryStat;
+      if (labelStat) {
+        const labelRadius = outerRadius + labelOffset;
+        const labelX = Math.cos(labelAngle) * labelRadius;
+        const labelY = Math.sin(labelAngle) * labelRadius;
+
+        // Determine text anchor based on position
+        let textAnchor: string = 'middle';
+        if (labelX > 10) textAnchor = 'start';
+        else if (labelX < -10) textAnchor = 'end';
+
+        // Draw stat label (name)
+        const labelText = createSvgElement('text');
+        labelText.setAttribute('x', String(labelX));
+        labelText.setAttribute('y', String(labelY - 6));
+        labelText.setAttribute('text-anchor', textAnchor);
+        labelText.setAttribute('fill', colors.label);
+        labelText.setAttribute('font-size', '10px');
+        labelText.setAttribute('font-weight', '500');
+        labelText.textContent = truncateLabel(labelStat.label, 14);
+        g.appendChild(labelText);
+
+        // Draw value labels for both entities (stacked)
+        const primaryValue = primaryStat ? String(primaryStat.value) : '-';
+        const secondaryValue = secondaryStat ? String(secondaryStat.value) : '-';
+
+        const valuesText = createSvgElement('text');
+        valuesText.setAttribute('x', String(labelX));
+        valuesText.setAttribute('y', String(labelY + 8));
+        valuesText.setAttribute('text-anchor', textAnchor);
+        valuesText.setAttribute('font-size', '8px');
+
+        // Primary value
+        const primarySpan = createSvgElement('tspan');
+        primarySpan.setAttribute('fill', compareColors.primary);
+        primarySpan.setAttribute('font-weight', '600');
+        primarySpan.textContent = primaryValue;
+        valuesText.appendChild(primarySpan);
+
+        // Separator
+        const sepSpan = createSvgElement('tspan');
+        sepSpan.setAttribute('fill', colors.sublabel);
+        sepSpan.textContent = ' / ';
+        valuesText.appendChild(sepSpan);
+
+        // Secondary value
+        const secondarySpan = createSvgElement('tspan');
+        secondarySpan.setAttribute('fill', compareColors.secondary);
+        secondarySpan.setAttribute('font-weight', '600');
+        secondarySpan.textContent = secondaryValue;
+        valuesText.appendChild(secondarySpan);
+
+        g.appendChild(valuesText);
+      }
+    });
+
+    // Draw center circle
+    const centerCircle = createSvgElement('circle');
+    centerCircle.setAttribute('r', String(innerRadius - 2));
+    centerCircle.setAttribute('fill', colors.cardBg);
+    g.appendChild(centerCircle);
+
+    // Center label - "VS"
+    const centerLabel = createSvgElement('text');
+    centerLabel.setAttribute('x', '0');
+    centerLabel.setAttribute('y', '5');
+    centerLabel.setAttribute('text-anchor', 'middle');
+    centerLabel.setAttribute('fill', colors.sublabel);
+    centerLabel.setAttribute('font-size', '12px');
+    centerLabel.setAttribute('font-weight', '700');
+    centerLabel.textContent = 'VS';
     g.appendChild(centerLabel);
 
     this.svg.appendChild(g);

@@ -14,6 +14,7 @@
  */
 
 import { SPORTS, type AutocompleteEntity } from '../types';
+import { getPositionGroup } from './position-groups';
 
 export interface EntityDataStoreState {
   loaded: boolean;
@@ -106,7 +107,7 @@ class EntityDataStore {
    * Fetch and parse sport data file.
    * Supports both old format (players/teams items) and new v2.0 format (entities array).
    */
-  private async fetchAndParse(dataFile: string, _sport: SportKey): Promise<AutocompleteEntity[]> {
+  private async fetchAndParse(dataFile: string, sport: SportKey): Promise<AutocompleteEntity[]> {
     const response = await fetch(dataFile);
     if (!response.ok) {
       throw new Error(`Failed to fetch ${dataFile}: ${response.status}`);
@@ -118,11 +119,16 @@ class EntityDataStore {
     // New v2.0 format: flat entities array with compound IDs
     if (json.entities && Array.isArray(json.entities)) {
       for (const entity of json.entities) {
+        const rawPosition = entity.position || entity.meta?.position;
+        const positionGroup = entity.type === 'player' ? getPositionGroup(sport, rawPosition) : undefined;
+
         items.push({
           id: String(entity.entity_id ?? entity.id),
           name: entity.name,
           type: entity.type as 'player' | 'team',
           team: entity.meta?.team ?? entity.meta?.abbreviation,
+          position: rawPosition,
+          positionGroup,
         });
       }
       return items;
@@ -132,25 +138,35 @@ class EntityDataStore {
     // Handle players
     if (json.players?.items) {
       for (const p of json.players.items) {
+        const rawPosition = p.position;
+        const positionGroup = getPositionGroup(sport, rawPosition);
+
         items.push({
           id: String(p.id),
           name: p.name,
           type: 'player',
           team: p.currentTeam || p.team,
+          position: rawPosition,
+          positionGroup,
         });
       }
     } else if (Array.isArray(json.players)) {
       for (const p of json.players) {
+        const rawPosition = p.position;
+        const positionGroup = getPositionGroup(sport, rawPosition);
+
         items.push({
           id: String(p.id),
           name: p.name,
           type: 'player',
           team: p.currentTeam || p.team,
+          position: rawPosition,
+          positionGroup,
         });
       }
     }
 
-    // Handle teams
+    // Handle teams (no position data)
     if (json.teams?.items) {
       for (const t of json.teams.items) {
         items.push({
