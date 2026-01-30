@@ -200,6 +200,9 @@ export interface SimilarityResponse {
 export interface SimilarEntity {
   entity_id: number;
   entity_name: string;
+  first_name?: string;             // For FOOTBALL name display
+  last_name?: string;              // For FOOTBALL name display
+  photo_url?: string;              // Entity avatar image
   entity_type: EntityType;
   similarity_score: number;        // 0.0 - 1.0
   similarity_label?: string;       // "Very Similar", "Similar", etc.

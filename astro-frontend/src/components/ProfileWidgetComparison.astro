@@ -509,7 +509,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
           name = (data as TeamProfileResponse).name || 'Primary';
         } else {
           const playerData = data as PlayerProfileResponse;
-          name = playerData.name || `${playerData.firstname || ''} ${playerData.lastname || ''}`.trim() || 'Primary';
+          name = playerData.name || playerData.full_name || `${playerData.first_name || ''} ${playerData.last_name || ''}`.trim() || 'Primary';
         }
         primaryNameEl.textContent = name;
       }
@@ -521,7 +521,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
           name = (data as TeamProfileResponse).name || 'Comparison';
         } else {
           const playerData = data as PlayerProfileResponse;
-          name = playerData.name || `${playerData.firstname || ''} ${playerData.lastname || ''}`.trim() || 'Comparison';
+          name = playerData.name || playerData.full_name || `${playerData.first_name || ''} ${playerData.last_name || ''}`.trim() || 'Comparison';
         }
         secondaryNameEl.textContent = name;
       }
