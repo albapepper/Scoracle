@@ -2,13 +2,15 @@
 /**
  * Similarity Tab Component
  *
- * Displays similar entities based on 64-dimensional embeddings.
- * Fetches: GET /api/v1/ml/similar/{entity_type}/{entity_id}?limit=5
+ * Displays similar entities based on ML embeddings.
+ * Fetches: GET /api/v1/similarity/{entity_type}/{entity_id}?sport=X&season=Y&limit=5
  *
  * Features:
- * - Similarity score with visual bar
+ * - Similarity score with visual bar and label
+ * - Shared traits and key differences display
  * - Click to navigate to entity stats page
  * - Lazy loading when tab is activated
+ * - Prefetch on tab hover for faster perceived load
  */
 
 const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -172,6 +174,89 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     background: #6b7280;
   }
 
+  /* Header layout for name + label */
+  #similarity-tab-content :global(.similarity-item-header) {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  /* Similarity label badge */
+  #similarity-tab-content :global(.similarity-label) {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.65rem;
+    font-weight: 500;
+    margin-left: 0.5rem;
+    white-space: nowrap;
+  }
+
+  #similarity-tab-content :global(.similarity-label.label-very-similar) {
+    background-color: #dcfce7;
+    color: #166534;
+  }
+
+  #similarity-tab-content :global(.similarity-label.label-similar) {
+    background-color: #dbeafe;
+    color: #1e40af;
+  }
+
+  #similarity-tab-content :global(.similarity-label.label-somewhat) {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+
+  #similarity-tab-content :global(.similarity-label.label-default) {
+    background-color: #f3f4f6;
+    color: #374151;
+  }
+
+  /* Dark mode labels */
+  :global(.dark) #similarity-tab-content :global(.similarity-label.label-very-similar) {
+    background-color: #166534;
+    color: #dcfce7;
+  }
+
+  :global(.dark) #similarity-tab-content :global(.similarity-label.label-similar) {
+    background-color: #1e40af;
+    color: #dbeafe;
+  }
+
+  :global(.dark) #similarity-tab-content :global(.similarity-label.label-somewhat) {
+    background-color: #92400e;
+    color: #fef3c7;
+  }
+
+  :global(.dark) #similarity-tab-content :global(.similarity-label.label-default) {
+    background-color: #374151;
+    color: #f3f4f6;
+  }
+
+  /* Traits & differences */
+  #similarity-tab-content :global(.similarity-traits) {
+    font-size: 0.7rem;
+    color: #16a34a;
+    margin-top: 0.375rem;
+    line-height: 1.4;
+  }
+
+  #similarity-tab-content :global(.similarity-differences) {
+    font-size: 0.7rem;
+    color: #f97316;
+    margin-top: 0.25rem;
+    line-height: 1.4;
+  }
+
+  :global(.dark) #similarity-tab-content :global(.similarity-traits) {
+    color: #4ade80;
+  }
+
+  :global(.dark) #similarity-tab-content :global(.similarity-differences) {
+    color: #fb923c;
+  }
+
   .empty-state {
     text-align: center;
     padding: 2rem;
@@ -190,12 +275,14 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 <script>
   import { parseEntityParams, escapeHtml } from '../../lib/utils/dom';
   import { swrFetch, setPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
+  import { getCurrentSeason } from '../../lib/utils/season';
   import type { SimilarityResponse, SimilarEntity } from '../../lib/types';
 
   class SimilarityTabManager {
     private container: HTMLElement | null;
     private apiUrl: string;
     private loaded = false;
+    private prefetched = false;
 
     constructor() {
       // Scope query to correct parent view based on entity type from URL
@@ -204,6 +291,35 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       const parentView = document.getElementById(viewId);
       this.container = parentView?.querySelector('#similarity-tab-content') as HTMLElement | null;
       this.apiUrl = this.container?.dataset.apiUrl || '';
+    }
+
+    /**
+     * Build the API URL with required parameters
+     */
+    private buildUrl(sport: string, type: string, id: string): string {
+      const season = getCurrentSeason(sport);
+      return `${this.apiUrl}/similarity/${type}/${id}?sport=${sport.toUpperCase()}&season=${season}&limit=5`;
+    }
+
+    /**
+     * Prefetch data without rendering (called on tab hover)
+     * Populates SWR cache for faster load when tab is clicked
+     */
+    async prefetch(): Promise<void> {
+      if (this.prefetched || this.loaded || !this.container) return;
+      this.prefetched = true;
+
+      const params = parseEntityParams();
+      const { sport, type, id } = params;
+      if (!sport || !type || !id) return;
+
+      try {
+        const url = this.buildUrl(sport, type, id);
+        // Prefetch into SWR cache (no rendering)
+        await swrFetch<SimilarityResponse>(url, CACHE_PRESETS.ml);
+      } catch {
+        // Silent fail on prefetch - will retry on actual load
+      }
     }
 
     async load(): Promise<void> {
@@ -219,7 +335,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       }
 
       try {
-        const url = `${this.apiUrl}/ml/similar/${type}/${id}?limit=5`;
+        const url = this.buildUrl(sport, type, id);
         const { data } = await swrFetch<SimilarityResponse>(url, CACHE_PRESETS.ml);
 
         if (!data || !data.similar_entities || data.similar_entities.length === 0) {
@@ -227,7 +343,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
           return;
         }
 
-        setPageData('ml', { similarity: data });
+        setPageData('similarity', { data });
         this.renderList(data.similar_entities, sport);
         this.showContent();
       } catch (err) {
@@ -236,6 +352,20 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         }
         this.showError();
       }
+    }
+
+    /**
+     * Get CSS class for similarity label based on text
+     */
+    private getLabelClass(label?: string): string {
+      if (!label) return 'label-default';
+      const lower = label.toLowerCase();
+      if (lower.includes('very similar')) return 'label-very-similar';
+      if (lower.includes('highly similar')) return 'label-very-similar';
+      if (lower.includes('similar')) return 'label-similar';
+      if (lower.includes('somewhat')) return 'label-somewhat';
+      if (lower.includes('moderate')) return 'label-somewhat';
+      return 'label-default';
     }
 
     private renderList(entities: SimilarEntity[], sport: string): void {
@@ -247,14 +377,33 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         const scoreClass = scorePercent >= 80 ? 'high' : scorePercent >= 60 ? 'medium' : 'low';
         const meta = [entity.position, entity.team].filter(Boolean).join(' - ');
 
+        // Label with color coding
+        const labelClass = this.getLabelClass(entity.similarity_label);
+        const labelHtml = entity.similarity_label
+          ? `<span class="similarity-label ${labelClass}">${escapeHtml(entity.similarity_label)}</span>`
+          : '';
+
+        // Robust handling of traits/differences arrays
+        const traitsHtml = Array.isArray(entity.shared_traits) && entity.shared_traits.length > 0
+          ? `<div class="similarity-traits">✓ Strong in: ${entity.shared_traits.map(t => escapeHtml(t)).join(', ')}</div>`
+          : '';
+        const diffsHtml = Array.isArray(entity.key_differences) && entity.key_differences.length > 0
+          ? `<div class="similarity-differences">✗ Differs in: ${entity.key_differences.map(d => escapeHtml(d)).join(', ')}</div>`
+          : '';
+
         return `
           <li class="similarity-item"
               data-sport="${escapeHtml(sport)}"
               data-type="${escapeHtml(entity.entity_type)}"
               data-id="${entity.entity_id}">
             <div class="similarity-item-info">
-              <p class="similarity-item-name">${escapeHtml(entity.entity_name)}</p>
+              <div class="similarity-item-header">
+                <p class="similarity-item-name">${escapeHtml(entity.entity_name)}</p>
+                ${labelHtml}
+              </div>
               ${meta ? `<span class="similarity-item-meta">${escapeHtml(meta)}</span>` : ''}
+              ${traitsHtml}
+              ${diffsHtml}
             </div>
             <div class="similarity-score">
               <span class="score-value">${scorePercent}%</span>
@@ -300,5 +449,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   }
 
   const manager = new SimilarityTabManager();
-  (window as any).similarityTab = { load: () => manager.load() };
+  (window as any).similarityTab = {
+    load: () => manager.load(),
+    prefetch: () => manager.prefetch(),
+  };
 </script>

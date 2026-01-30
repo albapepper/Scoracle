@@ -188,7 +188,7 @@ export interface TrendingVibe {
 
 // --- Similarity Types ---
 
-/** Similar entities from GET /api/v1/ml/similar/{entity_type}/{entity_id} */
+/** Similar entities from GET /api/v1/similarity/{entity_type}/{entity_id} */
 export interface SimilarityResponse {
   entity_id: number;
   entity_name: string;
@@ -201,7 +201,10 @@ export interface SimilarEntity {
   entity_id: number;
   entity_name: string;
   entity_type: EntityType;
-  similarity_score: number;
+  similarity_score: number;        // 0.0 - 1.0
+  similarity_label?: string;       // "Very Similar", "Similar", etc.
+  shared_traits?: string[];        // Stats where both entities excel
+  key_differences?: string[];      // Stats with largest gaps
   team?: string;
   position?: string;
 }

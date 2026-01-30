@@ -180,6 +180,13 @@ const { title = 'Statistics' } = Astro.props;
             (window as any).similarityTab?.load();
           }
         });
+
+        // Prefetch similarity data on hover (for faster perceived load)
+        if (btn.getAttribute('data-tab') === 'player-similarity') {
+          btn.addEventListener('mouseenter', () => {
+            (window as any).similarityTab?.prefetch?.();
+          }, { once: true }); // Only prefetch once
+        }
       });
     }
   }
