@@ -129,6 +129,7 @@ class EntityDataStore {
           team: entity.meta?.team ?? entity.meta?.abbreviation,
           position: rawPosition,
           positionGroup,
+          sport,
         });
       }
       return items;
@@ -148,6 +149,7 @@ class EntityDataStore {
           team: p.currentTeam || p.team,
           position: rawPosition,
           positionGroup,
+          sport,
         });
       }
     } else if (Array.isArray(json.players)) {
@@ -162,6 +164,7 @@ class EntityDataStore {
           team: p.currentTeam || p.team,
           position: rawPosition,
           positionGroup,
+          sport,
         });
       }
     }
@@ -173,6 +176,7 @@ class EntityDataStore {
           id: String(t.id),
           name: t.name,
           type: 'team',
+          sport,
         });
       }
     } else if (Array.isArray(json.teams)) {
@@ -181,6 +185,7 @@ class EntityDataStore {
           id: String(t.id),
           name: t.name,
           type: 'team',
+          sport,
         });
       }
     }

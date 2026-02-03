@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import CrystalBallSelector from '../components/CrystalBallSelector.astro';
 ---
 
-<Layout title="Scoracle">
+<Layout title="Scoracle" showHeaderSearch={false}>
   <main class="home-main">
     <div class="central-card">
       <CrystalBallSelector />
@@ -17,7 +17,7 @@ import CrystalBallSelector from '../components/CrystalBallSelector.astro';
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding-top: calc((100vh - 3.5rem) * 0.15);
+    padding-top: calc((100vh - 3.5rem) * 0.05);
     padding-left: 2rem;
     padding-right: 2rem;
     padding-bottom: 2rem;
@@ -38,7 +38,7 @@ import CrystalBallSelector from '../components/CrystalBallSelector.astro';
   @media (max-width: 768px) {
     .home-main {
       padding: 1rem;
-      padding-top: calc((100vh - 3.5rem) * 0.1);
+      padding-top: 1rem;
     }
 
     .central-card {

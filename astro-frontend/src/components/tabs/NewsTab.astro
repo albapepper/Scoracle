@@ -194,13 +194,13 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
       list.innerHTML = articles.map(article => {
         const title = escapeHtml(article.title || 'Untitled');
-        const link = article.link || '#';
+        const url = article.url || '#';
         const source = escapeHtml(article.source || '');
-        const date = formatDate(article.pub_date ?? undefined);
+        const date = formatDate(article.published_at ?? undefined);
 
         return `<div class="content-item">
           <h3 class="content-title">
-            <a href="${link}" target="_blank" rel="noopener">${title}</a>
+            <a href="${url}" target="_blank" rel="noopener">${title}</a>
           </h3>
           <div class="content-meta">${source}${source && date ? ' · ' : ''}${date}</div>
         </div>`;

@@ -53,9 +53,11 @@ export function getValidSportIds(): SportId[] {
 // News article from Google News RSS
 export interface NewsArticle {
   title: string;
-  link: string;
-  pub_date: string | null;
+  url: string;
+  published_at: string | null;
   source: string;
+  description?: string;
+  image_url?: string | null;
 }
 
 // News response from GET /api/v1/news/{entity_name}
@@ -78,6 +80,7 @@ export interface AutocompleteEntity {
   team?: string;
   position?: string;        // Raw position from API (e.g., 'PG', 'SF', 'GK')
   positionGroup?: string;   // Normalized group (e.g., 'Guard', 'Forward', 'Goalkeeper')
+  sport?: string;           // Sport identifier (e.g., 'nba', 'nfl', 'football') - used for multi-sport search
 }
 
 // ============================================

@@ -8,6 +8,7 @@ interface Props {
   image?: string;
   canonical?: string;
   type?: string;
+  showHeaderSearch?: boolean;
 }
 
 const { 
@@ -16,6 +17,7 @@ const {
   image = 'https://scoracle.vercel.app/og-image.png',
   canonical = Astro.url.href,
   type = 'website',
+  showHeaderSearch = true,
 } = Astro.props;
 
 // Structured data for SEO
@@ -66,31 +68,14 @@ const structuredData = {
     <!-- Structured Data -->
     <script type="application/ld+json" set:html={JSON.stringify(structuredData)} is:inline></script>
     
-    <!-- Theme initialization script (runs before page load to prevent flash) -->
+    <!-- Theme initialization script - forces light mode (dark mode disabled for now) -->
     <script is:inline>
-      const getInitialTheme = () => {
-        const stored = localStorage.getItem('color-scheme');
-        if (stored && ['light', 'dark', 'system'].includes(stored)) {
-          return stored;
-        }
-        return 'system';
-      };
-
-      const applyTheme = (scheme) => {
-        let effective = scheme;
-        if (scheme === 'system') {
-          effective = window.matchMedia('(prefers-color-scheme: dark)').matches 
-            ? 'dark' 
-            : 'light';
-        }
-        document.documentElement.classList.toggle('dark', effective === 'dark');
-      };
-
-      applyTheme(getInitialTheme());
+      // Ensure light mode is always active by removing any dark class
+      document.documentElement.classList.remove('dark');
     </script>
   </head>
   <body>
-    <Header />
+    <Header showSearch={showHeaderSearch} />
     <main>
       <slot />
     </main>
