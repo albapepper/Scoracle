@@ -453,6 +453,5 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
   }
 
-  const manager = new TransfersTabManager();
-  (window as any).transfersTab = { load: () => manager.load() };
+  new TransfersTabManager();
 </script>

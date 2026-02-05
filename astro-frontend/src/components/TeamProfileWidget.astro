@@ -41,7 +41,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
     <!-- Content -->
     <div id="team-pw-content" class="pw-content">
-      <img id="team-pw-logo" class="pw-logo" src="" alt="" style="display: none;" />
+      <img id="team-pw-logo" class="pw-logo" src="" alt="" loading="lazy" style="display: none;" />
       <h2 id="team-pw-name" class="pw-name"></h2>
       <p id="team-pw-subtitle" class="pw-subtitle"></p>
       <div id="team-pw-details" class="pw-details"></div>
@@ -329,6 +329,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 <script>
   import { escapeHtml, parseEntityParams } from '../lib/utils/dom';
   import { swrFetch, setPageData, CACHE_PRESETS } from '../lib/utils/api-fetcher';
+  import { register } from '../lib/utils/component-bus';
 
   /**
    * Team profile data shape from backend
@@ -422,15 +423,15 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private exposeAPI() {
-      // Expose widget API for other components
-      (window as any).teamProfileWidget = {
+      // Register widget API on component bus
+      register('teamProfileWidget', {
         getSport: () => this.sport,
-        getType: () => 'team',
+        getType: () => 'team' as const,
         getId: () => this.id,
         getName: () => this.entityName,
         hide: () => this.hide(),
         show: () => this.showWidget(),
-      };
+      });
     }
 
     private onCompareClick() {

@@ -646,12 +646,14 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
   }
 
-  // Initialize manager and expose on window
+  import { register } from '../../lib/utils/component-bus';
+
+  // Initialize manager and register on component bus
   const manager = new PlayerStatsTabManager();
-  (window as any).playerStatsTab = {
+  register('playerStatsTab', {
     load: () => manager.load(),
     refreshChart: () => manager.refreshChart(),
-  };
+  });
 
   // Defer to allow first paint, then load stats
   requestAnimationFrame(() => {

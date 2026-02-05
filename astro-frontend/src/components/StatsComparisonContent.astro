@@ -369,6 +369,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   import { swrFetch } from '../lib/utils/api-fetcher';
   import { PizzaChart, type PizzaChartStat, type ComparisonEntityData } from '../lib/charts/pizza-chart';
   import { categorizeStats } from '../lib/utils/stats-categorizer';
+  import { register, get } from '../lib/utils/component-bus';
 
   /**
    * Normalize percentiles from API (handles both Record and Array formats)
@@ -453,7 +454,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private exposeAPI() {
-      (window as any).statsComparisonContent = {
+      register('statsComparisonContent', {
         show: (
           sport: string,
           primaryType: string,
@@ -469,7 +470,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         },
         hide: () => this.hide(),
         isVisible: () => this.isVisible(),
-      };
+      });
     }
 
     public async show(
@@ -497,31 +498,25 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.showPizzaLoading();
 
       // Trigger child components
-      const swComparison = (window as any).swComparison;
-      if (swComparison) {
-        swComparison.show(
-          sport,
-          primaryType,
-          primaryId,
-          secondaryType,
-          secondaryId,
-          this.primaryName,
-          this.secondaryName
-        );
-      }
+      get('swComparison')?.show(
+        sport,
+        primaryType,
+        primaryId,
+        secondaryType,
+        secondaryId,
+        this.primaryName,
+        this.secondaryName
+      );
 
-      const statsComparison = (window as any).statsComparison;
-      if (statsComparison) {
-        statsComparison.show(
-          sport,
-          primaryType,
-          primaryId,
-          secondaryType,
-          secondaryId,
-          this.primaryName,
-          this.secondaryName
-        );
-      }
+      get('statsComparison')?.show(
+        sport,
+        primaryType,
+        primaryId,
+        secondaryType,
+        secondaryId,
+        this.primaryName,
+        this.secondaryName
+      );
 
       // Fetch and render pizza chart
       try {
@@ -635,11 +630,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.container?.classList.add('hidden');
 
       // Hide child components
-      const swComparison = (window as any).swComparison;
-      if (swComparison) swComparison.hide();
-
-      const statsComparison = (window as any).statsComparison;
-      if (statsComparison) statsComparison.hide();
+      get('swComparison')?.hide();
+      get('statsComparison')?.hide();
 
       // Destroy pizza chart
       if (this.pizzaChart) {

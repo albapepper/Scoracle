@@ -491,6 +491,5 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
   }
 
-  const manager = new VibesTabManager();
-  (window as any).vibesTab = { load: () => manager.load() };
+  new VibesTabManager();
 </script>

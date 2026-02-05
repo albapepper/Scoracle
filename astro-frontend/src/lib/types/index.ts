@@ -16,18 +16,19 @@ export type EntityType = 'player' | 'team';
 export type SportId = 'NBA' | 'NFL' | 'FOOTBALL';
 
 // Sport Configuration - SINGLE SOURCE OF TRUTH
+// Note: Sport logos are handled via Astro <Image /> imports in CrystalBallSelector.astro
+// (src/assets/images/) for automatic WebP/AVIF optimization.
 export interface SportConfig {
   id: SportId;
   idLower: string;        // Lowercase version for URLs/files
   display: string;        // Display name
-  logo: string;           // Logo path
   dataFile: string;       // Path to JSON data file
 }
 
 export const SPORTS: readonly SportConfig[] = [
-  { id: 'NBA', idLower: 'nba', display: 'NBA', logo: '/NBA logo.png', dataFile: '/data/nba.json' },
-  { id: 'NFL', idLower: 'nfl', display: 'NFL', logo: '/NFL logo.png', dataFile: '/data/nfl.json' },
-  { id: 'FOOTBALL', idLower: 'football', display: 'Football', logo: '/fifa logo.png', dataFile: '/data/football.json' },
+  { id: 'NBA', idLower: 'nba', display: 'NBA', dataFile: '/data/nba.json' },
+  { id: 'NFL', idLower: 'nfl', display: 'NFL', dataFile: '/data/nfl.json' },
+  { id: 'FOOTBALL', idLower: 'football', display: 'Football', dataFile: '/data/football.json' },
 ] as const;
 
 // Helper functions for sport lookups

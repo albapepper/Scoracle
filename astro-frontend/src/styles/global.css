@@ -30,16 +30,16 @@
   --accent-muted-dark: #cccccc;
 
   /* Comparison colors - subtle, distinguishable */
-  --compare-primary: #2563eb;
-  --compare-primary-bg: #dbeafe;
-  --compare-secondary: #f97316;
-  --compare-secondary-bg: #ffedd5;
+  --compare-primary: #6b8fc7;
+  --compare-primary-bg: #e8eff8;
+  --compare-secondary: #b38da8;
+  --compare-secondary-bg: #f3ecf0;
 
   /* Comparison colors - dark mode */
-  --compare-primary-dark: #60a5fa;
-  --compare-primary-bg-dark: #1e3a5f;
-  --compare-secondary-dark: #fb923c;
-  --compare-secondary-bg-dark: #5f3a1e;
+  --compare-primary-dark: #94b8e0;
+  --compare-primary-bg-dark: #1e2d42;
+  --compare-secondary-dark: #cba8c0;
+  --compare-secondary-bg-dark: #3d2d3a;
 
   /* Percentile tier colors (light mode) */
   --percentile-elite: #16a34a;      /* 90-100% - Green */

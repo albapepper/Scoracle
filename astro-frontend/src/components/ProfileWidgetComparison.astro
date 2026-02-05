@@ -340,6 +340,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 <script>
   import { swrFetch, setPageData, CACHE_PRESETS } from '../lib/utils/api-fetcher';
+  import { register } from '../lib/utils/component-bus';
 
   // Raw API response types matching actual backend response
   interface PlayerProfileResponse {
@@ -397,7 +398,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private exposeAPI() {
-      (window as any).profileWidgetComparison = {
+      register('profileWidgetComparison', {
         show: (
           sport: string,
           primaryType: string,
@@ -411,7 +412,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         isVisible: () => this.isVisible(),
         getPrimaryData: () => this.primaryData,
         getSecondaryData: () => this.secondaryData,
-      };
+      });
     }
 
     public async show(

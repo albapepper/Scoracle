@@ -79,6 +79,7 @@ import StatsComparisonContent from '../components/StatsComparisonContent.astro';
 
 <script>
   import type { AutocompleteEntity } from '../lib/utils/autocomplete';
+  import { get, waitFor } from '../lib/utils/component-bus';
 
   /**
    * Entity Page Manager
@@ -135,7 +136,6 @@ import StatsComparisonContent from '../components/StatsComparisonContent.astro';
     private bindEvents() {
       // Listen for comparison add request
       window.addEventListener('comparison:add', ((event: CustomEvent) => {
-        console.log('[EntityPageManager] comparison:add event received', event.detail);
         const { sport, type, id, name, positionGroup } = event.detail;
         this.primarySport = sport;
         this.primaryType = type;
@@ -153,19 +153,13 @@ import StatsComparisonContent from '../components/StatsComparisonContent.astro';
     }
 
     private openComparisonModal() {
-      console.log('[EntityPageManager] openComparisonModal called');
-      const modal = (window as any).comparisonModal;
-      console.log('[EntityPageManager] comparisonModal exists?', !!modal);
+      const modal = get('comparisonModal');
       if (modal) {
-        // For players, pass the position group to filter the search
-        // For teams, positionGroup will be undefined (no filtering)
-        console.log('[EntityPageManager] Opening modal with callback...');
         modal.open(
           this.primarySport,
           this.primaryType,
           this.primaryId,
           (entity: AutocompleteEntity) => {
-            console.log('[EntityPageManager] Modal callback triggered with:', entity.name);
             this.onComparisonSelected(entity);
           },
           this.primaryType === 'player' ? this.primaryPositionGroup : undefined
@@ -174,7 +168,6 @@ import StatsComparisonContent from '../components/StatsComparisonContent.astro';
     }
 
     private onComparisonSelected(entity: AutocompleteEntity) {
-      console.log('[EntityPageManager] onComparisonSelected called with:', entity.name, entity.id);
       this.secondaryType = entity.type;
       this.secondaryId = entity.id;
       this.secondaryName = entity.name;
@@ -183,51 +176,35 @@ import StatsComparisonContent from '../components/StatsComparisonContent.astro';
     }
 
     private enterComparisonMode() {
-      console.log('[EntityPageManager] enterComparisonMode called');
-      console.log('[EntityPageManager] Primary:', this.primarySport, this.primaryType, this.primaryId);
-      console.log('[EntityPageManager] Secondary:', this.secondaryType, this.secondaryId);
-
       // Hide both single entity views
       this.playerView?.classList.add('hidden');
       this.teamView?.classList.add('hidden');
 
       // Show comparison view
       this.comparisonView?.classList.remove('hidden');
-      console.log('[EntityPageManager] Comparison view shown');
 
       // Initialize comparison widgets
-      const widgetComparison = (window as any).profileWidgetComparison;
-      console.log('[EntityPageManager] profileWidgetComparison exists?', !!widgetComparison);
-      if (widgetComparison) {
-        console.log('[EntityPageManager] Calling profileWidgetComparison.show()...');
-        widgetComparison.show(
-          this.primarySport,
-          this.primaryType,
-          this.primaryId,
-          this.secondaryType,
-          this.secondaryId
-        );
-      }
+      get('profileWidgetComparison')?.show(
+        this.primarySport,
+        this.primaryType,
+        this.primaryId,
+        this.secondaryType,
+        this.secondaryId
+      );
 
       // Initialize comparison stats content (includes pizza chart, S/W, and detailed stats)
-      const statsComparisonContent = (window as any).statsComparisonContent;
-      console.log('[EntityPageManager] statsComparisonContent exists?', !!statsComparisonContent);
-      if (statsComparisonContent) {
-        console.log('[EntityPageManager] Calling statsComparisonContent.show()...');
-        statsComparisonContent.show(
-          this.primarySport,
-          this.primaryType,
-          this.primaryId,
-          this.secondaryType,
-          this.secondaryId,
-          this.primaryName,
-          this.secondaryName
-        );
-      }
+      get('statsComparisonContent')?.show(
+        this.primarySport,
+        this.primaryType,
+        this.primaryId,
+        this.secondaryType,
+        this.secondaryId,
+        this.primaryName,
+        this.secondaryName
+      );
 
       // Update URL with comparison params
       this.updateURL();
-      console.log('[EntityPageManager] enterComparisonMode completed');
     }
 
     private exitComparisonMode() {
@@ -238,11 +215,8 @@ import StatsComparisonContent from '../components/StatsComparisonContent.astro';
       this.showEntityView();
 
       // Hide comparison components
-      const widgetComparison = (window as any).profileWidgetComparison;
-      if (widgetComparison) widgetComparison.hide();
-
-      const statsComparisonContent = (window as any).statsComparisonContent;
-      if (statsComparisonContent) statsComparisonContent.hide();
+      get('profileWidgetComparison')?.hide();
+      get('statsComparisonContent')?.hide();
 
       // Reset secondary entity
       this.secondaryType = '';
@@ -270,22 +244,21 @@ import StatsComparisonContent from '../components/StatsComparisonContent.astro';
     /**
      * Check if comparison params exist in URL and restore comparison mode
      */
-    public checkURLForComparison() {
+    public async checkURLForComparison() {
       const params = new URLSearchParams(window.location.search);
       const compareType = params.get('compareType');
       const compareId = params.get('compareId');
 
       if (compareType && compareId) {
-        // Wait for profile widget to load and provide primary entity info
-        const checkWidget = () => {
-          const widget = this.entityType === 'team'
-            ? (window as any).teamProfileWidget
-            : (window as any).playerProfileWidget;
+        try {
+          // Wait for profile widget to register and provide primary entity info
+          const widgetName = this.entityType === 'team' ? 'teamProfileWidget' as const : 'playerProfileWidget' as const;
+          const widget = await waitFor(widgetName, 5000);
 
-          if (widget && widget.getSport && widget.getSport()) {
-            this.primarySport = widget.getSport();
+          if (widget.getSport()) {
+            this.primarySport = widget.getSport()!;
             this.primaryType = widget.getType();
-            this.primaryId = widget.getId();
+            this.primaryId = widget.getId()!;
             this.primaryName = widget.getName() || 'Primary';
 
             this.secondaryType = compareType;
@@ -293,13 +266,10 @@ import StatsComparisonContent from '../components/StatsComparisonContent.astro';
             this.secondaryName = 'Comparison';
 
             this.enterComparisonMode();
-          } else {
-            // Retry after a short delay
-            setTimeout(checkWidget, 100);
           }
-        };
-
-        setTimeout(checkWidget, 200);
+        } catch {
+          // Widget didn't register in time - can't restore comparison
+        }
       }
     }
   }

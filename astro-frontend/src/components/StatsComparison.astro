@@ -374,6 +374,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 <script>
   import { escapeHtml } from '../lib/utils/dom';
   import { swrFetch } from '../lib/utils/api-fetcher';
+  import { register } from '../lib/utils/component-bus';
 
   /**
    * StatsComparisonManager
@@ -399,7 +400,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private exposeAPI() {
-      (window as any).statsComparison = {
+      register('statsComparison', {
         show: (
           sport: string,
           primaryType: string,
@@ -415,7 +416,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         },
         hide: () => this.hide(),
         isVisible: () => this.isVisible(),
-      };
+      });
     }
 
     public async show(

@@ -260,6 +260,7 @@
   import { AutocompleteManager, type AutocompleteEntity } from '../lib/utils/autocomplete';
   import { escapeHtml } from '../lib/utils/dom';
   import { getPositionGroupDisplay } from '../lib/utils/position-groups';
+  import { register } from '../lib/utils/component-bus';
 
   /**
    * ComparisonModalManager
@@ -313,16 +314,8 @@
     }
 
     private exposeAPI() {
-      // Expose open/close methods globally for other components
-      (window as any).comparisonModal = {
-        /**
-         * Open the comparison modal.
-         * @param sport - Current sport (nba, nfl, football)
-         * @param type - Entity type ('player' or 'team')
-         * @param id - Current entity ID
-         * @param onSelect - Callback when entity is selected
-         * @param positionGroup - Optional position group to filter by (for players)
-         */
+      // Register open/close methods on component bus
+      register('comparisonModal', {
         open: (
           sport: string,
           type: string,
@@ -334,7 +327,7 @@
         },
         close: () => this.close(),
         isOpen: () => this.isOpen(),
-      };
+      });
     }
 
     public open(

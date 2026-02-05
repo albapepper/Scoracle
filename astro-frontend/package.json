@@ -16,7 +16,7 @@
   "license": "MIT",
   "description": "Scoracle Astro Frontend - Sports News & Statistics Platform (Zero React)",
   "dependencies": {
-    "astro": "^5.16.5",
+    "astro": "^5.17.1",
     "astro-compress": "^2.3.8",
     "typescript": "^5.9.3"
   },

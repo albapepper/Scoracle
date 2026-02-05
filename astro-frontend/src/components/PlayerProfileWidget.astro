@@ -42,7 +42,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
     <!-- Content -->
     <div id="player-pw-content" class="pw-content">
-      <img id="player-pw-logo" class="pw-logo" src="" alt="" style="display: none;" />
+      <img id="player-pw-logo" class="pw-logo" src="" alt="" loading="lazy" style="display: none;" />
       <h2 id="player-pw-name" class="pw-name"></h2>
       <p id="player-pw-subtitle" class="pw-subtitle"></p>
       <div id="player-pw-details" class="pw-details"></div>
@@ -331,6 +331,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   import { escapeHtml, parseEntityParams } from '../lib/utils/dom';
   import { swrFetch, setPageData, CACHE_PRESETS } from '../lib/utils/api-fetcher';
   import { getPositionGroup } from '../lib/utils/position-groups';
+  import { register } from '../lib/utils/component-bus';
 
   /**
    * Player profile data shape from backend
@@ -430,17 +431,17 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private exposeAPI() {
-      // Expose widget API for other components
-      (window as any).playerProfileWidget = {
+      // Register widget API on component bus
+      register('playerProfileWidget', {
         getSport: () => this.sport,
-        getType: () => 'player',
+        getType: () => 'player' as const,
         getId: () => this.id,
         getName: () => this.entityName,
         getPosition: () => this.entityPosition,
         getPositionGroup: () => this.entityPositionGroup,
         hide: () => this.hide(),
         show: () => this.showWidget(),
-      };
+      });
     }
 
     private onCompareClick() {
