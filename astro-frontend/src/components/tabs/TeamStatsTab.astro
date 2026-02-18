@@ -710,7 +710,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       const widgetData = getPageData('widget') as { info?: { name?: string; full_name?: string } } | undefined;
       const entityName = widgetData?.info?.name || widgetData?.info?.full_name || '';
 
-      // Share data with other components
+      // Share data with other components (includes form string for Momentum tab)
       setPageData('stats', {
         season: data.season,
         entity: {
@@ -720,6 +720,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         },
         categories: categories,
         boxScoreGroups: boxScoreGroups,
+        form: data.stats.form ? String(data.stats.form) : '',
       });
 
       // Update season display

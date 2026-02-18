@@ -1,0 +1,352 @@
+---
+/**
+ * Momentum Tab Component
+ *
+ * Displays team/player momentum based on recent form:
+ * - Pizza chart for momentum metrics (Points Rate, Win Rate, Unbeaten Rate, Streak, Trend)
+ * - Form badges (W/D/L colored squares for last 10 results)
+ * - Summary line (points earned, record)
+ *
+ * Currently only renders data for FOOTBALL team entities (derived from the
+ * `form` string in stats data). All other entity types see a "coming soon" state.
+ *
+ * Future: Will be powered by a dedicated momentum endpoint for all entity types.
+ *
+ * JS logic is dynamically imported via content card's TabController
+ * (see lib/tabs/momentum-tab.ts)
+ */
+
+interface Props {
+  title?: string;
+}
+
+const { title = 'Momentum' } = Astro.props;
+---
+
+<div id="momentum-tab-content">
+  <!-- Header -->
+  <div class="momentum-header">
+    <h3 class="momentum-title">{title}</h3>
+  </div>
+
+  <!-- Pizza Chart Section -->
+  <div id="momentum-chart-container" class="momentum-chart-container">
+    <div id="momentum-pizza-chart" class="momentum-pizza-chart"></div>
+    <div id="momentum-chart-loading" class="chart-skeleton">
+      <div class="chart-skeleton-circle"></div>
+    </div>
+  </div>
+
+  <!-- Form Display (W/D/L badges) -->
+  <div id="momentum-form-section" class="form-section hidden">
+    <p class="form-label">Last 10 Results</p>
+    <div id="momentum-form-display" class="form-display"></div>
+  </div>
+
+  <!-- Summary Line -->
+  <div id="momentum-summary" class="momentum-summary hidden">
+    <p id="momentum-summary-text" class="momentum-summary-text"></p>
+  </div>
+
+  <!-- Unavailable State (non-FOOTBALL or non-team entities) -->
+  <div id="momentum-unavailable" class="momentum-unavailable hidden">
+    <div class="unavailable-content">
+      <p class="unavailable-title">Momentum Coming Soon</p>
+      <p class="unavailable-description">Momentum tracking is not yet available for this sport. Check back soon.</p>
+    </div>
+  </div>
+
+  <!-- Empty State (FOOTBALL team but no form data) -->
+  <div id="momentum-empty" class="momentum-empty hidden">
+    <p>No form data available</p>
+  </div>
+
+  <!-- Error State -->
+  <div id="momentum-error" class="momentum-error hidden">
+    <p>Unable to load momentum data</p>
+  </div>
+</div>
+
+<style>
+  /* Header */
+  .momentum-header {
+    padding: 1.25rem 1.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  :global(.dark) .momentum-header {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .momentum-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  :global(.dark) .momentum-title {
+    color: var(--text-dark);
+  }
+
+  /* Chart Container */
+  .momentum-chart-container {
+    padding: 1.5rem 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    min-height: 280px;
+  }
+
+  :global(.dark) .momentum-chart-container {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .momentum-pizza-chart {
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .momentum-pizza-chart :global(.pizza-chart-svg) {
+    display: block;
+  }
+
+  .momentum-pizza-chart :global(.chart-no-data) {
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+    text-align: center;
+    margin: 0;
+  }
+
+  :global(.dark) .momentum-pizza-chart :global(.chart-no-data) {
+    color: var(--text-tertiary-dark);
+  }
+
+  /* Chart Skeleton */
+  .chart-skeleton {
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .chart-skeleton-circle {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: var(--border);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  :global(.dark) .chart-skeleton-circle {
+    background: var(--border-dark);
+  }
+
+  /* Form Section (W/D/L badges) */
+  .form-section {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  :global(.dark) .form-section {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .form-label {
+    margin: 0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  :global(.dark) .form-label {
+    color: var(--text-tertiary-dark);
+  }
+
+  .form-display {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .form-display :global(.form-badge) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+  }
+
+  .form-display :global(.form-badge.win) {
+    background-color: #22c55e;
+  }
+
+  .form-display :global(.form-badge.draw) {
+    background-color: #9ca3af;
+  }
+
+  .form-display :global(.form-badge.loss) {
+    background-color: #ef4444;
+  }
+
+  /* Summary */
+  .momentum-summary {
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+  }
+
+  :global(.dark) .momentum-summary {
+    border-bottom-color: var(--border-dark);
+  }
+
+  .momentum-summary-text {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  :global(.dark) .momentum-summary-text {
+    color: var(--text-secondary-dark);
+  }
+
+  /* Unavailable State */
+  .momentum-unavailable {
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+  }
+
+  .unavailable-content {
+    max-width: 280px;
+    margin: 0 auto;
+  }
+
+  .unavailable-title {
+    margin: 0 0 0.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  :global(.dark) .unavailable-title {
+    color: var(--text-secondary-dark);
+  }
+
+  .unavailable-description {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+    line-height: 1.5;
+  }
+
+  :global(.dark) .unavailable-description {
+    color: var(--text-tertiary-dark);
+  }
+
+  /* Empty & Error States */
+  .momentum-empty,
+  .momentum-error {
+    padding: 2rem 0;
+    text-align: center;
+  }
+
+  .momentum-empty p,
+  .momentum-error p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-tertiary);
+  }
+
+  :global(.dark) .momentum-empty p,
+  :global(.dark) .momentum-error p {
+    color: var(--text-tertiary-dark);
+  }
+
+  /* Utility */
+  .hidden {
+    display: none !important;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Responsive - Mobile */
+  @media (max-width: 480px) {
+    .momentum-header {
+      padding: 1rem;
+    }
+
+    .momentum-title {
+      font-size: 0.9rem;
+    }
+
+    .momentum-chart-container {
+      padding: 1rem;
+      min-height: 240px;
+    }
+
+    .momentum-pizza-chart {
+      max-width: 280px;
+    }
+
+    .form-section {
+      padding: 0.75rem 1rem;
+    }
+
+    .form-display :global(.form-badge) {
+      width: 22px;
+      height: 22px;
+      font-size: 0.65rem;
+    }
+
+    .momentum-summary {
+      padding: 0.625rem 1rem;
+    }
+
+    .momentum-summary-text {
+      font-size: 0.8rem;
+    }
+
+    .momentum-unavailable {
+      padding: 2rem 1rem;
+    }
+  }
+
+  /* Extra small screens */
+  @media (max-width: 320px) {
+    .momentum-header {
+      padding: 0.75rem;
+    }
+
+    .momentum-chart-container {
+      min-height: 200px;
+    }
+
+    .momentum-pizza-chart {
+      max-width: 220px;
+    }
+  }
+</style>
+
+<!-- JS logic is dynamically imported via content card's TabController (see lib/tabs/momentum-tab.ts) -->

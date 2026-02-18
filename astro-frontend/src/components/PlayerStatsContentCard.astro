@@ -14,6 +14,7 @@
 import PlayerStatsTab from './tabs/PlayerStatsTab.astro';
 import StrengthsWeaknessesTab from './tabs/StrengthsWeaknessesTab.astro';
 import SimilarityTab from './tabs/SimilarityTab.astro';
+import Momentum from './tabs/Momentum.astro';
 
 interface Props {
   title?: string;
@@ -26,6 +27,7 @@ const { title = 'Statistics' } = Astro.props;
   <!-- Tab Navigation -->
   <div class="tabs-nav">
     <button class="tab-btn active" data-tab="player-stats">Stats</button>
+    <button class="tab-btn" data-tab="player-momentum">Momentum</button>
     <button class="tab-btn" data-tab="player-strengths">Strengths</button>
     <button class="tab-btn" data-tab="player-similarity">Similarity</button>
   </div>
@@ -35,6 +37,11 @@ const { title = 'Statistics' } = Astro.props;
     <!-- Stats Tab -->
     <div id="player-stats-tab" class="tab-content active">
       <PlayerStatsTab title={title} />
+    </div>
+
+    <!-- Momentum Tab -->
+    <div id="player-momentum-tab" class="tab-content">
+      <Momentum />
     </div>
 
     <!-- Strengths & Weaknesses Tab -->
@@ -152,6 +159,10 @@ const { title = 'Statistics' } = Astro.props;
       onTabChange: async (tabId) => {
         if (tabId === 'player-stats') {
           get('playerStatsTab')?.load();
+        }
+        if (tabId === 'player-momentum') {
+          const { init } = await import('../lib/tabs/momentum-tab');
+          init().load();
         }
         if (tabId === 'player-strengths') {
           const { init } = await import('../lib/tabs/strengths-weaknesses-tab');
