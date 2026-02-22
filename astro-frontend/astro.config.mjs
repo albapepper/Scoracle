@@ -1,15 +1,22 @@
 import { defineConfig } from 'astro/config';
+import node from '@astrojs/node';
 import compress from 'astro-compress';
 
 const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('dev');
 
 // https://astro.build/config
 export default defineConfig({
-  // Set your site URL for proper canonical URLs and SEO
-  site: 'https://scoracle.vercel.app',
+  // Site URL — reads from env for Railway, falls back to Vercel for now
+  site: process.env.SITE_URL || 'https://scoracle.vercel.app',
 
-  // Static output (default behavior)
+  // Static by default; pages opt into SSR with `export const prerender = false`
+  // In Astro 5+, this is the default behavior when an adapter is present.
   output: 'static',
+
+  // Node.js SSR adapter for Railway deployment
+  adapter: node({
+    mode: 'standalone',
+  }),
 
   build: {
     format: 'directory',

@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "astro dev",
-    "start": "astro dev",
+    "start": "node dist/server/entry.mjs",
     "build": "astro check && astro build",
     "preview": "astro preview",
     "astro": "astro",
@@ -16,6 +16,7 @@
   "license": "MIT",
   "description": "Scoracle Astro Frontend - Sports News & Statistics Platform (Zero React)",
   "dependencies": {
+    "@astrojs/node": "^9.5.4",
     "astro": "^5.17.1",
     "astro-compress": "^2.3.8",
     "typescript": "^5.9.3"

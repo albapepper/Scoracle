@@ -16,12 +16,33 @@
 interface Props {
   page?: 'news' | 'stats';
   showCompareButton?: boolean;
+  /** SSR-provided profile data — skips client-side fetch when present */
+  initialData?: unknown;
 }
 
-const { page = 'news', showCompareButton = false } = Astro.props;
+const { page = 'news', showCompareButton = false, initialData } = Astro.props;
 const buttonText = page === 'news' ? 'View Stats' : 'View News';
 const buttonDest = page === 'news' ? 'stats' : 'news';
 const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+
+// Pre-compute display values from SSR data
+const ssrProfile = initialData as any;
+const ssrName = ssrProfile?.name || ssrProfile?.full_name || null;
+const ssrLogo = ssrProfile?.logo_url || null;
+const ssrSubtitle = ssrProfile?.venue_name || ssrProfile?.city || '';
+
+const ssrDetails: Array<{ label: string; value: string }> = [];
+if (ssrProfile) {
+  if (ssrProfile.country) ssrDetails.push({ label: 'Country', value: ssrProfile.country });
+  if (ssrProfile.founded) ssrDetails.push({ label: 'Founded', value: String(ssrProfile.founded) });
+  if (ssrProfile.venue_capacity) ssrDetails.push({ label: 'Capacity', value: ssrProfile.venue_capacity.toLocaleString() });
+  if (ssrProfile.league?.name) ssrDetails.push({ label: 'League', value: ssrProfile.league.name });
+}
+
+const urlSport = Astro.url.searchParams.get('sport');
+const urlId = Astro.url.searchParams.get('id');
+const navHref = urlSport && urlId ? `/${buttonDest}?sport=${urlSport}&type=team&id=${urlId}` : '#';
+const hasSSRData = !!ssrProfile;
 ---
 
 <div
@@ -30,21 +51,43 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   data-api={apiUrl}
   data-dest={buttonDest}
   data-show-compare={showCompareButton ? 'true' : 'false'}
+  data-has-ssr={hasSSRData ? 'true' : 'false'}
 >
+  {/* Embed SSR data for client-side hydration */}
+  {initialData && (
+    <script
+      is:inline
+      class="ssr-profile-data"
+      type="application/json"
+      set:html={JSON.stringify(initialData)}
+    />
+  )}
+
   <div class="pw-body">
-    <!-- Loading -->
-    <div id="team-pw-loading" class="pw-loading">
+    <!-- Loading (hidden when SSR data is present) -->
+    <div id="team-pw-loading" class="pw-loading" style={hasSSRData ? 'display:none' : undefined}>
       <div class="skeleton-circle"></div>
       <div class="skeleton-line"></div>
       <div class="skeleton-line short"></div>
     </div>
 
-    <!-- Content -->
-    <div id="team-pw-content" class="pw-content">
-      <img id="team-pw-logo" class="pw-logo" src="" alt="" loading="lazy" style="display: none;" />
-      <h2 id="team-pw-name" class="pw-name"></h2>
-      <p id="team-pw-subtitle" class="pw-subtitle"></p>
-      <div id="team-pw-details" class="pw-details"></div>
+    <!-- Content (visible when SSR data is present) -->
+    <div id="team-pw-content" class="pw-content" style={hasSSRData ? 'display:flex' : undefined}>
+      {ssrLogo ? (
+        <img id="team-pw-logo" class="pw-logo" src={ssrLogo} alt={ssrName || ''} loading="lazy" />
+      ) : (
+        <img id="team-pw-logo" class="pw-logo" src="" alt="" loading="lazy" style="display: none;" />
+      )}
+      <h2 id="team-pw-name" class="pw-name">{ssrName || ''}</h2>
+      <p id="team-pw-subtitle" class="pw-subtitle">{ssrSubtitle}</p>
+      <div id="team-pw-details" class="pw-details">
+        {ssrDetails.map(d => (
+          <div class="pw-detail-item">
+            <span class="pw-detail-label">{d.label}</span>
+            <span class="pw-detail-value">{d.value}</span>
+          </div>
+        ))}
+      </div>
     </div>
 
     <!-- Error -->
@@ -56,7 +99,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   <!-- Compare Button (+ icon) -->
   <button
     id="team-pw-compare-btn"
-    class="pw-compare-btn hidden"
+    class={`pw-compare-btn ${hasSSRData && showCompareButton ? '' : 'hidden'}`}
     type="button"
     title="Compare with another team"
     aria-label="Add comparison"
@@ -67,7 +110,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   </button>
 
   <!-- Navigation Button -->
-  <a id="team-pw-button" href="#" class="pw-button">{buttonText}</a>
+  <a id="team-pw-button" href={navHref} class="pw-button">{buttonText}</a>
 </div>
 
 <style>
@@ -398,11 +441,41 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.buttonEl = document.getElementById('team-pw-button') as HTMLAnchorElement;
       this.compareBtnEl = document.getElementById('team-pw-compare-btn') as HTMLButtonElement;
 
-      this.init();
+      // Check for SSR-provided data
+      const hasSSR = widget.dataset.hasSsr === 'true';
+      if (hasSSR) {
+        this.hydrateFromSSR();
+      }
+
+      this.init(hasSSR);
       this.exposeAPI();
     }
 
-    private init() {
+    /**
+     * Hydrate entity metadata from SSR-embedded data without re-fetching.
+     */
+    private hydrateFromSSR() {
+      const ssrEl = this.widget?.querySelector('.ssr-profile-data');
+      if (!ssrEl) return;
+
+      try {
+        const data = JSON.parse(ssrEl.textContent || '{}') as TeamProfileData;
+        if (!data || !data.id) return;
+
+        this.entityName = data.name || data.full_name || 'Unknown Team';
+
+        setPageData('widget', {
+          entity_id: data.id,
+          entity_type: 'team',
+          sport: this.sport,
+          info: data,
+        });
+      } catch {
+        // Parse failed — will fall through to client fetch
+      }
+    }
+
+    private init(skipFetch = false) {
       if (this.sport && this.id && this.buttonEl) {
         this.buttonEl.href = `/${this.buttonDest}?sport=${this.sport}&type=team&id=${this.id}`;
       }
@@ -418,6 +491,9 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         this.showError();
         return;
       }
+
+      // Skip network fetch if SSR already provided the data
+      if (skipFetch) return;
 
       this.fetchData();
     }

@@ -150,6 +150,20 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       if (this.loaded || !this.container) return;
       this.loaded = true;
 
+      // Try SSR-embedded news data first
+      const ssrData = this.getSSRData();
+      if (ssrData) {
+        const articles = ssrData.articles || [];
+        if (articles.length === 0) {
+          this.showEmpty();
+          return;
+        }
+        setPageData('news', { articles });
+        this.renderNews(articles);
+        this.showContent();
+        return;
+      }
+
       const params = parseEntityParams();
       const { sport, type, id } = params;
 
@@ -165,6 +179,22 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
           console.error('NewsTab error:', err);
         }
         this.showError();
+      }
+    }
+
+    /**
+     * Check for SSR-embedded news data in the parent content card.
+     */
+    private getSSRData(): NewsData | null {
+      const contentCard = this.container?.closest('.news-content-card');
+      const ssrEl = contentCard?.querySelector('.ssr-news-data');
+      if (!ssrEl) return null;
+
+      try {
+        const data = JSON.parse(ssrEl.textContent || '{}') as NewsData;
+        return data?.articles ? data : null;
+      } catch {
+        return null;
       }
     }
 

@@ -18,12 +18,23 @@ import Momentum from './tabs/Momentum.astro';
 
 interface Props {
   title?: string;
+  /** SSR-provided stats data — allows client to skip network fetch */
+  initialStats?: unknown;
 }
 
-const { title = 'Statistics' } = Astro.props;
+const { title = 'Statistics', initialStats } = Astro.props;
 ---
 
 <div class="team-stats-content-card card" data-entity-type="team">
+  {/* Embed SSR stats data for client-side hydration */}
+  {initialStats && (
+    <script
+      is:inline
+      class="ssr-stats-data"
+      type="application/json"
+      set:html={JSON.stringify(initialStats)}
+    />
+  )}
   <!-- Tab Navigation -->
   <div class="tabs-nav">
     <button class="tab-btn active" data-tab="team-stats">Stats</button>

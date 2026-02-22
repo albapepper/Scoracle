@@ -17,12 +17,47 @@
 interface Props {
   page?: 'news' | 'stats';
   showCompareButton?: boolean;
+  /** SSR-provided profile data — skips client-side fetch when present */
+  initialData?: unknown;
 }
 
-const { page = 'news', showCompareButton = false } = Astro.props;
+const { page = 'news', showCompareButton = false, initialData } = Astro.props;
 const buttonText = page === 'news' ? 'View Stats' : 'View News';
 const buttonDest = page === 'news' ? 'stats' : 'news';
 const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+
+// Pre-compute display values from SSR data for server-rendered HTML
+const ssrProfile = initialData as any;
+const ssrName = ssrProfile?.full_name
+  || `${ssrProfile?.first_name || ''} ${ssrProfile?.last_name || ''}`.trim()
+  || null;
+const ssrLogo = ssrProfile?.photo_url || null;
+const ssrSubtitle = ssrProfile?.team?.name || '';
+
+// Build details for server rendering
+const ssrDetails: Array<{ label: string; value: string }> = [];
+if (ssrProfile) {
+  if (ssrProfile.position) ssrDetails.push({ label: 'Position', value: ssrProfile.position });
+  if (ssrProfile.jersey_number) ssrDetails.push({ label: 'Number', value: `#${ssrProfile.jersey_number}` });
+  if (ssrProfile.height_inches) {
+    const feet = Math.floor(ssrProfile.height_inches / 12);
+    const inches = ssrProfile.height_inches % 12;
+    ssrDetails.push({ label: 'Height', value: `${feet}'${inches}"` });
+  }
+  if (ssrProfile.weight_lbs) ssrDetails.push({ label: 'Weight', value: `${ssrProfile.weight_lbs} lbs` });
+  if (ssrProfile.college) ssrDetails.push({ label: 'College', value: ssrProfile.college });
+  if (ssrProfile.experience_years !== undefined && ssrProfile.experience_years !== null) {
+    ssrDetails.push({ label: 'Experience', value: `${ssrProfile.experience_years} yrs` });
+  }
+  if (ssrProfile.birth_country) ssrDetails.push({ label: 'Country', value: ssrProfile.birth_country });
+  else if (ssrProfile.nationality) ssrDetails.push({ label: 'Nationality', value: ssrProfile.nationality });
+}
+
+// Build nav button href from URL params
+const urlSport = Astro.url.searchParams.get('sport');
+const urlId = Astro.url.searchParams.get('id');
+const navHref = urlSport && urlId ? `/${buttonDest}?sport=${urlSport}&type=player&id=${urlId}` : '#';
+const hasSSRData = !!ssrProfile;
 ---
 
 <div
@@ -31,21 +66,43 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   data-api={apiUrl}
   data-dest={buttonDest}
   data-show-compare={showCompareButton ? 'true' : 'false'}
+  data-has-ssr={hasSSRData ? 'true' : 'false'}
 >
+  {/* Embed SSR data for client-side hydration */}
+  {initialData && (
+    <script
+      is:inline
+      class="ssr-profile-data"
+      type="application/json"
+      set:html={JSON.stringify(initialData)}
+    />
+  )}
+
   <div class="pw-body">
-    <!-- Loading -->
-    <div id="player-pw-loading" class="pw-loading">
+    <!-- Loading (hidden when SSR data is present) -->
+    <div id="player-pw-loading" class="pw-loading" style={hasSSRData ? 'display:none' : undefined}>
       <div class="skeleton-circle"></div>
       <div class="skeleton-line"></div>
       <div class="skeleton-line short"></div>
     </div>
 
-    <!-- Content -->
-    <div id="player-pw-content" class="pw-content">
-      <img id="player-pw-logo" class="pw-logo" src="" alt="" loading="lazy" style="display: none;" />
-      <h2 id="player-pw-name" class="pw-name"></h2>
-      <p id="player-pw-subtitle" class="pw-subtitle"></p>
-      <div id="player-pw-details" class="pw-details"></div>
+    <!-- Content (visible when SSR data is present) -->
+    <div id="player-pw-content" class="pw-content" style={hasSSRData ? 'display:flex' : undefined}>
+      {ssrLogo ? (
+        <img id="player-pw-logo" class="pw-logo" src={ssrLogo} alt={ssrName || ''} loading="lazy" />
+      ) : (
+        <img id="player-pw-logo" class="pw-logo" src="" alt="" loading="lazy" style="display: none;" />
+      )}
+      <h2 id="player-pw-name" class="pw-name">{ssrName || ''}</h2>
+      <p id="player-pw-subtitle" class="pw-subtitle">{ssrSubtitle}</p>
+      <div id="player-pw-details" class="pw-details">
+        {ssrDetails.map(d => (
+          <div class="pw-detail-item">
+            <span class="pw-detail-label">{d.label}</span>
+            <span class="pw-detail-value">{d.value}</span>
+          </div>
+        ))}
+      </div>
     </div>
 
     <!-- Error -->
@@ -57,7 +114,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   <!-- Compare Button (+ icon) -->
   <button
     id="player-pw-compare-btn"
-    class="pw-compare-btn hidden"
+    class={`pw-compare-btn ${hasSSRData && showCompareButton ? '' : 'hidden'}`}
     type="button"
     title="Compare with another player"
     aria-label="Add comparison"
@@ -68,7 +125,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   </button>
 
   <!-- Navigation Button -->
-  <a id="player-pw-button" href="#" class="pw-button">{buttonText}</a>
+  <a id="player-pw-button" href={navHref} class="pw-button">{buttonText}</a>
 </div>
 
 <style>
@@ -406,11 +463,49 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.buttonEl = document.getElementById('player-pw-button') as HTMLAnchorElement;
       this.compareBtnEl = document.getElementById('player-pw-compare-btn') as HTMLButtonElement;
 
-      this.init();
+      // Check for SSR-provided data
+      const hasSSR = widget.dataset.hasSsr === 'true';
+      if (hasSSR) {
+        this.hydrateFromSSR();
+      }
+
+      this.init(hasSSR);
       this.exposeAPI();
     }
 
-    private init() {
+    /**
+     * Hydrate entity metadata from SSR-embedded data without re-fetching.
+     * The HTML is already rendered server-side; we just need to populate
+     * the class fields so the component bus API works.
+     */
+    private hydrateFromSSR() {
+      const ssrEl = this.widget?.querySelector('.ssr-profile-data');
+      if (!ssrEl) return;
+
+      try {
+        const data = JSON.parse(ssrEl.textContent || '{}') as PlayerProfileData;
+        if (!data || !data.id) return;
+
+        // Populate class fields for component bus
+        this.entityName = data.full_name
+          || `${data.first_name || ''} ${data.last_name || ''}`.trim()
+          || 'Unknown Player';
+        this.entityPosition = data.position;
+        this.entityPositionGroup = this.sport ? getPositionGroup(this.sport, data.position) : undefined;
+
+        // Share widget data with other components
+        setPageData('widget', {
+          entity_id: data.id,
+          entity_type: 'player',
+          sport: this.sport,
+          info: data,
+        });
+      } catch {
+        // Parse failed — will fall through to client fetch
+      }
+    }
+
+    private init(skipFetch = false) {
       if (this.sport && this.id && this.buttonEl) {
         this.buttonEl.href = `/${this.buttonDest}?sport=${this.sport}&type=player&id=${this.id}`;
       }
@@ -426,6 +521,9 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         this.showError();
         return;
       }
+
+      // Skip network fetch if SSR already provided the data
+      if (skipFetch) return;
 
       this.fetchData();
     }

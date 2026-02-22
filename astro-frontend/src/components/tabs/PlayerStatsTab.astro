@@ -460,10 +460,35 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       }
     }
 
-    private async loadStats(sport: string, id: string) {
-      const url = `${this.apiUrl}/stats/player/${id}?sport=${sport.toUpperCase()}`;
+    /**
+     * Check for SSR-embedded stats data in the parent content card.
+     * Returns the data if found, or null to trigger a network fetch.
+     */
+    private getSSRData(): PlayerStatsResponse | null {
+      const contentCard = this.container?.closest('.player-stats-content-card');
+      const ssrEl = contentCard?.querySelector('.ssr-stats-data');
+      if (!ssrEl) return null;
 
-      const { data } = await swrFetch<PlayerStatsResponse>(url, CACHE_PRESETS.stats);
+      try {
+        const data = JSON.parse(ssrEl.textContent || '{}') as PlayerStatsResponse;
+        return (data && data.stats) ? data : null;
+      } catch {
+        return null;
+      }
+    }
+
+    private async loadStats(sport: string, id: string) {
+      // Try SSR data first, fall back to network fetch
+      const ssrData = this.getSSRData();
+      let data: PlayerStatsResponse;
+
+      if (ssrData) {
+        data = ssrData;
+      } else {
+        const url = `${this.apiUrl}/stats/player/${id}?sport=${sport.toUpperCase()}`;
+        const result = await swrFetch<PlayerStatsResponse>(url, CACHE_PRESETS.stats);
+        data = result.data;
+      }
 
       if (!data || !data.stats) {
         this.showEmpty();

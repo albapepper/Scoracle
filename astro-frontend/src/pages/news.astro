@@ -1,25 +1,89 @@
 ---
+/**
+ * News Page — SSR
+ *
+ * Server-rendered: fetches profile + news data over Railway's private network
+ * during SSR, embeds it into the page, and hydrates client-side for interactivity.
+ *
+ * Pre-rendered data eliminates the loading skeleton for the initial view.
+ * Lazy tabs (Co-mentions, Twitter) still fetch client-side.
+ */
+export const prerender = false;
+
 import Layout from '../layouts/Layout.astro';
 import PlayerProfileWidget from '../components/PlayerProfileWidget.astro';
 import TeamProfileWidget from '../components/TeamProfileWidget.astro';
 import NewsContentCard from '../components/NewsContentCard.astro';
+import { fetchNewsPageData } from '../lib/server/fetch';
+
+// ─── SSR Data Fetching ───────────────────────────────────────────────────────
+
+const sport = Astro.url.searchParams.get('sport');
+const type = Astro.url.searchParams.get('type') || 'player';
+const id = Astro.url.searchParams.get('id');
+
+let ssrData: Record<string, unknown> | null = null;
+
+if (sport && id) {
+  const { profile, news } = await fetchNewsPageData(sport, type, id);
+
+  if (profile.data) {
+    ssrData = {
+      sport,
+      type,
+      id,
+      profile: profile.data,
+      news: news.data,          // may be null if news fetch failed
+      profileError: profile.error,
+      newsError: news.error,
+    };
+  }
+}
+
+// Build dynamic title from SSR data
+const entityName = ssrData?.profile
+  ? (ssrData.profile as any).full_name
+    || (ssrData.profile as any).name
+    || `${(ssrData.profile as any).first_name || ''} ${(ssrData.profile as any).last_name || ''}`.trim()
+  : null;
+const pageTitle = entityName ? `${entityName} News - Scoracle` : 'News - Scoracle';
 ---
 
 <Layout
-  title="News - Scoracle"
+  title={pageTitle}
   description="View recent news, social media mentions, and updates about sports players and teams"
 >
+  <!-- SSR Data Hydration -->
+  {ssrData && (
+    <script
+      is:inline
+      id="__SSR_DATA__"
+      type="application/json"
+      set:html={JSON.stringify(ssrData)}
+    />
+  )}
+
   <main class="news-main">
     <!-- Player View -->
     <div id="player-entity-view" class="entity-view hidden" data-entity-type="player">
-      <PlayerProfileWidget page="news" />
-      <NewsContentCard />
+      <PlayerProfileWidget
+        page="news"
+        initialData={type === 'player' && ssrData?.profile ? ssrData.profile : undefined}
+      />
+      <NewsContentCard
+        initialNews={type === 'player' && ssrData?.news ? ssrData.news : undefined}
+      />
     </div>
 
     <!-- Team View -->
     <div id="team-entity-view" class="entity-view hidden" data-entity-type="team">
-      <TeamProfileWidget page="news" />
-      <NewsContentCard />
+      <TeamProfileWidget
+        page="news"
+        initialData={type === 'team' && ssrData?.profile ? ssrData.profile : undefined}
+      />
+      <NewsContentCard
+        initialNews={type === 'team' && ssrData?.news ? ssrData.news : undefined}
+      />
     </div>
   </main>
 </Layout>
@@ -57,9 +121,12 @@ import NewsContentCard from '../components/NewsContentCard.astro';
 </style>
 
 <script>
+  import { setPageData } from '../lib/utils/api-fetcher';
+
   /**
    * News Page Entity View Manager
-   * Shows the correct entity view (player vs team) based on URL params
+   * Shows the correct entity view (player vs team) based on URL params.
+   * Hydrates SSR data into the page data store.
    */
   class NewsPageManager {
     private playerView: HTMLElement | null = null;
@@ -68,7 +135,34 @@ import NewsContentCard from '../components/NewsContentCard.astro';
     constructor() {
       this.playerView = document.getElementById('player-entity-view');
       this.teamView = document.getElementById('team-entity-view');
+      this.hydrateSSRData();
       this.init();
+    }
+
+    private hydrateSSRData() {
+      const ssrEl = document.getElementById('__SSR_DATA__');
+      if (!ssrEl) return;
+
+      try {
+        const ssrData = JSON.parse(ssrEl.textContent || '{}');
+
+        // Hydrate profile data
+        if (ssrData.profile) {
+          setPageData('widget', {
+            entity_id: ssrData.profile.id,
+            entity_type: ssrData.type,
+            sport: ssrData.sport,
+            info: ssrData.profile,
+          });
+        }
+
+        // Hydrate news data for co-mentions tab
+        if (ssrData.news?.articles) {
+          setPageData('news', { articles: ssrData.news.articles });
+        }
+      } catch {
+        // SSR data parse failed — components will fetch client-side
+      }
     }
 
     private init() {

@@ -15,10 +15,25 @@ import NewsTab from './tabs/NewsTab.astro';
 import CoMentionsTab from './tabs/CoMentionsTab.astro';
 import TwitterTab from './tabs/TwitterTab.astro';
 
+interface Props {
+  /** SSR-provided news data — allows client to skip network fetch */
+  initialNews?: unknown;
+}
+
+const { initialNews } = Astro.props;
 const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 ---
 
 <div id="news-content-card" class="news-content-card card" data-api-url={apiUrl}>
+  {/* Embed SSR news data for client-side hydration */}
+  {initialNews && (
+    <script
+      is:inline
+      class="ssr-news-data"
+      type="application/json"
+      set:html={JSON.stringify(initialNews)}
+    />
+  )}
   <!-- Tab Navigation -->
   <div class="tabs-nav">
     <button class="tab-btn active" data-tab="news">News</button>
