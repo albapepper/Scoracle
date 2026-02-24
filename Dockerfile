@@ -6,6 +6,7 @@ RUN npm ci
 
 COPY astro-frontend/ ./
 RUN npm run build
+RUN test -f dist/server/entry.mjs
 
 FROM node:20-alpine AS runtime
 WORKDIR /app/astro-frontend
