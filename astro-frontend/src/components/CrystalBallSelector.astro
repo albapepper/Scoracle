@@ -455,125 +455,70 @@ const initialSportDisplay = getSportDisplay(initialSport);
 
   const STORAGE_KEY = 'activeSport';
 
-  class CrystalBallSelector {
-    private container!: HTMLElement;
-    private sportOptions!: NodeListOf<HTMLElement>;
-    private prevBtn!: HTMLButtonElement;
-    private nextBtn!: HTMLButtonElement;
-    private sports!: string[];
-    private currentIndex!: number;
-    private isAnimating: boolean = false;
+  // ─── Carousel ──────────────────────────────────────────────────────────────
+  const selectorEl = document.getElementById('crystal-selector')!;
+  const sportOptions = selectorEl.querySelectorAll<HTMLElement>('.sport-option');
+  const sports = Array.from(sportOptions).map(el => el.dataset.sport!);
 
-    constructor() {
-      this.container = document.getElementById('crystal-selector')!;
-      this.sportOptions = this.container.querySelectorAll('.sport-option');
-      this.prevBtn = document.getElementById('prev-sport') as HTMLButtonElement;
-      this.nextBtn = document.getElementById('next-sport') as HTMLButtonElement;
+  const stored = localStorage.getItem(STORAGE_KEY);
+  const initial = stored || selectorEl.dataset.initial || 'nba';
+  let currentIndex = Math.max(0, sports.indexOf(initial));
+  let isAnimating = false;
 
-      // Build sports array from DOM
-      this.sports = Array.from(this.sportOptions).map(el => el.dataset.sport!);
-      
-      // Load from localStorage or use initial
-      const stored = localStorage.getItem(STORAGE_KEY);
-      const initial = this.container.dataset.initial || 'nba';
-      const savedSport = stored || initial;
-      
-      this.currentIndex = this.sports.indexOf(savedSport);
-      if (this.currentIndex === -1) this.currentIndex = 0;
-
-      this.init();
-    }
-
-    private init() {
-      // Set initial active state
-      this.updateDisplay();
-
-      // Bind events
-      this.prevBtn.addEventListener('click', () => this.navigate(-1));
-      this.nextBtn.addEventListener('click', () => this.navigate(1));
-
-      // Keyboard support
-      this.container.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowLeft') this.navigate(-1);
-        if (e.key === 'ArrowRight') this.navigate(1);
-      });
-
-      // Dispatch initial event
-      this.dispatchChange();
-    }
-
-    private navigate(direction: number) {
-      if (this.isAnimating) return;
-      
-      this.isAnimating = true;
-      const oldIndex = this.currentIndex;
-      
-      // Calculate new index with wrap-around
-      this.currentIndex = (this.currentIndex + direction + this.sports.length) % this.sports.length;
-      
-      // Animate transition
-      this.animateTransition(oldIndex, this.currentIndex, direction);
-      
-      // Save to localStorage
-      localStorage.setItem(STORAGE_KEY, this.sports[this.currentIndex]);
-      
-      // Dispatch change event
-      this.dispatchChange();
-    }
-
-    private animateTransition(oldIndex: number, newIndex: number, direction: number) {
-      const oldEl = this.sportOptions[oldIndex];
-      const newEl = this.sportOptions[newIndex];
-      
-      // Set exit animation
-      oldEl.classList.remove('active');
-      oldEl.classList.add(direction > 0 ? 'exit-up' : 'exit-down');
-      
-      // Set enter animation
-      newEl.classList.add(direction > 0 ? 'enter-down' : 'enter-up');
-      
-      // Small delay then activate new element
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          newEl.classList.remove('enter-up', 'enter-down');
-          newEl.classList.add('active');
-          
-          // Clean up old element after transition
-          setTimeout(() => {
-            oldEl.classList.remove('exit-up', 'exit-down');
-            this.isAnimating = false;
-          }, 300);
-        });
-      });
-    }
-
-    private updateDisplay() {
-      this.sportOptions.forEach((el, index) => {
-        el.classList.toggle('active', index === this.currentIndex);
-      });
-    }
-
-    private dispatchChange() {
-      window.dispatchEvent(new CustomEvent('sportchange', { 
-        detail: { sport: this.sports[this.currentIndex] } 
-      }));
-    }
-
-    public getCurrentSport(): string {
-      return this.sports[this.currentIndex];
-    }
+  function updateDisplay() {
+    sportOptions.forEach((el, i) => el.classList.toggle('active', i === currentIndex));
   }
 
-  // Initialize carousel
-  new CrystalBallSelector();
+  function dispatchChange() {
+    window.dispatchEvent(new CustomEvent('sportchange', { detail: { sport: sports[currentIndex] } }));
+  }
 
-  // Initialize home page search
+  function animateTransition(oldIdx: number, newIdx: number, dir: number) {
+    const oldEl = sportOptions[oldIdx];
+    const newEl = sportOptions[newIdx];
+
+    oldEl.classList.remove('active');
+    oldEl.classList.add(dir > 0 ? 'exit-up' : 'exit-down');
+    newEl.classList.add(dir > 0 ? 'enter-down' : 'enter-up');
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        newEl.classList.remove('enter-up', 'enter-down');
+        newEl.classList.add('active');
+        setTimeout(() => {
+          oldEl.classList.remove('exit-up', 'exit-down');
+          isAnimating = false;
+        }, 300);
+      });
+    });
+  }
+
+  function navigate(direction: number) {
+    if (isAnimating) return;
+    isAnimating = true;
+    const oldIndex = currentIndex;
+    currentIndex = (currentIndex + direction + sports.length) % sports.length;
+    animateTransition(oldIndex, currentIndex, direction);
+    localStorage.setItem(STORAGE_KEY, sports[currentIndex]);
+    dispatchChange();
+  }
+
+  // Set initial state and bind events
+  updateDisplay();
+  document.getElementById('prev-sport')!.addEventListener('click', () => navigate(-1));
+  document.getElementById('next-sport')!.addEventListener('click', () => navigate(1));
+  selectorEl.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft') navigate(-1);
+    if (e.key === 'ArrowRight') navigate(1);
+  });
+  dispatchChange();
+
+  // ─── Search ────────────────────────────────────────────────────────────────
   const searchInput = document.getElementById('home-search-input') as HTMLInputElement;
   const searchSuggestions = document.getElementById('home-suggestions') as HTMLElement;
   const searchContainer = document.querySelector('.home-search-container') as HTMLElement;
 
   if (searchInput && searchSuggestions) {
-    const stored = localStorage.getItem(STORAGE_KEY);
     const initialSport = stored || searchContainer?.dataset.sport || 'nba';
 
     const autocomplete = new AutocompleteManager({
@@ -582,24 +527,14 @@ const initialSportDisplay = getSportDisplay(initialSport);
       initialSport,
       itemClass: 'home-suggestion-item',
       onSelect: (entity) => {
-        // Use the entity's sport field (which comes from the data store)
-        // Fall back to current carousel sport if not available
         const sportParam = (entity.sport || autocomplete.getSport()).toUpperCase();
         window.location.href = `/news?sport=${sportParam}&type=${entity.type}&id=${entity.id}`;
       },
       renderItem: (entity, index) => {
         const sportDisplay = entity.sport ? getSportDisplay(entity.sport) : '';
-        const metaText = entity.type === 'player' 
-          ? (entity.team || 'Player') 
-          : 'Team';
-        
+        const metaText = entity.type === 'player' ? (entity.team || 'Player') : 'Team';
         return `
-          <button
-            type="button"
-            data-index="${index}"
-            class="home-suggestion-item"
-            tabindex="-1"
-          >
+          <button type="button" data-index="${index}" class="home-suggestion-item" tabindex="-1">
             <div class="home-suggestion-info">
               <div class="home-suggestion-name">${escapeHtml(entity.name)}</div>
               <div class="home-suggestion-meta">${escapeHtml(metaText)}</div>
@@ -610,17 +545,11 @@ const initialSportDisplay = getSportDisplay(initialSport);
       },
     });
 
-    // Listen for sport changes from carousel
     window.addEventListener('sportchange', ((e: CustomEvent) => {
-      const newSport = e.detail.sport;
-      autocomplete.setSport(newSport);
-      // Update placeholder text
-      searchInput.placeholder = `Search ${getSportDisplay(newSport)} players or teams...`;
+      autocomplete.setSport(e.detail.sport);
+      searchInput.placeholder = `Search ${getSportDisplay(e.detail.sport)} players or teams...`;
     }) as EventListener);
 
-    // Handle form submit (prevent default)
-    document.getElementById('home-search-form')?.addEventListener('submit', (e) => {
-      e.preventDefault();
-    });
+    document.getElementById('home-search-form')?.addEventListener('submit', (e) => e.preventDefault());
   }
 </script>

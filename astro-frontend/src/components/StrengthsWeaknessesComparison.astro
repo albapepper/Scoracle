@@ -436,7 +436,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 </style>
 
 <script>
-  import { escapeHtml } from '../lib/utils/dom';
+  import { escapeHtml, showState } from '../lib/utils/dom';
   import { swrFetch } from '../lib/utils/api-fetcher';
   import { categorizeStats, type Category } from '../lib/utils/stats-categorizer';
   import { register } from '../lib/utils/component-bus';
@@ -672,24 +672,15 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private showLoading() {
-      this.container?.querySelector('#sw-comparison-loading')?.classList.remove('hidden');
-      this.container?.querySelector('#sw-comparison-content')?.classList.add('hidden');
-      this.container?.querySelector('#sw-comparison-empty')?.classList.add('hidden');
-      this.container?.querySelector('#sw-comparison-error')?.classList.add('hidden');
+      showState(this.container, 'sw-comparison', 'loading');
     }
 
     private showContent() {
-      this.container?.querySelector('#sw-comparison-loading')?.classList.add('hidden');
-      this.container?.querySelector('#sw-comparison-content')?.classList.remove('hidden');
-      this.container?.querySelector('#sw-comparison-empty')?.classList.add('hidden');
-      this.container?.querySelector('#sw-comparison-error')?.classList.add('hidden');
+      showState(this.container, 'sw-comparison', 'content');
     }
 
     private showError() {
-      this.container?.querySelector('#sw-comparison-loading')?.classList.add('hidden');
-      this.container?.querySelector('#sw-comparison-content')?.classList.add('hidden');
-      this.container?.querySelector('#sw-comparison-empty')?.classList.add('hidden');
-      this.container?.querySelector('#sw-comparison-error')?.classList.remove('hidden');
+      showState(this.container, 'sw-comparison', 'error');
     }
 
     public hide() {

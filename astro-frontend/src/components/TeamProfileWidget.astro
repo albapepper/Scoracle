@@ -370,7 +370,7 @@ const hasSSRData = !!ssrProfile;
 </style>
 
 <script>
-  import { escapeHtml, parseEntityParams } from '../lib/utils/dom';
+  import { escapeHtml, parseEntityParams, showWidgetState } from '../lib/utils/dom';
   import { swrFetch, setPageData, CACHE_PRESETS } from '../lib/utils/api-fetcher';
   import { register } from '../lib/utils/component-bus';
 
@@ -598,17 +598,8 @@ const hasSSRData = !!ssrProfile;
       }
     }
 
-    private showContent() {
-      if (this.loadingEl) this.loadingEl.style.display = 'none';
-      if (this.contentEl) this.contentEl.style.display = 'flex';
-      if (this.errorEl) this.errorEl.style.display = 'none';
-    }
-
-    private showError() {
-      if (this.loadingEl) this.loadingEl.style.display = 'none';
-      if (this.contentEl) this.contentEl.style.display = 'none';
-      if (this.errorEl) this.errorEl.style.display = 'flex';
-    }
+    private showContent() { showWidgetState(this.loadingEl, this.contentEl, this.errorEl, 'content'); }
+    private showError() { showWidgetState(this.loadingEl, this.contentEl, this.errorEl, 'error'); }
 
     private hide() {
       if (this.widget) this.widget.classList.add('hidden');

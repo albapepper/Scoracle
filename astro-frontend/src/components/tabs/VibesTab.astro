@@ -345,7 +345,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 </style>
 
 <script>
-  import { parseEntityParams, escapeHtml } from '../../lib/utils/dom';
+  import { parseEntityParams, escapeHtml, showState } from '../../lib/utils/dom';
   import { swrFetch, setPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
   import type { VibeScoreResponse } from '../../lib/types';
 
@@ -470,24 +470,15 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private showContent(): void {
-      this.container?.querySelector('#vibes-loading')?.classList.add('hidden');
-      this.container?.querySelector('#vibes-content')?.classList.remove('hidden');
-      this.container?.querySelector('#vibes-empty')?.classList.add('hidden');
-      this.container?.querySelector('#vibes-error')?.classList.add('hidden');
+      showState(this.container, 'vibes', 'content');
     }
 
     private showEmpty(): void {
-      this.container?.querySelector('#vibes-loading')?.classList.add('hidden');
-      this.container?.querySelector('#vibes-content')?.classList.add('hidden');
-      this.container?.querySelector('#vibes-empty')?.classList.remove('hidden');
-      this.container?.querySelector('#vibes-error')?.classList.add('hidden');
+      showState(this.container, 'vibes', 'empty');
     }
 
     private showError(): void {
-      this.container?.querySelector('#vibes-loading')?.classList.add('hidden');
-      this.container?.querySelector('#vibes-content')?.classList.add('hidden');
-      this.container?.querySelector('#vibes-empty')?.classList.add('hidden');
-      this.container?.querySelector('#vibes-error')?.classList.remove('hidden');
+      showState(this.container, 'vibes', 'error');
     }
   }
 

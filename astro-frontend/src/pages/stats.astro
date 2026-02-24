@@ -151,231 +151,127 @@ const pageTitle = entityName ? `${entityName} Stats - Scoracle` : 'Stats - Scora
   import { get, waitFor } from '../lib/utils/component-bus';
   import { setPageData } from '../lib/utils/api-fetcher';
 
-  /**
-   * Entity Page Manager
-   *
-   * Handles:
-   * - Showing the correct entity view (player vs team) based on URL params
-   * - Hydrating SSR data into the page data store
-   * - Managing comparison mode
-   */
-  class EntityPageManager {
-    private playerView: HTMLElement | null = null;
-    private teamView: HTMLElement | null = null;
-    private comparisonView: HTMLElement | null = null;
+  // ─── DOM refs ──────────────────────────────────────────────────────────────
+  const playerView = document.getElementById('player-entity-view');
+  const teamView = document.getElementById('team-entity-view');
+  const comparisonView = document.getElementById('comparison-view');
 
-    private entityType: 'player' | 'team' = 'player';
-    private primarySport: string = '';
-    private primaryType: string = '';
-    private primaryId: string = '';
-    private primaryName: string = '';
-    private primaryPositionGroup: string | undefined = undefined;
+  // ─── State ─────────────────────────────────────────────────────────────────
+  const params = new URLSearchParams(window.location.search);
+  const entityType = params.get('type') === 'team' ? 'team' : 'player';
 
-    private secondaryType: string = '';
-    private secondaryId: string = '';
-    private secondaryName: string = '';
+  let primarySport = '';
+  let primaryType = '';
+  let primaryId = '';
+  let primaryName = '';
+  let primaryPositionGroup: string | undefined;
+  let secondaryType = '';
+  let secondaryId = '';
+  let secondaryName = '';
 
-    constructor() {
-      this.playerView = document.getElementById('player-entity-view');
-      this.teamView = document.getElementById('team-entity-view');
-      this.comparisonView = document.getElementById('comparison-view');
-
-      this.hydrateSSRData();
-      this.init();
-      this.bindEvents();
-    }
-
-    /**
-     * If the page was server-rendered with data, populate the page data store
-     * so downstream components (tabs, comparison) can access it without re-fetching.
-     */
-    private hydrateSSRData() {
-      const ssrEl = document.getElementById('__SSR_DATA__');
-      if (!ssrEl) return;
-
-      try {
-        const ssrData = JSON.parse(ssrEl.textContent || '{}');
-
-        // Hydrate profile data into the page data store
-        if (ssrData.profile) {
-          setPageData('widget', {
-            entity_id: ssrData.profile.id,
-            entity_type: ssrData.type,
-            sport: ssrData.sport,
-            info: ssrData.profile,
-          });
-        }
-      } catch {
-        // SSR data parse failed — components will fetch client-side
+  // ─── SSR hydration ─────────────────────────────────────────────────────────
+  const ssrEl = document.getElementById('__SSR_DATA__');
+  if (ssrEl) {
+    try {
+      const ssrData = JSON.parse(ssrEl.textContent || '{}');
+      if (ssrData.profile) {
+        setPageData('widget', {
+          entity_id: ssrData.profile.id,
+          entity_type: ssrData.type,
+          sport: ssrData.sport,
+          info: ssrData.profile,
+        });
       }
-    }
-
-    private init() {
-      // Read entity type from URL params
-      const params = new URLSearchParams(window.location.search);
-      const type = params.get('type');
-      this.entityType = type === 'team' ? 'team' : 'player';
-
-      // Show the appropriate view
-      this.showEntityView();
-    }
-
-    private showEntityView() {
-      if (this.entityType === 'team') {
-        this.playerView?.classList.add('hidden');
-        this.teamView?.classList.remove('hidden');
-      } else {
-        this.playerView?.classList.remove('hidden');
-        this.teamView?.classList.add('hidden');
-      }
-    }
-
-    private bindEvents() {
-      // Listen for comparison add request
-      window.addEventListener('comparison:add', ((event: CustomEvent) => {
-        const { sport, type, id, name, positionGroup } = event.detail;
-        this.primarySport = sport;
-        this.primaryType = type;
-        this.primaryId = id;
-        this.primaryName = name;
-        this.primaryPositionGroup = positionGroup;
-
-        this.openComparisonModal();
-      }) as EventListener);
-
-      // Listen for comparison removal
-      window.addEventListener('comparison:removed', () => {
-        this.exitComparisonMode();
-      });
-    }
-
-    private openComparisonModal() {
-      const modal = get('comparisonModal');
-      if (modal) {
-        modal.open(
-          this.primarySport,
-          this.primaryType,
-          this.primaryId,
-          (entity: AutocompleteEntity) => {
-            this.onComparisonSelected(entity);
-          },
-          this.primaryType === 'player' ? this.primaryPositionGroup : undefined
-        );
-      }
-    }
-
-    private onComparisonSelected(entity: AutocompleteEntity) {
-      this.secondaryType = entity.type;
-      this.secondaryId = entity.id;
-      this.secondaryName = entity.name;
-
-      this.enterComparisonMode();
-    }
-
-    private enterComparisonMode() {
-      // Hide both single entity views
-      this.playerView?.classList.add('hidden');
-      this.teamView?.classList.add('hidden');
-
-      // Show comparison view
-      this.comparisonView?.classList.remove('hidden');
-
-      // Initialize comparison widgets
-      get('profileWidgetComparison')?.show(
-        this.primarySport,
-        this.primaryType,
-        this.primaryId,
-        this.secondaryType,
-        this.secondaryId
-      );
-
-      // Initialize comparison stats content (includes pizza chart, S/W, and detailed stats)
-      get('statsComparisonContent')?.show(
-        this.primarySport,
-        this.primaryType,
-        this.primaryId,
-        this.secondaryType,
-        this.secondaryId,
-        this.primaryName,
-        this.secondaryName
-      );
-
-      // Update URL with comparison params
-      this.updateURL();
-    }
-
-    private exitComparisonMode() {
-      // Hide comparison view
-      this.comparisonView?.classList.add('hidden');
-
-      // Show the appropriate single entity view
-      this.showEntityView();
-
-      // Hide comparison components
-      get('profileWidgetComparison')?.hide();
-      get('statsComparisonContent')?.hide();
-
-      // Reset secondary entity
-      this.secondaryType = '';
-      this.secondaryId = '';
-      this.secondaryName = '';
-
-      // Remove comparison params from URL
-      this.removeComparisonFromURL();
-    }
-
-    private updateURL() {
-      const url = new URL(window.location.href);
-      url.searchParams.set('compareType', this.secondaryType);
-      url.searchParams.set('compareId', this.secondaryId);
-      window.history.replaceState({}, '', url.toString());
-    }
-
-    private removeComparisonFromURL() {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('compareType');
-      url.searchParams.delete('compareId');
-      window.history.replaceState({}, '', url.toString());
-    }
-
-    /**
-     * Check if comparison params exist in URL and restore comparison mode
-     */
-    public async checkURLForComparison() {
-      const params = new URLSearchParams(window.location.search);
-      const compareType = params.get('compareType');
-      const compareId = params.get('compareId');
-
-      if (compareType && compareId) {
-        try {
-          // Wait for profile widget to register and provide primary entity info
-          const widgetName = this.entityType === 'team' ? 'teamProfileWidget' as const : 'playerProfileWidget' as const;
-          const widget = await waitFor(widgetName, 5000);
-
-          if (widget.getSport()) {
-            this.primarySport = widget.getSport()!;
-            this.primaryType = widget.getType();
-            this.primaryId = widget.getId()!;
-            this.primaryName = widget.getName() || 'Primary';
-
-            this.secondaryType = compareType;
-            this.secondaryId = compareId;
-            this.secondaryName = 'Comparison';
-
-            this.enterComparisonMode();
-          }
-        } catch {
-          // Widget didn't register in time - can't restore comparison
-        }
-      }
+    } catch {
+      // SSR data parse failed — components will fetch client-side
     }
   }
 
-  // Initialize
-  const manager = new EntityPageManager();
+  // ─── View helpers ──────────────────────────────────────────────────────────
+  function showEntityView() {
+    const isTeam = entityType === 'team';
+    playerView?.classList.toggle('hidden', isTeam);
+    teamView?.classList.toggle('hidden', !isTeam);
+  }
 
-  // Check for comparison in URL after page load
-  document.addEventListener('DOMContentLoaded', () => {
-    manager.checkURLForComparison();
-  });
+  function enterComparisonMode() {
+    playerView?.classList.add('hidden');
+    teamView?.classList.add('hidden');
+    comparisonView?.classList.remove('hidden');
+
+    get('profileWidgetComparison')?.show(primarySport, primaryType, primaryId, secondaryType, secondaryId);
+    get('statsComparisonContent')?.show(primarySport, primaryType, primaryId, secondaryType, secondaryId, primaryName, secondaryName);
+
+    const url = new URL(window.location.href);
+    url.searchParams.set('compareType', secondaryType);
+    url.searchParams.set('compareId', secondaryId);
+    window.history.replaceState({}, '', url.toString());
+  }
+
+  function exitComparisonMode() {
+    comparisonView?.classList.add('hidden');
+    showEntityView();
+    get('profileWidgetComparison')?.hide();
+    get('statsComparisonContent')?.hide();
+    secondaryType = '';
+    secondaryId = '';
+    secondaryName = '';
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('compareType');
+    url.searchParams.delete('compareId');
+    window.history.replaceState({}, '', url.toString());
+  }
+
+  // ─── Init ──────────────────────────────────────────────────────────────────
+  showEntityView();
+
+  // Listen for comparison add request
+  window.addEventListener('comparison:add', ((event: CustomEvent) => {
+    const d = event.detail;
+    primarySport = d.sport;
+    primaryType = d.type;
+    primaryId = d.id;
+    primaryName = d.name;
+    primaryPositionGroup = d.positionGroup;
+
+    get('comparisonModal')?.open(
+      primarySport, primaryType, primaryId,
+      (entity: AutocompleteEntity) => {
+        secondaryType = entity.type;
+        secondaryId = entity.id;
+        secondaryName = entity.name;
+        enterComparisonMode();
+      },
+      primaryType === 'player' ? primaryPositionGroup : undefined,
+    );
+  }) as EventListener);
+
+  window.addEventListener('comparison:removed', exitComparisonMode);
+
+  // Restore comparison from URL if present
+  async function checkURLForComparison() {
+    const compareType = params.get('compareType');
+    const compareId = params.get('compareId');
+    if (!compareType || !compareId) return;
+
+    try {
+      const widgetName = entityType === 'team' ? 'teamProfileWidget' as const : 'playerProfileWidget' as const;
+      const widget = await waitFor(widgetName, 5000);
+      if (!widget.getSport()) return;
+
+      primarySport = widget.getSport()!;
+      primaryType = widget.getType();
+      primaryId = widget.getId()!;
+      primaryName = widget.getName() || 'Primary';
+      secondaryType = compareType;
+      secondaryId = compareId;
+      secondaryName = 'Comparison';
+      enterComparisonMode();
+    } catch {
+      // Widget didn't register in time
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => checkURLForComparison());
 </script>

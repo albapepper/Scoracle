@@ -5,7 +5,7 @@
  * Fetches journalist tweets about the current entity.
  */
 
-import { escapeHtml, parseEntityParams } from '../utils/dom';
+import { escapeHtml, parseEntityParams, showState } from '../utils/dom';
 import { formatDate } from '../utils/date';
 import { swrFetch, waitForPageData, getPageData, setPageData, CACHE_PRESETS } from '../utils/api-fetcher';
 
@@ -157,37 +157,12 @@ class TwitterTabManager {
     }).join('');
   }
 
-  private showContent(): void {
-    this.container?.querySelector('#twitter-loading')?.classList.add('hidden');
-    this.container?.querySelector('#twitter-content')?.classList.remove('hidden');
-    this.container?.querySelector('#twitter-empty')?.classList.add('hidden');
-    this.container?.querySelector('#twitter-unavailable')?.classList.add('hidden');
-    this.container?.querySelector('#twitter-error')?.classList.add('hidden');
-  }
+  private static readonly STATES = ['loading', 'content', 'empty', 'unavailable', 'error'];
 
-  private showEmpty(): void {
-    this.container?.querySelector('#twitter-loading')?.classList.add('hidden');
-    this.container?.querySelector('#twitter-content')?.classList.add('hidden');
-    this.container?.querySelector('#twitter-empty')?.classList.remove('hidden');
-    this.container?.querySelector('#twitter-unavailable')?.classList.add('hidden');
-    this.container?.querySelector('#twitter-error')?.classList.add('hidden');
-  }
-
-  private showUnavailable(): void {
-    this.container?.querySelector('#twitter-loading')?.classList.add('hidden');
-    this.container?.querySelector('#twitter-content')?.classList.add('hidden');
-    this.container?.querySelector('#twitter-empty')?.classList.add('hidden');
-    this.container?.querySelector('#twitter-unavailable')?.classList.remove('hidden');
-    this.container?.querySelector('#twitter-error')?.classList.add('hidden');
-  }
-
-  private showError(): void {
-    this.container?.querySelector('#twitter-loading')?.classList.add('hidden');
-    this.container?.querySelector('#twitter-content')?.classList.add('hidden');
-    this.container?.querySelector('#twitter-empty')?.classList.add('hidden');
-    this.container?.querySelector('#twitter-unavailable')?.classList.add('hidden');
-    this.container?.querySelector('#twitter-error')?.classList.remove('hidden');
-  }
+  private showContent(): void { showState(this.container, 'twitter', 'content', TwitterTabManager.STATES); }
+  private showEmpty(): void { showState(this.container, 'twitter', 'empty', TwitterTabManager.STATES); }
+  private showUnavailable(): void { showState(this.container, 'twitter', 'unavailable', TwitterTabManager.STATES); }
+  private showError(): void { showState(this.container, 'twitter', 'error', TwitterTabManager.STATES); }
 }
 
 /** Lazy singleton - creates the manager on first call, returns cached instance after. */

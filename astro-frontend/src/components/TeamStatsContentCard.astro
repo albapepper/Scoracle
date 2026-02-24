@@ -161,34 +161,20 @@ const { title = 'Statistics', initialStats } = Astro.props;
 </style>
 
 <script>
-  import { TabController } from '../lib/utils/tab-controller';
+  import { initTabs } from '../lib/utils/tab-controller';
   import { get } from '../lib/utils/component-bus';
 
   const card = document.querySelector<HTMLElement>('.team-stats-content-card');
   if (card) {
-    new TabController(card, {
+    initTabs(card, {
       onTabChange: async (tabId) => {
-        if (tabId === 'team-stats') {
-          get('teamStatsTab')?.load();
-        }
-        if (tabId === 'team-momentum') {
-          const { init } = await import('../lib/tabs/momentum-tab');
-          init().load();
-        }
-        if (tabId === 'team-strengths') {
-          const { init } = await import('../lib/tabs/strengths-weaknesses-tab');
-          init().load();
-        }
-        if (tabId === 'team-similarity') {
-          const { init } = await import('../lib/tabs/similarity-tab');
-          init().load();
-        }
+        if (tabId === 'team-stats') get('teamStatsTab')?.load();
+        if (tabId === 'team-momentum') (await import('../lib/tabs/momentum-tab')).init().load();
+        if (tabId === 'team-strengths') (await import('../lib/tabs/strengths-weaknesses-tab')).init().load();
+        if (tabId === 'team-similarity') (await import('../lib/tabs/similarity-tab')).init().load();
       },
       prefetch: {
-        'team-similarity': async () => {
-          const { init } = await import('../lib/tabs/similarity-tab');
-          init().prefetch();
-        },
+        'team-similarity': async () => (await import('../lib/tabs/similarity-tab')).init().prefetch(),
       },
     });
   }

@@ -55,3 +55,54 @@ export function parseCoMentionsParams(): {
     coId: params.get('coId'),
   };
 }
+
+/**
+ * Show a specific state within a container by toggling 'hidden' class.
+ *
+ * Convention: child elements use IDs like `{prefix}-loading`, `{prefix}-content`, etc.
+ * Only the element matching `activeState` is shown; all others are hidden.
+ *
+ * @param container - Parent element containing the state elements
+ * @param prefix - ID prefix (e.g., 'news', 'twitter', 'sw')
+ * @param activeState - The state to show (e.g., 'loading', 'content', 'empty', 'error', 'unavailable')
+ * @param allStates - All possible states for this container (defaults to common set)
+ */
+export function showState(
+  container: HTMLElement | null,
+  prefix: string,
+  activeState: string,
+  allStates: string[] = ['loading', 'content', 'empty', 'error'],
+): void {
+  if (!container) return;
+  for (const state of allStates) {
+    const el = container.querySelector(`#${prefix}-${state}`);
+    if (!el) continue;
+    if (state === activeState) {
+      el.classList.remove('hidden');
+    } else {
+      el.classList.add('hidden');
+    }
+  }
+}
+
+/**
+ * Show a specific state within a profile widget using display style.
+ *
+ * Profile widgets use `display: none/flex` instead of `hidden` class
+ * because their CSS defines `.pw-content, .pw-error { display: none }`.
+ *
+ * @param loadingEl - The loading skeleton element
+ * @param contentEl - The content element
+ * @param errorEl - The error element
+ * @param state - Which state to show: 'loading', 'content', or 'error'
+ */
+export function showWidgetState(
+  loadingEl: HTMLElement | null,
+  contentEl: HTMLElement | null,
+  errorEl: HTMLElement | null,
+  state: 'loading' | 'content' | 'error',
+): void {
+  if (loadingEl) loadingEl.style.display = state === 'loading' ? 'flex' : 'none';
+  if (contentEl) contentEl.style.display = state === 'content' ? 'flex' : 'none';
+  if (errorEl) errorEl.style.display = state === 'error' ? 'flex' : 'none';
+}

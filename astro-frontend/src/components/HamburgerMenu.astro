@@ -1,25 +1,25 @@
 ---
-// Hamburger Menu Component - Settings dropdown with theme toggle and navigation
+/**
+ * Hamburger Menu Component
+ *
+ * Uses native <details>/<summary> for open/close toggle (zero JS for basic behavior).
+ * Minimal JS added only for: click-outside-to-close, Escape-to-close, and localStorage.
+ */
 ---
 
-<div class="hamburger-menu-wrapper">
-  <!-- Hamburger Menu Button -->
-  <button
-    id="menu-toggle"
-    class="header-btn hamburger-btn"
-    aria-label="Toggle menu"
-    aria-expanded="false"
-  >
-    <svg id="menu-icon" class="icon-large" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<details id="hamburger-menu" class="hamburger-menu-wrapper">
+  <!-- Summary acts as the toggle button -->
+  <summary class="header-btn hamburger-btn" aria-label="Toggle menu">
+    <svg class="icon-large menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
     </svg>
-    <svg id="close-icon" class="icon-large hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg class="icon-large close-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
     </svg>
-  </button>
+  </summary>
 
-  <!-- Dropdown Menu -->
-  <div id="menu-dropdown" class="menu-dropdown hidden">
+  <!-- Dropdown Menu (shown/hidden by <details> open state) -->
+  <div class="menu-dropdown">
     <div class="menu-content">
       <!-- Navigation Links -->
       <nav class="menu-nav">
@@ -47,10 +47,14 @@
       </div>
     </div>
   </div>
-</div>
+</details>
 
 <style scoped>
-  .hidden {
+  /* Hide default <details> marker/triangle */
+  .hamburger-menu-wrapper summary {
+    list-style: none;
+  }
+  .hamburger-menu-wrapper summary::-webkit-details-marker {
     display: none;
   }
 
@@ -80,6 +84,17 @@
     height: 1.75rem;
   }
 
+  /* Icon switching via [open] attribute — no JS needed */
+  .hamburger-menu-wrapper .close-icon {
+    display: none;
+  }
+  .hamburger-menu-wrapper[open] .menu-icon {
+    display: none;
+  }
+  .hamburger-menu-wrapper[open] .close-icon {
+    display: block;
+  }
+
   .menu-dropdown {
     position: fixed;
     top: 3.5rem;
@@ -95,10 +110,6 @@
   :global(.dark) .menu-dropdown {
     background-color: var(--bg-dark);
     border-right-color: var(--border-dark);
-  }
-
-  .menu-dropdown.hidden {
-    display: none;
   }
 
   .menu-content {
@@ -188,79 +199,32 @@
 
 <script>
   const LANG_STORAGE_KEY = 'preferred-language';
+  const details = document.getElementById('hamburger-menu') as HTMLDetailsElement | null;
 
-  class HamburgerMenuManager {
-    private menuToggle!: HTMLButtonElement;
-    private menuDropdown!: HTMLElement;
-    private menuIcon!: HTMLElement;
-    private closeIcon!: HTMLElement;
-    private languageSelect!: HTMLSelectElement;
-    private isMenuOpen = false;
-
-    constructor() {
-      this.menuToggle = document.getElementById('menu-toggle') as HTMLButtonElement;
-      this.menuDropdown = document.getElementById('menu-dropdown') as HTMLElement;
-      this.menuIcon = document.getElementById('menu-icon') as HTMLElement;
-      this.closeIcon = document.getElementById('close-icon') as HTMLElement;
-      this.languageSelect = document.getElementById('language-select') as HTMLSelectElement;
-
-      this.init();
-    }
-
-    private init() {
-      // Menu toggle
-      this.menuToggle.addEventListener('click', () => this.toggleMenu());
-
-      // Language select
-      if (this.languageSelect) {
-        // Load saved language
-        const savedLang = localStorage.getItem(LANG_STORAGE_KEY);
-        if (savedLang) {
-          this.languageSelect.value = savedLang;
-        }
-        
-        this.languageSelect.addEventListener('change', (e) => {
-          localStorage.setItem(LANG_STORAGE_KEY, (e.target as HTMLSelectElement).value);
-        });
+  if (details) {
+    // Close on click outside
+    document.addEventListener('click', (e) => {
+      if (details.open && !details.contains(e.target as Node)) {
+        details.open = false;
       }
+    });
 
-      // Close menu on outside click
-      document.addEventListener('click', (e) => {
-        if (this.isMenuOpen && 
-            !this.menuToggle.contains(e.target as Node) && 
-            !this.menuDropdown.contains(e.target as Node)) {
-          this.closeMenu();
-        }
-      });
-
-      // Close on escape
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && this.isMenuOpen) {
-          this.closeMenu();
-        }
-      });
-    }
-
-    private toggleMenu() {
-      this.isMenuOpen ? this.closeMenu() : this.openMenu();
-    }
-
-    private openMenu() {
-      this.isMenuOpen = true;
-      this.menuDropdown.classList.remove('hidden');
-      this.menuIcon.classList.add('hidden');
-      this.closeIcon.classList.remove('hidden');
-      this.menuToggle.setAttribute('aria-expanded', 'true');
-    }
-
-    private closeMenu() {
-      this.isMenuOpen = false;
-      this.menuDropdown.classList.add('hidden');
-      this.menuIcon.classList.remove('hidden');
-      this.closeIcon.classList.add('hidden');
-      this.menuToggle.setAttribute('aria-expanded', 'false');
-    }
+    // Close on Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && details.open) {
+        details.open = false;
+      }
+    });
   }
 
-  new HamburgerMenuManager();
+  // Language select persistence
+  const langSelect = document.getElementById('language-select') as HTMLSelectElement | null;
+  if (langSelect) {
+    const saved = localStorage.getItem(LANG_STORAGE_KEY);
+    if (saved) langSelect.value = saved;
+
+    langSelect.addEventListener('change', () => {
+      localStorage.setItem(LANG_STORAGE_KEY, langSelect.value);
+    });
+  }
 </script>

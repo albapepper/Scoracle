@@ -367,6 +367,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 <script>
   import { swrFetch } from '../lib/utils/api-fetcher';
+  import { showState } from '../lib/utils/dom';
   import { PizzaChart, type PizzaChartStat, type ComparisonEntityData } from '../lib/charts/pizza-chart';
   import { categorizeStats } from '../lib/utils/stats-categorizer';
   import { register, get } from '../lib/utils/component-bus';
@@ -608,23 +609,11 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.showPizzaChart();
     }
 
-    private showPizzaLoading() {
-      document.getElementById('pizza-comparison-loading')?.classList.remove('hidden');
-      document.getElementById('pizza-comparison-chart')?.classList.add('hidden');
-      document.getElementById('pizza-comparison-error')?.classList.add('hidden');
-    }
+    private static readonly PIZZA_STATES = ['loading', 'chart', 'error'];
 
-    private showPizzaChart() {
-      document.getElementById('pizza-comparison-loading')?.classList.add('hidden');
-      document.getElementById('pizza-comparison-chart')?.classList.remove('hidden');
-      document.getElementById('pizza-comparison-error')?.classList.add('hidden');
-    }
-
-    private showPizzaError() {
-      document.getElementById('pizza-comparison-loading')?.classList.add('hidden');
-      document.getElementById('pizza-comparison-chart')?.classList.add('hidden');
-      document.getElementById('pizza-comparison-error')?.classList.remove('hidden');
-    }
+    private showPizzaLoading() { showState(document.body, 'pizza-comparison', 'loading', StatsComparisonContentManager.PIZZA_STATES); }
+    private showPizzaChart() { showState(document.body, 'pizza-comparison', 'chart', StatsComparisonContentManager.PIZZA_STATES); }
+    private showPizzaError() { showState(document.body, 'pizza-comparison', 'error', StatsComparisonContentManager.PIZZA_STATES); }
 
     public hide() {
       this.container?.classList.add('hidden');

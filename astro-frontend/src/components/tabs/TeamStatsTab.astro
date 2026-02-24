@@ -613,7 +613,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 </style>
 
 <script>
-  import { escapeHtml, parseEntityParams } from '../../lib/utils/dom';
+  import { escapeHtml, parseEntityParams, showState } from '../../lib/utils/dom';
   import { swrFetch, setPageData, getPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
   import { PizzaChart, type PizzaChartStat } from '../../lib/charts/pizza-chart';
   import {
@@ -990,18 +990,14 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       }
     }
 
+    private static readonly STATS_STATES = ['loading', 'box-score', 'empty', 'error'] as const;
+
     private showContent() {
-      this.container?.querySelector('#team-stats-loading')?.classList.add('hidden');
-      this.container?.querySelector('#team-stats-box-score')?.classList.remove('hidden');
-      this.container?.querySelector('#team-stats-empty')?.classList.add('hidden');
-      this.container?.querySelector('#team-stats-error')?.classList.add('hidden');
+      showState(this.container, 'team-stats', 'box-score', [...TeamStatsTabManager.STATS_STATES]);
     }
 
     private showEmpty() {
-      this.container?.querySelector('#team-stats-loading')?.classList.add('hidden');
-      this.container?.querySelector('#team-stats-box-score')?.classList.add('hidden');
-      this.container?.querySelector('#team-stats-empty')?.classList.remove('hidden');
-      this.container?.querySelector('#team-stats-error')?.classList.add('hidden');
+      showState(this.container, 'team-stats', 'empty', [...TeamStatsTabManager.STATS_STATES]);
 
       // Hide chart if no data
       const chartContainer = this.container?.querySelector('#team-stats-chart-container');
@@ -1009,10 +1005,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private showError() {
-      this.container?.querySelector('#team-stats-loading')?.classList.add('hidden');
-      this.container?.querySelector('#team-stats-box-score')?.classList.add('hidden');
-      this.container?.querySelector('#team-stats-empty')?.classList.add('hidden');
-      this.container?.querySelector('#team-stats-error')?.classList.remove('hidden');
+      showState(this.container, 'team-stats', 'error', [...TeamStatsTabManager.STATS_STATES]);
 
       // Hide chart on error
       const chartContainer = this.container?.querySelector('#team-stats-chart-container');

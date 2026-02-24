@@ -12,7 +12,7 @@
  * Football points weighting: W = 3, D = 1, L = 0
  */
 
-import { parseEntityParams } from '../utils/dom';
+import { parseEntityParams, showState } from '../utils/dom';
 import { waitForPageData } from '../utils/api-fetcher';
 import { PizzaChart, type PizzaChartStat } from '../charts/pizza-chart';
 
@@ -253,42 +253,28 @@ class MomentumTabManager {
     this.themeObserver.observe(document.documentElement, { attributes: true });
   }
 
+  private static readonly STATES = ['chart-loading', 'chart-container', 'unavailable', 'empty', 'error'];
+
   private showContent(): void {
-    this.container?.querySelector('#momentum-chart-loading')?.classList.add('hidden');
-    this.container?.querySelector('#momentum-chart-container')?.classList.remove('hidden');
-    this.container?.querySelector('#momentum-unavailable')?.classList.add('hidden');
-    this.container?.querySelector('#momentum-empty')?.classList.add('hidden');
-    this.container?.querySelector('#momentum-error')?.classList.add('hidden');
+    showState(this.container, 'momentum', 'chart-container', MomentumTabManager.STATES);
   }
 
   private showUnavailable(): void {
-    this.container?.querySelector('#momentum-chart-loading')?.classList.add('hidden');
-    this.container?.querySelector('#momentum-chart-container')?.classList.add('hidden');
+    showState(this.container, 'momentum', 'unavailable', MomentumTabManager.STATES);
     this.container?.querySelector('#momentum-form-section')?.classList.add('hidden');
     this.container?.querySelector('#momentum-summary')?.classList.add('hidden');
-    this.container?.querySelector('#momentum-unavailable')?.classList.remove('hidden');
-    this.container?.querySelector('#momentum-empty')?.classList.add('hidden');
-    this.container?.querySelector('#momentum-error')?.classList.add('hidden');
   }
 
   private showEmpty(): void {
-    this.container?.querySelector('#momentum-chart-loading')?.classList.add('hidden');
-    this.container?.querySelector('#momentum-chart-container')?.classList.add('hidden');
+    showState(this.container, 'momentum', 'empty', MomentumTabManager.STATES);
     this.container?.querySelector('#momentum-form-section')?.classList.add('hidden');
     this.container?.querySelector('#momentum-summary')?.classList.add('hidden');
-    this.container?.querySelector('#momentum-unavailable')?.classList.add('hidden');
-    this.container?.querySelector('#momentum-empty')?.classList.remove('hidden');
-    this.container?.querySelector('#momentum-error')?.classList.add('hidden');
   }
 
   private showError(): void {
-    this.container?.querySelector('#momentum-chart-loading')?.classList.add('hidden');
-    this.container?.querySelector('#momentum-chart-container')?.classList.add('hidden');
+    showState(this.container, 'momentum', 'error', MomentumTabManager.STATES);
     this.container?.querySelector('#momentum-form-section')?.classList.add('hidden');
     this.container?.querySelector('#momentum-summary')?.classList.add('hidden');
-    this.container?.querySelector('#momentum-unavailable')?.classList.add('hidden');
-    this.container?.querySelector('#momentum-empty')?.classList.add('hidden');
-    this.container?.querySelector('#momentum-error')?.classList.remove('hidden');
   }
 }
 

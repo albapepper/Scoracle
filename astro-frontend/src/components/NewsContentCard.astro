@@ -216,36 +216,22 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 </style>
 
 <script>
-  import { TabController } from '../lib/utils/tab-controller';
+  import { initTabs } from '../lib/utils/tab-controller';
   import { get } from '../lib/utils/component-bus';
 
-  // Scope query to correct parent view based on entity type from URL
   const params = new URLSearchParams(window.location.search);
-  const type = params.get('type');
-  const viewId = type === 'team' ? 'team-entity-view' : 'player-entity-view';
-  const parentView = document.getElementById(viewId);
-  const card = parentView?.querySelector<HTMLElement>('#news-content-card');
+  const viewId = params.get('type') === 'team' ? 'team-entity-view' : 'player-entity-view';
+  const card = document.getElementById(viewId)?.querySelector<HTMLElement>('#news-content-card');
 
   if (card) {
-    new TabController(card, {
+    initTabs(card, {
       onTabChange: async (tabId) => {
-        if (tabId === 'news') {
-          get('newsTab')?.load();
-        }
-        if (tabId === 'comentions') {
-          const { init } = await import('../lib/tabs/co-mentions-tab');
-          init().load();
-        }
-        if (tabId === 'twitter') {
-          const { init } = await import('../lib/tabs/twitter-tab');
-          init().load();
-        }
+        if (tabId === 'news') get('newsTab')?.load();
+        if (tabId === 'comentions') (await import('../lib/tabs/co-mentions-tab')).init().load();
+        if (tabId === 'twitter') (await import('../lib/tabs/twitter-tab')).init().load();
       },
     });
 
-    // Defer default tab load to allow first paint
-    requestAnimationFrame(() => {
-      get('newsTab')?.load();
-    });
+    requestAnimationFrame(() => get('newsTab')?.load());
   }
 </script>

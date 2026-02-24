@@ -338,7 +338,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 </style>
 
 <script>
-  import { parseEntityParams, escapeHtml } from '../../lib/utils/dom';
+  import { parseEntityParams, escapeHtml, showState } from '../../lib/utils/dom';
   import { swrFetch, setPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
   import type { GamePredictionResponse, StatPrediction } from '../../lib/types';
 
@@ -448,24 +448,15 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private showContent(): void {
-      this.container?.querySelector('#predictions-loading')?.classList.add('hidden');
-      this.container?.querySelector('#predictions-content')?.classList.remove('hidden');
-      this.container?.querySelector('#predictions-empty')?.classList.add('hidden');
-      this.container?.querySelector('#predictions-error')?.classList.add('hidden');
+      showState(this.container, 'predictions', 'content');
     }
 
     private showEmpty(): void {
-      this.container?.querySelector('#predictions-loading')?.classList.add('hidden');
-      this.container?.querySelector('#predictions-content')?.classList.add('hidden');
-      this.container?.querySelector('#predictions-empty')?.classList.remove('hidden');
-      this.container?.querySelector('#predictions-error')?.classList.add('hidden');
+      showState(this.container, 'predictions', 'empty');
     }
 
     private showError(): void {
-      this.container?.querySelector('#predictions-loading')?.classList.add('hidden');
-      this.container?.querySelector('#predictions-content')?.classList.add('hidden');
-      this.container?.querySelector('#predictions-empty')?.classList.add('hidden');
-      this.container?.querySelector('#predictions-error')?.classList.remove('hidden');
+      showState(this.container, 'predictions', 'error');
     }
   }
 

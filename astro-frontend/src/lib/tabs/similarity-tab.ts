@@ -5,7 +5,7 @@
  * Fetches and displays similar entities based on embedding similarity.
  */
 
-import { parseEntityParams, escapeHtml } from '../utils/dom';
+import { parseEntityParams, escapeHtml, showState } from '../utils/dom';
 import { swrFetch, setPageData, CACHE_PRESETS } from '../utils/api-fetcher';
 import { getCurrentSeason } from '../utils/season';
 import type { SimilarityResponse, SimilarEntity } from '../types';
@@ -168,26 +168,9 @@ class SimilarityTabManager {
     });
   }
 
-  private showContent(): void {
-    this.container?.querySelector('#similarity-loading')?.classList.add('hidden');
-    this.container?.querySelector('#similarity-content')?.classList.remove('hidden');
-    this.container?.querySelector('#similarity-empty')?.classList.add('hidden');
-    this.container?.querySelector('#similarity-error')?.classList.add('hidden');
-  }
-
-  private showEmpty(): void {
-    this.container?.querySelector('#similarity-loading')?.classList.add('hidden');
-    this.container?.querySelector('#similarity-content')?.classList.add('hidden');
-    this.container?.querySelector('#similarity-empty')?.classList.remove('hidden');
-    this.container?.querySelector('#similarity-error')?.classList.add('hidden');
-  }
-
-  private showError(): void {
-    this.container?.querySelector('#similarity-loading')?.classList.add('hidden');
-    this.container?.querySelector('#similarity-content')?.classList.add('hidden');
-    this.container?.querySelector('#similarity-empty')?.classList.add('hidden');
-    this.container?.querySelector('#similarity-error')?.classList.remove('hidden');
-  }
+  private showContent(): void { showState(this.container, 'similarity', 'content'); }
+  private showEmpty(): void { showState(this.container, 'similarity', 'empty'); }
+  private showError(): void { showState(this.container, 'similarity', 'error'); }
 }
 
 /** Lazy singleton - creates the manager on first call, returns cached instance after. */

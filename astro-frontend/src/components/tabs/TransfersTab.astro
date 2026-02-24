@@ -275,7 +275,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 </style>
 
 <script>
-  import { parseEntityParams, escapeHtml } from '../../lib/utils/dom';
+  import { parseEntityParams, escapeHtml, showState } from '../../lib/utils/dom';
   import { swrFetch, setPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
   import type { PlayerTransferLinks, TeamTransferPredictions, LinkedTeam, TransferTarget } from '../../lib/types';
 
@@ -420,36 +420,22 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       }).join('');
     }
 
+    private static readonly TRANSFER_STATES = ['loading', 'player-content', 'team-content', 'empty', 'error'] as const;
+
     private showPlayerContent(): void {
-      this.container?.querySelector('#transfers-loading')?.classList.add('hidden');
-      this.container?.querySelector('#transfers-player-content')?.classList.remove('hidden');
-      this.container?.querySelector('#transfers-team-content')?.classList.add('hidden');
-      this.container?.querySelector('#transfers-empty')?.classList.add('hidden');
-      this.container?.querySelector('#transfers-error')?.classList.add('hidden');
+      showState(this.container, 'transfers', 'player-content', [...TransfersTabManager.TRANSFER_STATES]);
     }
 
     private showTeamContent(): void {
-      this.container?.querySelector('#transfers-loading')?.classList.add('hidden');
-      this.container?.querySelector('#transfers-player-content')?.classList.add('hidden');
-      this.container?.querySelector('#transfers-team-content')?.classList.remove('hidden');
-      this.container?.querySelector('#transfers-empty')?.classList.add('hidden');
-      this.container?.querySelector('#transfers-error')?.classList.add('hidden');
+      showState(this.container, 'transfers', 'team-content', [...TransfersTabManager.TRANSFER_STATES]);
     }
 
     private showEmpty(): void {
-      this.container?.querySelector('#transfers-loading')?.classList.add('hidden');
-      this.container?.querySelector('#transfers-player-content')?.classList.add('hidden');
-      this.container?.querySelector('#transfers-team-content')?.classList.add('hidden');
-      this.container?.querySelector('#transfers-empty')?.classList.remove('hidden');
-      this.container?.querySelector('#transfers-error')?.classList.add('hidden');
+      showState(this.container, 'transfers', 'empty', [...TransfersTabManager.TRANSFER_STATES]);
     }
 
     private showError(): void {
-      this.container?.querySelector('#transfers-loading')?.classList.add('hidden');
-      this.container?.querySelector('#transfers-player-content')?.classList.add('hidden');
-      this.container?.querySelector('#transfers-team-content')?.classList.add('hidden');
-      this.container?.querySelector('#transfers-empty')?.classList.add('hidden');
-      this.container?.querySelector('#transfers-error')?.classList.remove('hidden');
+      showState(this.container, 'transfers', 'error', [...TransfersTabManager.TRANSFER_STATES]);
     }
   }
 

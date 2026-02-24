@@ -5,7 +5,7 @@
  * Cross-references news articles with entity data to find co-mentioned entities.
  */
 
-import { escapeHtml, parseEntityParams } from '../utils/dom';
+import { escapeHtml, parseEntityParams, showState } from '../utils/dom';
 import { findCoMentions, loadEntitiesForSport, type Article, type CoMention } from '../utils/co-mentions';
 import { waitForPageData } from '../utils/api-fetcher';
 
@@ -89,15 +89,11 @@ class CoMentionsTabManager {
   }
 
   private showContent(): void {
-    this.container?.querySelector('#comentions-loading')?.classList.add('hidden');
-    this.container?.querySelector('#comentions-content')?.classList.remove('hidden');
-    this.container?.querySelector('#comentions-empty')?.classList.add('hidden');
+    showState(this.container, 'comentions', 'content', ['loading', 'content', 'empty']);
   }
 
   private showEmpty(): void {
-    this.container?.querySelector('#comentions-loading')?.classList.add('hidden');
-    this.container?.querySelector('#comentions-content')?.classList.add('hidden');
-    this.container?.querySelector('#comentions-empty')?.classList.remove('hidden');
+    showState(this.container, 'comentions', 'empty', ['loading', 'content', 'empty']);
   }
 }
 

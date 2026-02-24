@@ -123,63 +123,29 @@ const pageTitle = entityName ? `${entityName} News - Scoracle` : 'News - Scoracl
 <script>
   import { setPageData } from '../lib/utils/api-fetcher';
 
-  /**
-   * News Page Entity View Manager
-   * Shows the correct entity view (player vs team) based on URL params.
-   * Hydrates SSR data into the page data store.
-   */
-  class NewsPageManager {
-    private playerView: HTMLElement | null = null;
-    private teamView: HTMLElement | null = null;
-
-    constructor() {
-      this.playerView = document.getElementById('player-entity-view');
-      this.teamView = document.getElementById('team-entity-view');
-      this.hydrateSSRData();
-      this.init();
-    }
-
-    private hydrateSSRData() {
-      const ssrEl = document.getElementById('__SSR_DATA__');
-      if (!ssrEl) return;
-
-      try {
-        const ssrData = JSON.parse(ssrEl.textContent || '{}');
-
-        // Hydrate profile data
-        if (ssrData.profile) {
-          setPageData('widget', {
-            entity_id: ssrData.profile.id,
-            entity_type: ssrData.type,
-            sport: ssrData.sport,
-            info: ssrData.profile,
-          });
-        }
-
-        // Hydrate news data for co-mentions tab
-        if (ssrData.news?.articles) {
-          setPageData('news', { articles: ssrData.news.articles });
-        }
-      } catch {
-        // SSR data parse failed — components will fetch client-side
+  // ─── Hydrate SSR data ──────────────────────────────────────────────────────
+  const ssrEl = document.getElementById('__SSR_DATA__');
+  if (ssrEl) {
+    try {
+      const ssrData = JSON.parse(ssrEl.textContent || '{}');
+      if (ssrData.profile) {
+        setPageData('widget', {
+          entity_id: ssrData.profile.id,
+          entity_type: ssrData.type,
+          sport: ssrData.sport,
+          info: ssrData.profile,
+        });
       }
-    }
-
-    private init() {
-      const params = new URLSearchParams(window.location.search);
-      const type = params.get('type');
-      const entityType = type === 'team' ? 'team' : 'player';
-
-      if (entityType === 'team') {
-        this.playerView?.classList.add('hidden');
-        this.teamView?.classList.remove('hidden');
-      } else {
-        this.playerView?.classList.remove('hidden');
-        this.teamView?.classList.add('hidden');
+      if (ssrData.news?.articles) {
+        setPageData('news', { articles: ssrData.news.articles });
       }
+    } catch {
+      // SSR data parse failed — components will fetch client-side
     }
   }
 
-  // Initialize
-  new NewsPageManager();
+  // ─── Show correct entity view ──────────────────────────────────────────────
+  const isTeam = new URLSearchParams(window.location.search).get('type') === 'team';
+  document.getElementById('player-entity-view')?.classList.toggle('hidden', isTeam);
+  document.getElementById('team-entity-view')?.classList.toggle('hidden', !isTeam);
 </script>

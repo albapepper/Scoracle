@@ -5,7 +5,7 @@
  * Extracts strength/weakness indicators from stats percentile data.
  */
 
-import { escapeHtml, parseEntityParams } from '../utils/dom';
+import { escapeHtml, parseEntityParams, showState } from '../utils/dom';
 import { waitForPageData } from '../utils/api-fetcher';
 import type { Category } from '../utils/stats-categorizer';
 
@@ -162,26 +162,9 @@ class StrengthsWeaknessesTabManager {
     `;
   }
 
-  private showContent(): void {
-    this.container?.querySelector('#sw-loading')?.classList.add('hidden');
-    this.container?.querySelector('#sw-content')?.classList.remove('hidden');
-    this.container?.querySelector('#sw-empty')?.classList.add('hidden');
-    this.container?.querySelector('#sw-error')?.classList.add('hidden');
-  }
-
-  private showEmpty(): void {
-    this.container?.querySelector('#sw-loading')?.classList.add('hidden');
-    this.container?.querySelector('#sw-content')?.classList.add('hidden');
-    this.container?.querySelector('#sw-empty')?.classList.remove('hidden');
-    this.container?.querySelector('#sw-error')?.classList.add('hidden');
-  }
-
-  private showError(): void {
-    this.container?.querySelector('#sw-loading')?.classList.add('hidden');
-    this.container?.querySelector('#sw-content')?.classList.add('hidden');
-    this.container?.querySelector('#sw-empty')?.classList.add('hidden');
-    this.container?.querySelector('#sw-error')?.classList.remove('hidden');
-  }
+  private showContent(): void { showState(this.container, 'sw', 'content'); }
+  private showEmpty(): void { showState(this.container, 'sw', 'empty'); }
+  private showError(): void { showState(this.container, 'sw', 'error'); }
 }
 
 /** Lazy singleton - creates the manager on first call, returns cached instance after. */

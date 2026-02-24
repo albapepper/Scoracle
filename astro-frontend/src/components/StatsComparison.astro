@@ -372,7 +372,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 </style>
 
 <script>
-  import { escapeHtml } from '../lib/utils/dom';
+  import { escapeHtml, showState } from '../lib/utils/dom';
   import { swrFetch } from '../lib/utils/api-fetcher';
   import { register } from '../lib/utils/component-bus';
 
@@ -594,31 +594,19 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private showLoading() {
-      this.container?.querySelector('#stats-comparison-loading')?.classList.remove('hidden');
-      this.container?.querySelector('#stats-comparison-content')?.classList.add('hidden');
-      this.container?.querySelector('#stats-comparison-empty')?.classList.add('hidden');
-      this.container?.querySelector('#stats-comparison-error')?.classList.add('hidden');
+      showState(this.container, 'stats-comparison', 'loading');
     }
 
     private showContent() {
-      this.container?.querySelector('#stats-comparison-loading')?.classList.add('hidden');
-      this.container?.querySelector('#stats-comparison-content')?.classList.remove('hidden');
-      this.container?.querySelector('#stats-comparison-empty')?.classList.add('hidden');
-      this.container?.querySelector('#stats-comparison-error')?.classList.add('hidden');
+      showState(this.container, 'stats-comparison', 'content');
     }
 
     private showEmpty() {
-      this.container?.querySelector('#stats-comparison-loading')?.classList.add('hidden');
-      this.container?.querySelector('#stats-comparison-content')?.classList.add('hidden');
-      this.container?.querySelector('#stats-comparison-empty')?.classList.remove('hidden');
-      this.container?.querySelector('#stats-comparison-error')?.classList.add('hidden');
+      showState(this.container, 'stats-comparison', 'empty');
     }
 
     private showError() {
-      this.container?.querySelector('#stats-comparison-loading')?.classList.add('hidden');
-      this.container?.querySelector('#stats-comparison-content')?.classList.add('hidden');
-      this.container?.querySelector('#stats-comparison-empty')?.classList.add('hidden');
-      this.container?.querySelector('#stats-comparison-error')?.classList.remove('hidden');
+      showState(this.container, 'stats-comparison', 'error');
     }
 
     public hide() {

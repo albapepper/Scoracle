@@ -340,6 +340,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 <script>
   import { swrFetch, setPageData, CACHE_PRESETS } from '../lib/utils/api-fetcher';
+  import { showWidgetState } from '../lib/utils/dom';
   import { register } from '../lib/utils/component-bus';
 
   // Raw API response types matching actual backend response
@@ -529,23 +530,21 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private showContent(prefix: string) {
-      const loadingEl = document.getElementById(`${prefix}-loading`);
-      const contentEl = document.getElementById(`${prefix}-content`);
-      const errorEl = document.getElementById(`${prefix}-error`);
-
-      if (loadingEl) loadingEl.style.display = 'none';
-      if (contentEl) contentEl.style.display = 'flex';
-      if (errorEl) errorEl.style.display = 'none';
+      showWidgetState(
+        document.getElementById(`${prefix}-loading`),
+        document.getElementById(`${prefix}-content`),
+        document.getElementById(`${prefix}-error`),
+        'content',
+      );
     }
 
     private showError(prefix: string) {
-      const loadingEl = document.getElementById(`${prefix}-loading`);
-      const contentEl = document.getElementById(`${prefix}-content`);
-      const errorEl = document.getElementById(`${prefix}-error`);
-
-      if (loadingEl) loadingEl.style.display = 'none';
-      if (contentEl) contentEl.style.display = 'none';
-      if (errorEl) errorEl.style.display = 'flex';
+      showWidgetState(
+        document.getElementById(`${prefix}-loading`),
+        document.getElementById(`${prefix}-content`),
+        document.getElementById(`${prefix}-error`),
+        'error',
+      );
     }
 
     public hide() {
@@ -555,13 +554,12 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.secondaryData = null;
 
       ['compare-primary', 'compare-secondary'].forEach((prefix) => {
-        const loadingEl = document.getElementById(`${prefix}-loading`);
-        const contentEl = document.getElementById(`${prefix}-content`);
-        const errorEl = document.getElementById(`${prefix}-error`);
-
-        if (loadingEl) loadingEl.style.display = 'flex';
-        if (contentEl) contentEl.style.display = 'none';
-        if (errorEl) errorEl.style.display = 'none';
+        showWidgetState(
+          document.getElementById(`${prefix}-loading`),
+          document.getElementById(`${prefix}-content`),
+          document.getElementById(`${prefix}-error`),
+          'loading',
+        );
       });
     }
 
