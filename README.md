@@ -140,7 +140,7 @@ The frontend runs on `http://localhost:4321` and calls the production API by def
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `PUBLIC_API_URL` | Backend API base URL | `https://scoracle-data-production.up.railway.app/api/v1` |
-| `SITE_URL` | Canonical site URL (SEO) | `https://scoracle.vercel.app` |
+| `SITE_URL` | Canonical site URL (SEO) | `https://scoracle.up.railway.app` |
 | `FASTAPI_INTERNAL_URL` | Private Railway URL for SSR | _(set in Railway dashboard)_ |
 
 See `.env.example` for the full list including future PostgREST and Go backend variables.

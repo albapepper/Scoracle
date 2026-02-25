@@ -82,14 +82,14 @@ import { defineConfig } from 'astro/config';
 import node from '@astrojs/node';
 
 export default defineConfig({
-  output: 'server', // or 'hybrid' for mixed static/SSR
+  output: 'static', // In Astro 5+, static with an adapter = hybrid mode
   adapter: node({
     mode: 'standalone'
   })
 });
 ```
 
-For a mixed strategy where most pages are static but select routes use SSR, use `output: 'hybrid'` and opt individual pages into SSR with `export const prerender = false`.
+In Astro 5+, `output: 'static'` with an adapter present provides hybrid behavior: pages are static by default, and individual pages opt into SSR with `export const prerender = false`.
 
 ### Railway Service Configuration
 

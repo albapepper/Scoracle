@@ -11,10 +11,12 @@ interface Props {
   showHeaderSearch?: boolean;
 }
 
+const siteUrl = import.meta.env.SITE_URL || Astro.site?.origin || '';
+
 const { 
   title, 
   description = 'Sports News & Statistics Platform',
-  image = 'https://scoracle.vercel.app/og-image.png',
+  image = siteUrl ? `${siteUrl}/og-image.png` : '',
   canonical = Astro.url.href,
   type = 'website',
   showHeaderSearch = true,
@@ -27,7 +29,7 @@ const structuredData = {
   name: title,
   description: description,
   url: canonical,
-  image: image,
+  ...(image && { image }),
 };
 ---
 
@@ -51,14 +53,14 @@ const structuredData = {
     <meta property="og:url" content={canonical} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content={image} />
+    {image && <meta property="og:image" content={image} />}
     
     <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:card" content={image ? "summary_large_image" : "summary"} />
     <meta property="twitter:url" content={canonical} />
     <meta property="twitter:title" content={title} />
     <meta property="twitter:description" content={description} />
-    <meta property="twitter:image" content={image} />
+    {image && <meta property="twitter:image" content={image} />}
     
     <title>{title}</title>
     

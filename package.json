@@ -11,8 +11,8 @@
     "astro": "astro",
     "check": "astro check"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["sports", "astro", "statistics", "nba", "nfl", "football"],
+  "author": "albapepper",
   "license": "MIT",
   "description": "Scoracle - Sports Intelligence Platform (Astro + TypeScript)",
   "engines": {
