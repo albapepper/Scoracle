@@ -152,12 +152,11 @@ Full API docs: <https://scoracle-data-production.up.railway.app/docs>
 
 ## Deployment
 
-### Vercel (Frontend)
+### Railway (Container)
 
-1. Connect repo to Vercel
-2. Set Root Directory: `astro-frontend`
-3. Add env var: `PUBLIC_API_URL=https://scoracle-data-production.up.railway.app/api/v1`
-4. Deploy
+1. Deploy from this repository root (uses `Dockerfile` + `railway.toml`)
+2. Add env var: `PUBLIC_API_URL=https://scoracle-data-production.up.railway.app/api/v1`
+3. Add env var: `SITE_URL=https://<your-railway-domain>`
 
 ## License
 
