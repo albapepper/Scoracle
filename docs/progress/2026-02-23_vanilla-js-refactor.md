@@ -1,7 +1,7 @@
 # Vanilla JS Refactor - Frontend Cleanup
 
 **Date:** 2026-02-23
-**Scope:** `astro-frontend/src/`
+**Scope:** `src/`
 **Commit:** `b53cdcf`
 
 ## Goal

@@ -2,17 +2,30 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Seed local DBs (API)",
+			"label": "Dev Server",
 			"type": "shell",
-			"command": "python",
-			"args": [
-				"-m",
-				"app.database.seed_local_dbs"
-			],
+			"command": "npm",
+			"args": ["run", "dev"],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Build",
+			"type": "shell",
+			"command": "npm",
+			"args": ["run", "build"],
 			"isBackground": false,
-			"problemMatcher": [
-				"$eslint-stylish"
-			],
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Type Check",
+			"type": "shell",
+			"command": "npm",
+			"args": ["run", "check"],
+			"isBackground": false,
+			"problemMatcher": [],
 			"group": "build"
 		}
 	]

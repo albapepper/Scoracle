@@ -6,8 +6,8 @@ const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('d
 
 // https://astro.build/config
 export default defineConfig({
-  // Site URL — reads from env for Railway, falls back to Vercel for now
-  site: process.env.SITE_URL || 'https://scoracle.vercel.app',
+  // Site URL — reads from env for Railway
+  site: process.env.SITE_URL || 'https://scoracle.up.railway.app',
 
   // Static by default; pages opt into SSR with `export const prerender = false`
   // In Astro 5+, this is the default behavior when an adapter is present.

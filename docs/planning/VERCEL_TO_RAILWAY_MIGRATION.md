@@ -31,7 +31,7 @@ The `ARCHITECTURE-FRONTEND.md` document defined a target architecture for Scorac
 - **Cloudflare CDN integration** — The architecture doc marks this as a future enhancement for when geographic user distribution becomes a latency concern.
 - **Actual PostgREST/Go endpoint wiring** — Both backends have Railway build failures currently. The abstraction layer is built and ready, but all requests route through FastAPI until the other backends stabilize.
 - **Root `README.md` update** — Still references Vercel deployment. Should be updated when the Railway deployment is validated in production.
-- **`astro-frontend/README.md` update** — Contains outdated information (references React, Tailwind, Tabler icons — none of which are used). Should be rewritten.
+- **`README.md` update** — Contains outdated information (references React, Tailwind, Tabler icons — none of which are used). Should be rewritten.
 
 ---
 
@@ -174,14 +174,14 @@ Client-side <script> blocks hydrate:
 
 - Updated `package.json` `start` script: `"start": "node dist/server/entry.mjs"`
 - Removed `vercel.json` (root)
-- Removed `astro-frontend/vercel.json`
+- Removed `vercel.json` (was in astro-frontend/)
 - Removed `.vercelignore`
 
 Railway will auto-detect the Node.js project and use the `start` script.
 
 ### Phase 6: Environment & Cleanup
 
-- Rewrote `astro-frontend/.env.example` with full documentation of all environment variables organized by category (site URL, public URLs, private URLs, Node env)
+- Rewrote `.env.example` with full documentation of all environment variables organized by category (site URL, public URLs, private URLs, Node env)
 - Added `is:inline` directives to all `<script type="application/json">` tags to silence Astro build hints
 
 ---
@@ -224,7 +224,7 @@ Railway will auto-detect the Node.js project and use the `start` script.
 | File | Reason |
 |---|---|
 | `vercel.json` (root) | Vercel no longer used |
-| `astro-frontend/vercel.json` | Vercel no longer used |
+| `vercel.json` (was in astro-frontend/) | Vercel no longer used |
 | `.vercelignore` | Vercel no longer used |
 
 ---
@@ -315,7 +315,7 @@ Adapter: @astrojs/node (standalone)
 
 4. **Update root `README.md`** — Still references Vercel deployment, Vercel architecture diagram, and `vercel.json`. Should reflect the Railway setup.
 
-5. **Rewrite `astro-frontend/README.md`** — Contains outdated references to React, Tailwind, Tabler icons, and Vercel. None of these are used.
+5. **Rewrite `README.md`** — Contains outdated references to React, Tailwind, Tabler icons, and Vercel. None of these are used.
 
 6. **Add `Cache-Control` headers to SSR responses** — The architecture doc notes that SSR responses can be cached at the edge when Cloudflare is added. Adding appropriate cache headers now prepares for that.
 
