@@ -237,3 +237,60 @@ Backend at: `https://scoracle-data-production.up.railway.app`
 - **No console.log in production:** Terser drops `console.*` in production builds. Use `import.meta.env.DEV` guards for debug logging.
 - **Private network URLs:** `*.railway.internal` hostnames only work server-side within Railway's private network. They must never appear in client-side code.
 - **Sport IDs are uppercase** in API calls (`NBA`, `NFL`, `FOOTBALL`) but **lowercase** in file paths and URL slugs (`nba`, `nfl`, `football`).
+
+## Progress Documentation
+
+After completing any major edit — new feature, new file/folder, or significant refactor — generate a markdown summary and save it to `docs/progress/`. This is **mandatory** for all qualifying changes.
+
+### What qualifies as a major edit
+
+- Adding a new feature or page
+- Creating new files or folders
+- Significant refactoring (restructuring code, renaming modules, changing architecture)
+- Adding or removing dependencies
+- Changing deployment, build, or infrastructure configuration
+
+Minor changes (typo fixes, small bug fixes, comment updates, config tweaks) do not require a progress doc.
+
+### File naming
+
+Use the format: `YYYY-MM-DD_short-description.md`
+
+Examples: `2026-03-02_add-dark-mode.md`, `2026-03-02_stats-page-ssr-migration.md`
+
+### Required structure
+
+```markdown
+# Title
+
+**Date:** YYYY-MM-DD
+**Scope:** Brief one-line scope description
+
+## Goal
+
+What was the objective of this change and why was it needed?
+
+## What Was Done
+
+Describe what was implemented or changed, organized by logical phases or areas.
+Include specific files created, modified, or deleted.
+
+## Files Changed
+
+Summary of files added, modified, renamed, or deleted.
+
+## Verification
+
+How the changes were verified (build, type-check, manual testing, etc.).
+
+## Result
+
+One-paragraph summary of the outcome and current state.
+```
+
+### Rules
+
+- Write the progress doc as the **final step** after all code changes are committed.
+- Keep descriptions factual and concise — focus on what changed and why, not how to use it.
+- Reference commit hashes when available.
+- If a session involves multiple major changes, write one doc per distinct change or one combined doc if they are closely related.
