@@ -231,6 +231,66 @@ Backend at: `https://scoracle-data-production.up.railway.app`
 - **Health check:** `GET /` with 15s timeout
 - Set environment variables in Railway dashboard (not in code)
 
+## Progress Documentation
+
+After completing any major edit — new feature, new file/folder, or significant refactor — generate a markdown summary and save it to `docs/progress/`. This is **mandatory**, not optional.
+
+### When to write a progress entry
+
+- Adding a new feature or page
+- Creating new files or directories
+- Significant refactoring (restructuring, renaming, rewriting modules)
+- Architectural changes (new patterns, dependency changes, config overhauls)
+- Bug fixes that required non-trivial investigation or multi-file changes
+
+Do **not** write a progress entry for minor edits like typo fixes, comment updates, or single-line config tweaks.
+
+### File naming
+
+```
+docs/progress/YYYY-MM-DD_short-description.md
+```
+
+Use today's date and a kebab-case slug describing the work. Examples:
+- `2026-03-02_ssr-news-page.md`
+- `2026-03-05_tab-system-refactor.md`
+
+### Required format
+
+```markdown
+# Title of Change
+
+**Date:** YYYY-MM-DD
+**Scope:** What areas were affected (e.g., `src/components/`, `src/lib/utils/`)
+**Commit(s):** `abc1234`
+
+## Goal
+
+2-3 sentences explaining the purpose and rationale.
+
+## What Was Done
+
+Detailed breakdown with numbered subsections for each major change.
+Include implementation details, design decisions, and trade-offs.
+
+## Files Changed
+
+List or table of modified/added/deleted files with brief descriptions.
+
+## Verification
+
+Build checks, test results, and confirmation that changes work.
+Include quantitative info where relevant (lines changed, file counts).
+```
+
+### Key principles
+
+- Write in **narrative style** as a session recap for future reference
+- Include **technical depth** — implementation details, not just high-level summaries
+- Document **design decisions** and why alternatives were rejected
+- Show **verification evidence** — that the build passes and changes work
+- Keep it **concise but complete** — a future developer (or AI) should understand what happened and why
+
 ## Important Constraints
 
 - **Server-only imports:** Never import `src/lib/server/fetch.ts` from client-side `<script>` blocks. Astro tree-shakes it out when only imported in frontmatter.
