@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document covers the migration of the Scoracle frontend from Vercel to Railway and the architectural decisions around Astro's rendering model. It also notes a future Cloudflare integration for edge asset delivery.
+This document covers the architectural decisions behind Scoracle's Railway hosting and Astro rendering model. It also notes a future Cloudflare integration for edge asset delivery.
 
 The guiding principle: **pre-render everything possible at build time, use SSR only where live data is required, and keep the entire stack on Railway's private network.**
 
@@ -96,12 +96,16 @@ In Astro 5+, `output: 'static'` with an adapter present provides hybrid behavior
 Railway auto-detects Node.js projects. Set the following environment variables in the Railway service dashboard:
 
 ```
-PUBLIC_POSTGREST_URL=http://postgrest.railway.internal:3000
-PUBLIC_GO_API_URL=http://scoracle-data.railway.internal:8080
+# Public URLs (used by client-side code in the browser)
+PUBLIC_API_URL=https://scoracle-data-production.up.railway.app/api/v1
+
+# Private URLs (used by Astro SSR server over Railway's internal network)
+FASTAPI_INTERNAL_URL=http://scoracle-data.railway.internal:8000/api/v1
+
 NODE_ENV=production
 ```
 
-Using Railway's internal hostnames (`.railway.internal`) ensures all service-to-service communication stays on the private network and never traverses the public internet.
+Private `.railway.internal` hostnames are resolved only on the server during SSR. Client-side code uses the `PUBLIC_*` URLs. The multi-backend abstraction in `src/lib/utils/data-sources.ts` handles this routing automatically. See `.env.example` for the full variable list.
 
 ### Region Alignment
 
