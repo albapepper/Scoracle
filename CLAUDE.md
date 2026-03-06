@@ -34,25 +34,22 @@ src/
 │   ├── index.astro           # Home — static, crystal ball sport selector
 │   ├── news.astro            # News — SSR (prerender = false)
 │   ├── stats.astro           # Stats — SSR (prerender = false)
-│   ├── co-mentions.astro     # Co-mention analysis page
 │   └── 404.astro             # Custom 404
 ├── components/               # Astro components
 │   ├── Header.astro
 │   ├── HamburgerMenu.astro         # Uses <details>/<summary> (CSS-only)
 │   ├── CrystalBallSelector.astro   # Home page sport carousel
 │   ├── ComparisonSearchModal.astro  # Uses <dialog> element
+│   ├── ComparisonWidget.astro       # Compact profile card for side-by-side comparison
 │   ├── PlayerProfileWidget.astro
 │   ├── TeamProfileWidget.astro
 │   ├── PlayerStatsContentCard.astro
 │   ├── TeamStatsContentCard.astro
 │   ├── NewsContentCard.astro
-│   ├── EntityWidgetPair.astro
 │   ├── ProfileWidgetComparison.astro
 │   ├── StatsComparison.astro
 │   ├── StatsComparisonContent.astro
 │   ├── StrengthsWeaknessesComparison.astro
-│   ├── SharedArticlesCard.astro
-│   ├── SharedContentCard.astro
 │   └── tabs/                 # Lazy-loaded tab components
 │       ├── NewsTab.astro
 │       ├── CoMentionsTab.astro
@@ -112,7 +109,7 @@ docs/
 
 ### Rendering Strategy
 
-- **Static by default:** `index.astro`, `co-mentions.astro`, `404.astro` are pre-rendered at build time.
+- **Static by default:** `index.astro`, `404.astro` are pre-rendered at build time.
 - **SSR for live data:** `news.astro` and `stats.astro` use `export const prerender = false` to server-render with real data from the API, eliminating loading skeletons.
 - Pages opt into SSR individually. Astro's `output: 'static'` config with the Node adapter allows this hybrid behavior.
 
