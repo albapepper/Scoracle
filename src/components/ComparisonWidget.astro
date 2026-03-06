@@ -1,0 +1,273 @@
+---
+/**
+ * ComparisonWidget
+ *
+ * A compact, reusable profile card for side-by-side entity comparison.
+ * Displays entity logo, name, subtitle, and Stats/News navigation buttons.
+ * Purely presentational — the parent component populates data via DOM IDs.
+ *
+ * ID convention: All child elements use `{slot}-` prefix for unique addressing.
+ * Example: slot="compare-primary" → #compare-primary-loading, #compare-primary-name, etc.
+ */
+
+interface Props {
+  slot: string;
+  variant: 'primary' | 'secondary';
+  showRemove?: boolean;
+}
+
+const { slot, variant, showRemove = false } = Astro.props;
+---
+
+<div id={`${slot}-widget`} class="comparison-widget-half card" data-entity={variant}>
+  <div class={`cw-color-indicator ${variant}`}></div>
+  <div class="cw-body">
+    <div id={`${slot}-loading`} class="cw-loading">
+      <div class="skeleton-circle"></div>
+      <div class="skeleton-line"></div>
+      <div class="skeleton-line short"></div>
+    </div>
+    <div id={`${slot}-content`} class="cw-content">
+      <img id={`${slot}-logo`} class="cw-logo" src="" alt="" style="display: none;" />
+      <h2 id={`${slot}-name`} class="cw-name"></h2>
+      <p id={`${slot}-subtitle`} class="cw-subtitle"></p>
+    </div>
+    <div id={`${slot}-error`} class="cw-error">
+      <p>Unable to load profile</p>
+    </div>
+  </div>
+  <div class="cw-button-split">
+    <a id={`${slot}-stats-btn`} href="#" class="cw-button-half">Stats</a>
+    <a id={`${slot}-news-btn`} href="#" class="cw-button-half">News</a>
+  </div>
+  {showRemove && (
+    <button id={`${slot}-remove-btn`} class="cw-remove-btn" title="Remove comparison">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 6L6 18M6 6l12 12" />
+      </svg>
+    </button>
+  )}
+</div>
+
+<style>
+  .comparison-widget-half {
+    flex: 1;
+    text-align: center;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-radius: 0.375rem;
+    overflow: hidden;
+    min-width: 0;
+    position: relative;
+  }
+
+  .cw-color-indicator {
+    width: 100%;
+    height: 4px;
+  }
+
+  .cw-color-indicator.primary {
+    background-color: var(--compare-primary);
+  }
+
+  .cw-color-indicator.secondary {
+    background-color: var(--compare-secondary);
+  }
+
+  :global(.dark) .cw-color-indicator.primary {
+    background-color: var(--compare-primary-dark);
+  }
+
+  :global(.dark) .cw-color-indicator.secondary {
+    background-color: var(--compare-secondary-dark);
+  }
+
+  .cw-body {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    flex: 1;
+    min-height: 120px;
+  }
+
+  .cw-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .cw-content, .cw-error {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .skeleton-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--border);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .skeleton-line {
+    height: 12px;
+    width: 100px;
+    border-radius: 4px;
+    background: var(--border);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .skeleton-line.short {
+    width: 70px;
+  }
+
+  :global(.dark) .skeleton-circle,
+  :global(.dark) .skeleton-line {
+    background: var(--border-dark);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .cw-logo {
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+    margin-bottom: 0.25rem;
+  }
+
+  .cw-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  :global(.dark) .cw-name {
+    color: var(--text-dark);
+  }
+
+  .cw-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.dark) .cw-subtitle {
+    color: var(--text-secondary-dark);
+  }
+
+  .cw-error p {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    margin: 0;
+  }
+
+  :global(.dark) .cw-error p {
+    color: var(--text-secondary-dark);
+  }
+
+  /* Split button styles */
+  .cw-button-split {
+    display: flex;
+    width: 100%;
+  }
+
+  .cw-button-half {
+    flex: 1;
+    display: block;
+    padding: 0.75rem 0.5rem;
+    background-color: var(--accent);
+    color: var(--bg);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.8rem;
+    text-align: center;
+    transition: background-color 0.15s;
+  }
+
+  .cw-button-half:first-child {
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .cw-button-half:hover {
+    background-color: var(--accent-hover, var(--accent));
+    filter: brightness(1.1);
+  }
+
+  :global(.dark) .cw-button-half {
+    background-color: var(--accent-dark);
+    color: var(--bg-dark);
+  }
+
+  :global(.dark) .cw-button-half:first-child {
+    border-right-color: rgba(0, 0, 0, 0.2);
+  }
+
+  :global(.dark) .cw-button-half:hover {
+    background-color: var(--accent-dark-hover, var(--accent-dark));
+  }
+
+  /* Remove button */
+  .cw-remove-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background-color: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--text-tertiary);
+    opacity: 0.7;
+    transition: opacity 0.15s;
+  }
+
+  .cw-remove-btn:hover {
+    opacity: 1;
+    color: var(--text-secondary);
+  }
+
+  :global(.dark) .cw-remove-btn {
+    background-color: var(--bg-dark);
+    border-color: var(--border-dark);
+    color: var(--text-tertiary-dark);
+  }
+
+  :global(.dark) .cw-remove-btn:hover {
+    color: var(--text-secondary-dark);
+  }
+
+  /* Mobile */
+  @media (max-width: 480px) {
+    .cw-logo {
+      width: 48px;
+      height: 48px;
+    }
+
+    .cw-name {
+      font-size: 0.95rem;
+    }
+  }
+</style>
