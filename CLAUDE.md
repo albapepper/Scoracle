@@ -4,6 +4,16 @@
 
 Scoracle is a sports intelligence web platform covering NBA, NFL, and Football (soccer). It provides news aggregation, statistics dashboards, player/team comparisons, and AI-powered insights (similarity matching, transfer predictions, sentiment analysis). The frontend is built with Astro 5 + TypeScript + vanilla JS and deployed on Railway as a Docker container.
 
+## Frontend Philosophy
+
+These are the overarching principles that govern all frontend decisions:
+
+1. **Lazy load aggressively.** Lean into Astro's island architecture. Components, tabs, and modules should defer loading until needed. If the user hasn't scrolled to it or clicked on it, don't load it. Prefer dynamic `import()` over static imports for anything not immediately visible.
+
+2. **Ship minimal JavaScript.** Every byte of JS sent to the browser must earn its place. Default to zero-JS Astro components (HTML + CSS only). When interactivity is required, use the smallest possible amount of vanilla JS — no frameworks, no libraries, no abstractions beyond what the feature demands. Question whether JS is needed at all before writing it; CSS-only solutions (`<details>`, `:target`, scroll-snap, animations) are always preferred.
+
+3. **Speed and simplicity above all.** Fast page loads, instant interactions, small payloads. Favor server-rendered HTML over client-side rendering. Favor native browser APIs over polyfills or libraries. Keep the dependency count near zero. If a solution feels complex, it's probably wrong — find the simpler path.
+
 ## Tech Stack
 
 - **Framework:** Astro 5 with hybrid rendering (static by default, SSR opt-in)
