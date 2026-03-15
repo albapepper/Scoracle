@@ -2,18 +2,19 @@
  * Data Sources — Multi-Backend Abstraction Layer
  *
  * Routes data requests to the correct backend service:
- * - PostgREST: stats, percentiles, profiles (future)
- * - Go API: news, twitter (future)
- * - FastAPI: fallback for all endpoints until Go/PostgREST are stable
+ * - PostgREST: profiles, stats (via Accept-Profile header per sport schema)
+ * - Go API: news, twitter
+ * - FastAPI: ML endpoints (vibe, predictions, transfers), similarity
  *
  * On the server (SSR), uses private Railway network URLs.
- * On the client, uses public URLs.
+ * On the client, uses public URLs (PUBLIC_* env vars are inlined by Vite).
  *
- * To swap a data source from FastAPI to PostgREST/Go:
- * 1. Update the relevant fetch function below
- * 2. Add any response shape transformation needed
- * 3. The rest of the app remains unchanged
+ * Each URL builder returns a FetchTarget { url, headers } so callers
+ * get both the endpoint and any required headers (e.g. Accept-Profile)
+ * in a single call.
  */
+
+import { getCurrentSeason } from './season';
 
 // ─── Backend Source Types ────────────────────────────────────────────────────
 
@@ -35,14 +36,25 @@ export interface DataSourceConfig {
  * Change individual entries as backends become available.
  */
 export const DATA_SOURCES: DataSourceConfig = {
-  profile: 'fastapi',     // Future: 'postgrest' or 'go'
-  stats: 'fastapi',       // Future: 'postgrest'
-  news: 'fastapi',        // Future: 'go'
-  twitter: 'fastapi',     // Future: 'go'
-  similarity: 'fastapi',  // Future: 'postgrest' or 'go'
-  vibe: 'fastapi',        // ML — stays on FastAPI or migrates to Go
+  profile: 'postgrest',   // PostgREST via Accept-Profile header
+  stats: 'postgrest',     // PostgREST via Accept-Profile header
+  news: 'go',             // Go API
+  twitter: 'go',          // Go API
+  similarity: 'fastapi',  // No PostgREST view yet
+  vibe: 'fastapi',        // ML — stays on FastAPI
   momentum: 'fastapi',    // Future: 'postgrest'
 };
+
+// ─── FetchTarget ─────────────────────────────────────────────────────────────
+
+/**
+ * A fully-resolved fetch target: the URL to call plus any headers
+ * required by the backend (e.g. Accept-Profile for PostgREST).
+ */
+export interface FetchTarget {
+  url: string;
+  headers: Record<string, string>;
+}
 
 // ─── URL Resolution ──────────────────────────────────────────────────────────
 
@@ -50,10 +62,7 @@ export const DATA_SOURCES: DataSourceConfig = {
  * Get the base URL for a backend source.
  *
  * Server-side (SSR): uses private Railway internal URLs for zero-latency calls.
- * Client-side: uses public URLs.
- *
- * import.meta.env.SSR is an Astro built-in that is true during SSR rendering
- * and false in client <script> blocks.
+ * Client-side: uses public URLs (PUBLIC_* vars inlined by Vite at build time).
  */
 export function getBaseUrl(source: BackendSource): string {
   const isServer = typeof window === 'undefined';
@@ -61,7 +70,6 @@ export function getBaseUrl(source: BackendSource): string {
   switch (source) {
     case 'fastapi':
       if (isServer) {
-        // Server: prefer private network URL, fall back to public
         return import.meta.env.FASTAPI_INTERNAL_URL
           || import.meta.env.PUBLIC_API_URL
           || 'http://localhost:8000/api/v1';
@@ -80,130 +88,197 @@ export function getBaseUrl(source: BackendSource): string {
       if (isServer) {
         return import.meta.env.GO_INTERNAL_URL
           || import.meta.env.PUBLIC_GO_API_URL
-          || 'http://localhost:8080';
+          || 'http://localhost:8080/api/v1';
       }
-      return import.meta.env.PUBLIC_GO_API_URL || 'http://localhost:8080';
+      return import.meta.env.PUBLIC_GO_API_URL || 'http://localhost:8080/api/v1';
   }
+}
+
+// ─── Header Helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Build PostgREST headers for a sport schema.
+ *
+ * Accept-Profile selects the DB schema (nba, nfl, football).
+ * application/vnd.pgrst.object+json returns a single object instead of an array
+ * for endpoints that query by primary key.
+ */
+function postgrestHeaders(sport: string, singular: boolean = false): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Accept-Profile': sport.toLowerCase(),
+  };
+  if (singular) {
+    headers['Accept'] = 'application/vnd.pgrst.object+json';
+  }
+  return headers;
 }
 
 // ─── URL Builders ────────────────────────────────────────────────────────────
 
 /**
- * Build the full URL for a profile request.
+ * Build the FetchTarget for a profile request.
+ *
+ * PostgREST: GET /players?id=eq.{id} or /teams?id=eq.{id}
+ *   with Accept-Profile header for sport schema selection.
  */
-export function profileUrl(sport: string, type: string, id: string): string {
+export function profileUrl(sport: string, type: string, id: string): FetchTarget {
   const source = DATA_SOURCES.profile;
   const base = getBaseUrl(source);
 
   switch (source) {
-    case 'postgrest':
-      // PostgREST: GET /rpc/entity_profile?sport=NBA&entity_type=player&entity_id=123
-      return `${base}/rpc/entity_profile?sport=${sport.toUpperCase()}&entity_type=${type}&entity_id=${id}`;
+    case 'postgrest': {
+      const view = type === 'team' ? 'teams' : 'players';
+      return {
+        url: `${base}/${view}?id=eq.${id}`,
+        headers: postgrestHeaders(sport, true),
+      };
+    }
     case 'go':
-      return `${base}/api/v1/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
+      return {
+        url: `${base}/profile/${type}/${id}?sport=${sport.toUpperCase()}`,
+        headers: {},
+      };
     case 'fastapi':
     default:
-      return `${base}/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
+      return {
+        url: `${base}/profile/${type}/${id}?sport=${sport.toUpperCase()}`,
+        headers: {},
+      };
   }
 }
 
 /**
- * Build the full URL for a stats request.
+ * Build the FetchTarget for a stats request.
+ *
+ * PostgREST: GET /player_stats?player_id=eq.{id}&season=eq.{season}
+ *            or  /team_stats?team_id=eq.{id}&season=eq.{season}
+ *   with Accept-Profile header for sport schema selection.
  */
-export function statsUrl(sport: string, type: string, id: string): string {
+export function statsUrl(sport: string, type: string, id: string): FetchTarget {
   const source = DATA_SOURCES.stats;
   const base = getBaseUrl(source);
 
   switch (source) {
-    case 'postgrest':
-      // PostgREST: GET /rpc/entity_stats?sport=NBA&entity_type=player&entity_id=123
-      return `${base}/rpc/entity_stats?sport=${sport.toUpperCase()}&entity_type=${type}&entity_id=${id}`;
+    case 'postgrest': {
+      const season = getCurrentSeason(sport);
+      if (type === 'team') {
+        return {
+          url: `${base}/team_stats?team_id=eq.${id}&season=eq.${season}`,
+          headers: postgrestHeaders(sport, true),
+        };
+      }
+      return {
+        url: `${base}/player_stats?player_id=eq.${id}&season=eq.${season}`,
+        headers: postgrestHeaders(sport, true),
+      };
+    }
     case 'fastapi':
     default:
-      return `${base}/stats/${type}/${id}?sport=${sport.toUpperCase()}`;
+      return {
+        url: `${base}/stats/${type}/${id}?sport=${sport.toUpperCase()}`,
+        headers: {},
+      };
   }
 }
 
 /**
- * Build the full URL for a news request.
+ * Build the FetchTarget for a news request.
+ *
+ * Go API: GET /news/{entityType}/{entityID}?sport={SPORT}
+ *   Optionally includes limit param.
  */
-export function newsUrl(sport: string, type: string, id: string): string {
+export function newsUrl(sport: string, type: string, id: string, limit?: number): FetchTarget {
   const source = DATA_SOURCES.news;
   const base = getBaseUrl(source);
 
-  switch (source) {
-    case 'go':
-      return `${base}/api/v1/news/${type}/${id}?sport=${sport.toUpperCase()}`;
-    case 'fastapi':
-    default:
-      return `${base}/news/${type}/${id}?sport=${sport.toUpperCase()}`;
-  }
+  const params = new URLSearchParams();
+  params.set('sport', sport.toUpperCase());
+  if (limit) params.set('limit', limit.toString());
+
+  // Go and FastAPI share the same path structure
+  return {
+    url: `${base}/news/${type}/${id}?${params.toString()}`,
+    headers: {},
+  };
 }
 
 /**
- * Build the full URL for a twitter status check.
+ * Build the FetchTarget for a twitter status check.
  */
-export function twitterStatusUrl(): string {
+export function twitterStatusUrl(): FetchTarget {
   const source = DATA_SOURCES.twitter;
   const base = getBaseUrl(source);
 
-  switch (source) {
-    case 'go':
-      return `${base}/api/v1/twitter/status`;
-    case 'fastapi':
-    default:
-      return `${base}/twitter/status`;
-  }
+  // Go and FastAPI share the same path structure
+  return {
+    url: `${base}/twitter/status`,
+    headers: {},
+  };
 }
 
 /**
- * Build the full URL for a twitter feed.
+ * Build the FetchTarget for a twitter journalist feed.
+ *
+ * Go API: GET /twitter/journalist-feed?q={query}&sport={SPORT}&limit={N}
  */
-export function twitterFeedUrl(query: string): string {
+export function twitterFeedUrl(query: string, sport?: string, limit?: number): FetchTarget {
   const source = DATA_SOURCES.twitter;
   const base = getBaseUrl(source);
 
-  switch (source) {
-    case 'go':
-      return `${base}/api/v1/twitter/journalist-feed?q=${encodeURIComponent(query)}`;
-    case 'fastapi':
-    default:
-      return `${base}/twitter/journalist-feed?q=${encodeURIComponent(query)}`;
-  }
+  const params = new URLSearchParams();
+  params.set('q', encodeURIComponent(query));
+  if (sport) params.set('sport', sport.toUpperCase());
+  if (limit) params.set('limit', limit.toString());
+
+  return {
+    url: `${base}/twitter/journalist-feed?${params.toString()}`,
+    headers: {},
+  };
 }
 
 /**
- * Build the full URL for a similarity request.
+ * Build the FetchTarget for a similarity request.
+ * (Still on FastAPI — no PostgREST view exists yet.)
  */
-export function similarityUrl(sport: string, type: string, id: string): string {
+export function similarityUrl(sport: string, type: string, id: string, season?: number, limit?: number): FetchTarget {
   const source = DATA_SOURCES.similarity;
   const base = getBaseUrl(source);
 
-  switch (source) {
-    case 'postgrest':
-      return `${base}/rpc/similar_entities?sport=${sport.toUpperCase()}&entity_type=${type}&entity_id=${id}`;
-    case 'fastapi':
-    default:
-      return `${base}/similarity/${type}/${id}?sport=${sport.toUpperCase()}`;
-  }
+  const params = new URLSearchParams();
+  params.set('sport', sport.toUpperCase());
+  if (season) params.set('season', season.toString());
+  if (limit) params.set('limit', limit.toString());
+
+  return {
+    url: `${base}/similarity/${type}/${id}?${params.toString()}`,
+    headers: {},
+  };
 }
 
 /**
- * Build the full URL for a vibe request.
+ * Build the FetchTarget for a vibe request.
+ * (ML — stays on FastAPI.)
  */
-export function vibeUrl(sport: string, type: string, id: string): string {
+export function vibeUrl(sport: string, type: string, id: string): FetchTarget {
   const source = DATA_SOURCES.vibe;
   const base = getBaseUrl(source);
 
-  // Vibe is ML — always FastAPI-shaped for now
-  return `${base}/ml/vibe/${type}/${id}?sport=${sport.toUpperCase()}`;
+  return {
+    url: `${base}/ml/vibe/${type}/${id}?sport=${sport.toUpperCase()}`,
+    headers: {},
+  };
 }
 
 /**
- * Build the full URL for transfer predictions.
+ * Build the FetchTarget for transfer predictions.
+ * (ML — stays on FastAPI.)
  */
-export function transfersUrl(id: string): string {
+export function transfersUrl(id: string): FetchTarget {
   const source = DATA_SOURCES.vibe; // Same source as ML endpoints
   const base = getBaseUrl(source);
-  return `${base}/ml/transfers/predictions/${id}`;
+
+  return {
+    url: `${base}/ml/transfers/predictions/${id}`,
+    headers: {},
+  };
 }

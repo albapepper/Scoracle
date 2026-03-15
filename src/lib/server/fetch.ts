@@ -98,7 +98,11 @@ export interface SSRFetchResult<T> {
 
 const DEFAULT_TIMEOUT = 5000; // 5 seconds
 
-async function serverFetch<T>(url: string, timeout = DEFAULT_TIMEOUT): Promise<SSRFetchResult<T>> {
+async function serverFetch<T>(
+  url: string,
+  extraHeaders: Record<string, string> = {},
+  timeout = DEFAULT_TIMEOUT
+): Promise<SSRFetchResult<T>> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -107,6 +111,7 @@ async function serverFetch<T>(url: string, timeout = DEFAULT_TIMEOUT): Promise<S
       signal: controller.signal,
       headers: {
         'Accept': 'application/json',
+        ...extraHeaders,
       },
     });
 
@@ -134,8 +139,8 @@ export async function fetchProfile(
   type: string,
   id: string
 ): Promise<SSRFetchResult<PlayerProfileData | TeamProfileData>> {
-  const url = profileUrl(sport, type, id);
-  return serverFetch(url);
+  const { url, headers } = profileUrl(sport, type, id);
+  return serverFetch(url, headers);
 }
 
 /**
@@ -146,8 +151,8 @@ export async function fetchStats(
   type: string,
   id: string
 ): Promise<SSRFetchResult<StatsResponse>> {
-  const url = statsUrl(sport, type, id);
-  return serverFetch(url);
+  const { url, headers } = statsUrl(sport, type, id);
+  return serverFetch(url, headers);
 }
 
 /**
@@ -158,8 +163,8 @@ export async function fetchNews(
   type: string,
   id: string
 ): Promise<SSRFetchResult<NewsResponse>> {
-  const url = newsUrl(sport, type, id);
-  return serverFetch(url);
+  const { url, headers } = newsUrl(sport, type, id);
+  return serverFetch(url, headers);
 }
 
 /**

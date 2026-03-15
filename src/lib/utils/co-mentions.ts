@@ -10,6 +10,8 @@
  * - Uses word boundaries to avoid partial matches
  */
 
+import { newsUrl } from './data-sources';
+
 export interface Entity {
   id: string;
   name: string;
@@ -366,17 +368,15 @@ export async function loadEntitiesForSport(sport: string): Promise<Entity[]> {
 export async function fetchArticles(
   entityType: 'player' | 'team',
   entityId: string,
-  apiUrl: string,
+  _apiUrl: string, // Kept for API compatibility; URL now resolved by newsUrl()
   sport: string,
   limit: number = 20
 ): Promise<Article[]> {
-  const params = new URLSearchParams();
-  params.set('sport', sport.toUpperCase());
-  params.set('limit', limit.toString());
+  const { url, headers } = newsUrl(sport, entityType, entityId, limit);
 
-  const response = await fetch(
-    `${apiUrl}/news/${entityType}/${entityId}?${params.toString()}`
-  );
+  const response = await fetch(url, {
+    headers,
+  });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch articles: ${response.status}`);

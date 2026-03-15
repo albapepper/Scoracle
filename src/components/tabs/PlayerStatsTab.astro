@@ -397,6 +397,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 <script>
   import { escapeHtml, parseEntityParams, showState } from '../../lib/utils/dom';
   import { swrFetch, setPageData, getPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
+  import { statsUrl } from '../../lib/utils/data-sources';
   import { PizzaChart, type PizzaChartStat } from '../../lib/charts/pizza-chart';
   import {
     categorizeStats,
@@ -485,8 +486,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       if (ssrData) {
         data = ssrData;
       } else {
-        const url = `${this.apiUrl}/stats/player/${id}?sport=${sport.toUpperCase()}`;
-        const result = await swrFetch<PlayerStatsResponse>(url, CACHE_PRESETS.stats);
+        const { url, headers } = statsUrl(sport, 'player', id);
+        const result = await swrFetch<PlayerStatsResponse>(url, { ...CACHE_PRESETS.stats, headers });
         data = result.data;
       }
 

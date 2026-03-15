@@ -9,6 +9,8 @@
  * - TTL-based cache expiration
  */
 
+import { twitterStatusUrl } from './data-sources';
+
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
@@ -25,6 +27,8 @@ interface FetcherOptions {
   forceRefresh?: boolean;
   /** Enable ETag-based conditional requests (default: true for widget endpoints) */
   useEtag?: boolean;
+  /** Extra headers to include in the request (e.g. Accept-Profile for PostgREST) */
+  headers?: Record<string, string>;
 }
 
 // In-memory cache store
@@ -114,7 +118,8 @@ export async function swrFetch<T>(
     staleTime = DEFAULT_STALE_TIME,
     cacheTime = DEFAULT_CACHE_TIME,
     forceRefresh = false,
-    useEtag = url.includes('/profile/') || url.includes('/stats/'),
+    useEtag = url.includes('/profile/') || url.includes('/stats/') || url.includes('/players?') || url.includes('/teams?') || url.includes('/player_stats?') || url.includes('/team_stats?'),
+    headers: extraHeaders = {},
   } = options;
 
   const now = Date.now();
@@ -131,14 +136,14 @@ export async function swrFetch<T>(
     if (!isExpired) {
       // If stale, trigger background revalidation
       if (isStale) {
-        revalidate<T>(url, cacheTime, useEtag, cached.etag);
+        revalidate<T>(url, cacheTime, useEtag, cached.etag, extraHeaders);
       }
       return { data: cached.data, isStale, fromCache: true };
     }
   }
 
   // No valid cache, fetch fresh data
-  const data = await dedupedFetch<T>(url, cacheTime, useEtag, cached?.etag);
+  const data = await dedupedFetch<T>(url, cacheTime, useEtag, cached?.etag, extraHeaders);
   return { data, isStale: false, fromCache: false };
 }
 
@@ -149,7 +154,8 @@ async function dedupedFetch<T>(
   url: string,
   cacheTime: number,
   useEtag: boolean = false,
-  existingEtag?: string
+  existingEtag?: string,
+  extraHeaders: Record<string, string> = {}
 ): Promise<T> {
   // Check if request is already in-flight
   const existing = inFlight.get(url);
@@ -160,8 +166,8 @@ async function dedupedFetch<T>(
   // Create new fetch promise
   const fetchPromise = (async () => {
     try {
-      // Build headers with conditional request if ETag exists
-      const headers: Record<string, string> = {};
+      // Build headers: merge extra headers (e.g. Accept-Profile) with ETag
+      const headers: Record<string, string> = { ...extraHeaders };
       const storedEtag = existingEtag || getStoredEtag(url);
       if (useEtag && storedEtag) {
         headers['If-None-Match'] = storedEtag;
@@ -225,12 +231,13 @@ function revalidate<T>(
   url: string,
   cacheTime: number,
   useEtag: boolean = false,
-  existingEtag?: string
+  existingEtag?: string,
+  extraHeaders: Record<string, string> = {}
 ): void {
   // Don't revalidate if already in-flight
   if (inFlight.has(url)) return;
 
-  dedupedFetch<T>(url, cacheTime, useEtag, existingEtag).catch(() => {
+  dedupedFetch<T>(url, cacheTime, useEtag, existingEtag, extraHeaders).catch(() => {
     // Silently fail background revalidation
   });
 }
@@ -272,11 +279,12 @@ export async function fetchParallel<T extends Record<string, string>>(
 /**
  * Pre-warm cache for anticipated requests
  */
-export function prefetch(url: string, cacheTime = DEFAULT_CACHE_TIME): void {
+export function prefetch(url: string, cacheTime = DEFAULT_CACHE_TIME, extraHeaders: Record<string, string> = {}): void {
   // Don't prefetch if already cached or in-flight
   if (cache.has(url) || inFlight.has(url)) return;
 
-  dedupedFetch(url, cacheTime, url.includes('/profile/') || url.includes('/stats/')).catch(() => {
+  const useEtag = url.includes('/profile/') || url.includes('/stats/') || url.includes('/players?') || url.includes('/teams?') || url.includes('/player_stats?') || url.includes('/team_stats?');
+  dedupedFetch(url, cacheTime, useEtag, undefined, extraHeaders).catch(() => {
     // Silently fail prefetch
   });
 }
@@ -391,14 +399,16 @@ export function clearPageData(): void {
  * Fetch Twitter API status (whether Twitter is configured)
  * Results are cached for the page session
  */
-export async function fetchTwitterStatus(apiUrl: string): Promise<TwitterStatus> {
+export async function fetchTwitterStatus(): Promise<TwitterStatus> {
   // Check if already fetched
   const cached = getPageData('twitterStatus');
   if (cached) return cached;
 
   try {
-    const { data } = await swrFetch<TwitterStatus>(`${apiUrl}/twitter/status`, {
+    const { url, headers } = twitterStatusUrl();
+    const { data } = await swrFetch<TwitterStatus>(url, {
       ...CACHE_PRESETS.twitter,
+      headers,
     });
     setPageData('twitterStatus', data);
     return data;

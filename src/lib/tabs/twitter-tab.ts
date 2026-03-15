@@ -8,6 +8,7 @@
 import { escapeHtml, parseEntityParams, showState } from '../utils/dom';
 import { formatDate } from '../utils/date';
 import { swrFetch, waitForPageData, getPageData, setPageData, CACHE_PRESETS } from '../utils/api-fetcher';
+import { profileUrl, twitterStatusUrl, twitterFeedUrl } from '../utils/data-sources';
 
 interface Tweet {
   id: string;
@@ -90,7 +91,8 @@ class TwitterTabManager {
 
   private async checkTwitterEnabled(): Promise<boolean> {
     try {
-      const { data } = await swrFetch<TwitterStatusResponse>(`${this.apiUrl}/twitter/status`, CACHE_PRESETS.twitter);
+      const { url, headers } = twitterStatusUrl();
+      const { data } = await swrFetch<TwitterStatusResponse>(url, { ...CACHE_PRESETS.twitter, headers });
       return data?.configured ?? false;
     } catch {
       return false;
@@ -104,8 +106,8 @@ class TwitterTabManager {
       try {
         profileData = await waitForPageData('widget', 1000) as ProfileResponse;
       } catch {
-        const url = `${this.apiUrl}/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
-        const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);
+        const { url, headers } = profileUrl(sport, type, id);
+        const { data } = await swrFetch<ProfileResponse>(url, { ...CACHE_PRESETS.widget, headers });
         profileData = data;
         if (data) setPageData('widget', data);
       }
@@ -121,13 +123,8 @@ class TwitterTabManager {
   }
 
   private async fetchTwitter(entityName: string, sport: string): Promise<void> {
-    const params = new URLSearchParams();
-    params.set('q', entityName);
-    params.set('sport', sport.toUpperCase());
-    params.set('limit', '10');
-
-    const url = `${this.apiUrl}/twitter/journalist-feed?${params.toString()}`;
-    const { data } = await swrFetch<TwitterResponse>(url, CACHE_PRESETS.twitter);
+    const { url, headers } = twitterFeedUrl(entityName, sport, 10);
+    const { data } = await swrFetch<TwitterResponse>(url, { ...CACHE_PRESETS.twitter, headers });
 
     const tweets = data?.tweets || [];
     if (tweets.length === 0) {

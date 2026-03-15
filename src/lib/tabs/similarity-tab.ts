@@ -7,6 +7,7 @@
 
 import { parseEntityParams, escapeHtml, showState } from '../utils/dom';
 import { swrFetch, setPageData, CACHE_PRESETS } from '../utils/api-fetcher';
+import { similarityUrl } from '../utils/data-sources';
 import { getCurrentSeason } from '../utils/season';
 import type { SimilarityResponse, SimilarEntity } from '../types';
 
@@ -24,9 +25,9 @@ class SimilarityTabManager {
     this.apiUrl = this.container?.dataset.apiUrl || '';
   }
 
-  private buildUrl(sport: string, type: string, id: string): string {
+  private buildTarget(sport: string, type: string, id: string) {
     const season = getCurrentSeason(sport);
-    return `${this.apiUrl}/similarity/${type}/${id}?sport=${sport.toUpperCase()}&season=${season}&limit=5`;
+    return similarityUrl(sport, type, id, season, 5);
   }
 
   async prefetch(): Promise<void> {
@@ -38,8 +39,8 @@ class SimilarityTabManager {
     if (!sport || !type || !id) return;
 
     try {
-      const url = this.buildUrl(sport, type, id);
-      await swrFetch<SimilarityResponse>(url, CACHE_PRESETS.ml);
+      const { url, headers } = this.buildTarget(sport, type, id);
+      await swrFetch<SimilarityResponse>(url, { ...CACHE_PRESETS.ml, headers });
     } catch {
       // Silent fail on prefetch - will retry on actual load
     }
@@ -58,8 +59,8 @@ class SimilarityTabManager {
     }
 
     try {
-      const url = this.buildUrl(sport, type, id);
-      const { data } = await swrFetch<SimilarityResponse>(url, CACHE_PRESETS.ml);
+      const { url, headers } = this.buildTarget(sport, type, id);
+      const { data } = await swrFetch<SimilarityResponse>(url, { ...CACHE_PRESETS.ml, headers });
 
       if (!data || !data.similar_entities || data.similar_entities.length === 0) {
         this.showEmpty();

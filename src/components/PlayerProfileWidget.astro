@@ -14,6 +14,8 @@
  * }
  */
 
+import { serializeForHtml } from '../lib/utils/serialize';
+
 interface Props {
   page?: 'news' | 'stats';
   showCompareButton?: boolean;
@@ -74,7 +76,7 @@ const hasSSRData = !!ssrProfile;
       is:inline
       class="ssr-profile-data"
       type="application/json"
-      set:html={JSON.stringify(initialData)}
+      set:html={serializeForHtml(initialData)}
     />
   )}
 
@@ -387,6 +389,7 @@ const hasSSRData = !!ssrProfile;
 <script>
   import { escapeHtml, parseEntityParams, showWidgetState } from '../lib/utils/dom';
   import { swrFetch, setPageData, CACHE_PRESETS } from '../lib/utils/api-fetcher';
+  import { profileUrl } from '../lib/utils/data-sources';
   import { getPositionGroup } from '../lib/utils/position-groups';
   import { register } from '../lib/utils/component-bus';
 
@@ -556,10 +559,10 @@ const hasSSRData = !!ssrProfile;
     }
 
     private async fetchData() {
-      const url = `${this.apiUrl}/profile/player/${this.id}?sport=${this.sport!.toUpperCase()}`;
+      const { url, headers } = profileUrl(this.sport!, 'player', this.id!);
 
       try {
-        const { data } = await swrFetch<PlayerProfileData>(url, CACHE_PRESETS.widget);
+        const { data } = await swrFetch<PlayerProfileData>(url, { ...CACHE_PRESETS.widget, headers });
 
         if (!data || !data.id) {
           this.showError();

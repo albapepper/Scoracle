@@ -128,8 +128,10 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 <script>
   import { escapeHtml, parseEntityParams, showState } from '../../lib/utils/dom';
+  import { sanitizeUrl } from '../../lib/utils/url';
   import { formatDate } from '../../lib/utils/date';
   import { swrFetch, setPageData, CACHE_PRESETS } from '../../lib/utils/api-fetcher';
+  import { newsUrl } from '../../lib/utils/data-sources';
   import type { NewsArticle, NewsData } from '../../lib/types';
 
   class NewsTabManager {
@@ -199,11 +201,8 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     }
 
     private async fetchNews(entityType: string, entityId: string, sport: string): Promise<void> {
-      const params = new URLSearchParams();
-      params.set('sport', sport.toUpperCase());
-
-      const url = `${this.apiUrl}/news/${entityType}/${entityId}?${params.toString()}`;
-      const { data } = await swrFetch<NewsData>(url, CACHE_PRESETS.news);
+      const { url, headers } = newsUrl(sport, entityType, entityId);
+      const { data } = await swrFetch<NewsData>(url, { ...CACHE_PRESETS.news, headers });
 
       const articles = data?.articles || [];
       if (articles.length === 0) {
@@ -224,13 +223,13 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
       list.innerHTML = articles.map(article => {
         const title = escapeHtml(article.title || 'Untitled');
-        const url = article.url || '#';
+        const url = sanitizeUrl(article.url) || '#';
         const source = escapeHtml(article.source || '');
         const date = formatDate(article.published_at ?? undefined);
 
         return `<div class="content-item">
           <h3 class="content-title">
-            <a href="${url}" target="_blank" rel="noopener">${title}</a>
+            <a href="${url}" target="_blank" rel="noopener noreferrer">${title}</a>
           </h3>
           <div class="content-meta">${source}${source && date ? ' · ' : ''}${date}</div>
         </div>`;

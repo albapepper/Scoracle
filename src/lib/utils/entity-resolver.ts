@@ -12,6 +12,7 @@
  */
 
 import { swrFetch, waitForPageData, getPageData, setPageData, CACHE_PRESETS, type PageData } from './api-fetcher';
+import { profileUrl } from './data-sources';
 
 // Raw API response types (no adapter transformation needed)
 export interface PlayerProfileResponse {
@@ -103,8 +104,8 @@ export async function resolveEntityInfo(
       profileData = await waitForPageData(pageDataKey, waitTimeout) as ProfileDataWithMeta;
     } catch {
       // Fetch it ourselves
-      const url = `${apiUrl}/profile/${type}/${id}?sport=${sport.toUpperCase()}`;
-      const { data } = await swrFetch<ProfileResponse>(url, CACHE_PRESETS.widget);
+      const { url, headers } = profileUrl(sport, type, id);
+      const { data } = await swrFetch<ProfileResponse>(url, { ...CACHE_PRESETS.widget, headers });
       
       if (data && typeof data === 'object') {
         profileData = { entityType: type as 'player' | 'team', data };

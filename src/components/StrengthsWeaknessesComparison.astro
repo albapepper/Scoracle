@@ -438,6 +438,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 <script>
   import { escapeHtml, showState } from '../lib/utils/dom';
   import { swrFetch } from '../lib/utils/api-fetcher';
+  import { statsUrl } from '../lib/utils/data-sources';
   import { categorizeStats, type Category } from '../lib/utils/stats-categorizer';
   import { register } from '../lib/utils/component-bus';
 
@@ -605,7 +606,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       type: string,
       id: string
     ): Promise<Category[] | null> {
-      const url = `${this.apiUrl}/stats/${type}/${id}?sport=${sport.toUpperCase()}`;
+      const { url, headers } = statsUrl(sport, type, id);
 
       try {
         const { data } = await swrFetch<{
@@ -614,6 +615,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         }>(url, {
           staleTime: 5 * 60 * 1000,
           cacheTime: 30 * 60 * 1000,
+          headers,
         });
 
         if (!data || !data.stats) {

@@ -15,11 +15,6 @@
 import StrengthsWeaknessesComparison from './StrengthsWeaknessesComparison.astro';
 import StatsComparison from './StatsComparison.astro';
 
-interface Props {
-  title?: string;
-}
-
-const { title = 'Statistics Comparison' } = Astro.props;
 const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 ---
 
@@ -367,6 +362,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 <script>
   import { swrFetch } from '../lib/utils/api-fetcher';
+  import { statsUrl } from '../lib/utils/data-sources';
   import { showState } from '../lib/utils/dom';
   import { PizzaChart, type PizzaChartStat, type ComparisonEntityData } from '../lib/charts/pizza-chart';
   import { categorizeStats } from '../lib/utils/stats-categorizer';
@@ -545,7 +541,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       type: string,
       id: string
     ): Promise<PizzaChartStat[] | null> {
-      const url = `${this.apiUrl}/stats/${type}/${id}?sport=${sport.toUpperCase()}`;
+      const { url, headers } = statsUrl(sport, type, id);
 
       try {
         const { data } = await swrFetch<{
@@ -554,6 +550,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
         }>(url, {
           staleTime: 5 * 60 * 1000,
           cacheTime: 30 * 60 * 1000,
+          headers,
         });
 
         if (!data || !data.stats) {
