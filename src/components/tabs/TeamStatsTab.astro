@@ -645,13 +645,11 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
    */
   class TeamStatsTabManager {
     private container: HTMLElement | null;
-    private apiUrl: string;
     private pizzaChart: PizzaChart | null = null;
     private loaded = false;
 
     constructor() {
       this.container = document.getElementById('team-stats-tab-content');
-      this.apiUrl = this.container?.dataset.apiUrl || '';
     }
 
     async load(): Promise<void> {

@@ -147,7 +147,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
   class ProfileWidgetComparisonManager {
     private container: HTMLElement | null = null;
-    private apiUrl: string = '';
     private removeBtn: HTMLElement | null = null;
     private currentSport: string = '';
 
@@ -158,7 +157,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.container = document.getElementById('profile-widget-comparison');
       if (!this.container) return;
 
-      this.apiUrl = this.container.dataset.api || 'http://localhost:8000/api/v1';
       this.removeBtn = document.getElementById('compare-secondary-remove-btn');
 
       this.bindEvents();

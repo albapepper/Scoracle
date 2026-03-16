@@ -531,8 +531,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
    */
   class StrengthsWeaknessesComparisonManager {
     private container: HTMLElement | null = null;
-    private apiUrl: string = '';
-
     private primaryName: string = 'Primary';
     private secondaryName: string = 'Comparison';
 
@@ -540,7 +538,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.container = document.getElementById('sw-comparison');
       if (!this.container) return;
 
-      this.apiUrl = this.container.dataset.apiUrl || '';
       this.exposeAPI();
     }
 

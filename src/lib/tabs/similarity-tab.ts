@@ -13,7 +13,6 @@ import type { SimilarityResponse, SimilarEntity } from '../types';
 
 class SimilarityTabManager {
   private container: HTMLElement | null;
-  private apiUrl: string;
   private loaded = false;
   private prefetched = false;
 
@@ -22,7 +21,6 @@ class SimilarityTabManager {
     const viewId = params.type === 'team' ? 'team-entity-view' : 'player-entity-view';
     const parentView = document.getElementById(viewId);
     this.container = parentView?.querySelector('#similarity-tab-content') as HTMLElement | null;
-    this.apiUrl = this.container?.dataset.apiUrl || '';
   }
 
   private buildTarget(sport: string, type: string, id: string) {

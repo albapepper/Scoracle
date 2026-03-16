@@ -399,8 +399,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
    */
   class StatsComparisonContentManager {
     private container: HTMLElement | null = null;
-    private apiUrl: string = '';
-
     private pizzaChart: PizzaChart | null = null;
     private activeTab: 'overview' | 'detailed' = 'overview';
 
@@ -411,7 +409,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.container = document.getElementById('stats-comparison-content');
       if (!this.container) return;
 
-      this.apiUrl = this.container.dataset.apiUrl || '';
       this.bindTabEvents();
       this.exposeAPI();
     }

@@ -6,10 +6,18 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . ./
-RUN npm run build \
+RUN npm run fetch-data \
+ && npm run build \
  && test -f dist/server/entry.mjs
 
-# ── Stage 2: Production runtime ──────────────────────────────────────────────
+# ── Stage 2: Production dependencies ─────────────────────────────────────────
+FROM node:20-alpine AS deps
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+# ── Stage 3: Production runtime ──────────────────────────────────────────────
 FROM node:20-alpine AS runtime
 WORKDIR /app
 
@@ -20,12 +28,11 @@ ENV PORT=3000
 # Run as non-root for security
 RUN addgroup -S app && adduser -S app -G app
 
-COPY --from=build /app/package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+# Use --chown on COPY instead of RUN chown -R (saves ~18s of recursive walk)
+COPY --chown=app:app --from=deps /app/node_modules ./node_modules
+COPY --chown=app:app --from=build /app/dist ./dist
+COPY --chown=app:app package.json ./
 
-COPY --from=build /app/dist ./dist
-
-RUN chown -R app:app /app
 USER app
 
 EXPOSE 3000

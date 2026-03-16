@@ -6,7 +6,7 @@
  *
  * Usage:
  * ```typescript
- * const entityInfo = await resolveEntityInfo(apiUrl, type, id, sport);
+ * const entityInfo = await resolveEntityInfo(type, id, sport);
  * console.log(entityInfo.name, entityInfo.team);
  * ```
  */
@@ -75,14 +75,12 @@ export function extractEntityInfo(profileData: ProfileDataWithMeta | null | unde
 /**
  * Resolve entity info from page data or fetch from API
  *
- * @param apiUrl - Base API URL
  * @param type - Entity type ('player' or 'team')
  * @param id - Entity ID
  * @param sport - Sport code
  * @param options - Optional configuration
  */
 export async function resolveEntityInfo(
-  apiUrl: string,
   type: string,
   id: string,
   sport: string,

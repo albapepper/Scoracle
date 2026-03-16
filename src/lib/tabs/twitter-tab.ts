@@ -44,7 +44,6 @@ interface ProfileResponse {
 
 class TwitterTabManager {
   private container: HTMLElement | null;
-  private apiUrl: string;
   private loaded = false;
 
   constructor() {
@@ -52,7 +51,6 @@ class TwitterTabManager {
     const viewId = params.type === 'team' ? 'team-entity-view' : 'player-entity-view';
     const parentView = document.getElementById(viewId);
     this.container = parentView?.querySelector('#twitter-tab-content') as HTMLElement | null;
-    this.apiUrl = this.container?.dataset.apiUrl || '';
   }
 
   async load(): Promise<void> {

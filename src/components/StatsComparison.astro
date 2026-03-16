@@ -385,8 +385,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
    */
   class StatsComparisonManager {
     private container: HTMLElement | null = null;
-    private apiUrl: string = '';
-
     private primaryStats: Array<{ label: string; value: string | number }> = [];
     private secondaryStats: Array<{ label: string; value: string | number }> = [];
     private primaryName: string = 'Primary';
@@ -396,7 +394,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       this.container = document.getElementById('stats-comparison');
       if (!this.container) return;
 
-      this.apiUrl = this.container.dataset.apiUrl || '';
       this.exposeAPI();
     }
 

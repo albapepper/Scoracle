@@ -420,7 +420,6 @@ const hasSSRData = !!ssrProfile;
 
   class PlayerProfileWidget {
     private widget: HTMLElement | null = null;
-    private apiUrl = '';
     private buttonDest = '';
     private showCompare = false;
     private sport: string | null = null;
@@ -445,7 +444,6 @@ const hasSSRData = !!ssrProfile;
       if (!widget) return;
 
       this.widget = widget;
-      this.apiUrl = widget.dataset.api || 'http://localhost:8000/api/v1';
       this.buttonDest = widget.dataset.dest || 'news';
       this.showCompare = widget.dataset.showCompare === 'true';
 

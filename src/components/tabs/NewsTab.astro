@@ -136,7 +136,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
   class NewsTabManager {
     private container: HTMLElement | null;
-    private apiUrl: string;
     private loaded = false;
 
     constructor() {
@@ -145,7 +144,6 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       const viewId = params.type === 'team' ? 'team-entity-view' : 'player-entity-view';
       const parentView = document.getElementById(viewId);
       this.container = parentView?.querySelector('#news-tab-content') as HTMLElement | null;
-      this.apiUrl = this.container?.dataset.apiUrl || '';
     }
 
     async load(): Promise<void> {
