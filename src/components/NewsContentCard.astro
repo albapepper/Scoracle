@@ -14,6 +14,7 @@
 import NewsTab from './tabs/NewsTab.astro';
 import CoMentionsTab from './tabs/CoMentionsTab.astro';
 import TwitterTab from './tabs/TwitterTab.astro';
+import { serializeForHtml } from '../lib/utils/serialize';
 
 interface Props {
   /** SSR-provided news data — allows client to skip network fetch */
@@ -31,7 +32,7 @@ const apiUrl = import.meta.env.PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       is:inline
       class="ssr-news-data"
       type="application/json"
-      set:html={JSON.stringify(initialNews)}
+      set:html={serializeForHtml(initialNews)}
     />
   )}
   <!-- Tab Navigation -->

@@ -269,7 +269,6 @@
   let currentSport = '';
   let currentType = '';
   let currentId = '';
-  let currentPositionGroup: string | undefined;
   let onSelectCallback: ((entity: AutocompleteEntity) => void) | null = null;
 
   // ─── Open / Close ─────────────────────────────────────────────────────────
@@ -285,7 +284,6 @@
     currentSport = sport.toLowerCase();
     currentType = type;
     currentId = id;
-    currentPositionGroup = positionGroup;
     onSelectCallback = onSelect;
 
     // Update hint text

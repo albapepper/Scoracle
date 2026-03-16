@@ -19,6 +19,7 @@ import ComparisonSearchModal from '../components/ComparisonSearchModal.astro';
 import ProfileWidgetComparison from '../components/ProfileWidgetComparison.astro';
 import StatsComparisonContent from '../components/StatsComparisonContent.astro';
 import { fetchStatsPageData } from '../lib/server/fetch';
+import { serializeForHtml } from '../lib/utils/serialize';
 
 // ─── SSR Data Fetching ───────────────────────────────────────────────────────
 
@@ -64,7 +65,7 @@ const pageTitle = entityName ? `${entityName} Stats - Scoracle` : 'Stats - Scora
       is:inline
       id="__SSR_DATA__"
       type="application/json"
-      set:html={JSON.stringify(ssrData)}
+      set:html={serializeForHtml(ssrData)}
     />
   )}
 

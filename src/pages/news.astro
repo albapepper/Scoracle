@@ -15,6 +15,7 @@ import PlayerProfileWidget from '../components/PlayerProfileWidget.astro';
 import TeamProfileWidget from '../components/TeamProfileWidget.astro';
 import NewsContentCard from '../components/NewsContentCard.astro';
 import { fetchNewsPageData } from '../lib/server/fetch';
+import { serializeForHtml } from '../lib/utils/serialize';
 
 // ─── SSR Data Fetching ───────────────────────────────────────────────────────
 
@@ -59,7 +60,7 @@ const pageTitle = entityName ? `${entityName} News - Scoracle` : 'News - Scoracl
       is:inline
       id="__SSR_DATA__"
       type="application/json"
-      set:html={JSON.stringify(ssrData)}
+      set:html={serializeForHtml(ssrData)}
     />
   )}
 
