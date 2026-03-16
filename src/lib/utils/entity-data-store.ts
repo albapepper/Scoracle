@@ -108,7 +108,11 @@ class EntityDataStore {
    * Supports both old format (players/teams items) and new v2.0 format (entities array).
    */
   private async fetchAndParse(dataFile: string, sport: SportKey): Promise<AutocompleteEntity[]> {
-    const response = await fetch(dataFile);
+    // Cache-bust: __DATA_VERSION__ is a build-time constant (set in astro.config.mjs).
+    // Each deploy gets a new value, so CDN/browser caches are busted automatically.
+    const version = typeof __DATA_VERSION__ !== 'undefined' ? __DATA_VERSION__ : '';
+    const url = version ? `${dataFile}?v=${version}` : dataFile;
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Failed to fetch ${dataFile}: ${response.status}`);
     }

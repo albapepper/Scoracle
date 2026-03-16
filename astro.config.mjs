@@ -28,6 +28,9 @@ export default defineConfig({
   ],
 
   vite: {
+    define: {
+      __DATA_VERSION__: JSON.stringify(Date.now().toString()),
+    },
     build: {
       minify: 'terser',
       cssMinify: true,

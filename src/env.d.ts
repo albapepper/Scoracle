@@ -1,5 +1,8 @@
 /// <reference types="astro/client" />
 
+/** Build-time constant injected by Vite (see astro.config.mjs vite.define) */
+declare const __DATA_VERSION__: string;
+
 /**
  * Environment variable type declarations for Astro
  * 
